@@ -21,10 +21,7 @@
 figures/src/preview_*.png
 figures/src/__pycache__/
 
-# 업체(FIMS) 자료에서 가져온 사진과 그 사진이 들어간 Fig. 2
-# 공개 저장소에 올려도 되는지 확인 전까지 업로드하지 않음
+# 원본 사진과 잘라낸 사진 (그림 pptx 와 PDF 에는 들어감)
 figures/src/photos/
-figures/fig_vessel.pdf
-figures/ppt/fig2_vessel.pptx
 figures/src/_crop/
 figures/src/render_*.png

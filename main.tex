@@ -84,7 +84,7 @@ In this article, the dwell is reinterpreted not as a scheduling restriction but 
 \item Full scale field experiments on an eight meter sterndrive vessel are conducted against PID and NMPC baselines, and a simulation study exposes the false certification produced when the dwell is ignored.
 \end{enumerate}
 
-The remainder of this article is organized as follows. Section~\ref{sec_system} describes the vessel, the physical origin of the shift dwell, the maneuvering model, and the disturbance model. Section~\ref{sec_problem} formulates the augmented safety game and establishes that the augmentation preserves its structure. Section~\ref{sec_method} develops the dwell indexed safe controller, its learning scheme, the task policy, and the shield. Section~\ref{sec_sim} presents the simulation results, and Section~\ref{sec_exp} presents the onboard implementation and the field results. Section~\ref{sec_conclusion} concludes this article, and the proof of the lemma is given in the Appendix. Fig.~\ref{fig_framework} shows the overall framework.
+The remainder of this article is organized as follows. Section~\ref{sec_system} describes the vessel, the physical origin of the shift dwell, the maneuvering model, and the disturbance model. Section~\ref{sec_problem} formulates the augmented safety game and establishes that the augmentation preserves its structure. Section~\ref{sec_method} develops the dwell indexed safe controller, its learning scheme, the task policy, and the shield. Section~\ref{sec_results} presents the system identification, simulation, and field results, including the onboard implementation. Section~\ref{sec_conclusion} concludes this article, and the proof of the lemma is given in the Appendix. Fig.~\ref{fig_framework} shows the overall framework.
 
 \begin{figure*}[!t]
 \centering
@@ -95,51 +95,18 @@ The remainder of this article is organized as follows. Section~\ref{sec_system} 
 
 \section{System Description and Modeling}\label{sec_system}
 
-This section describes the vessel and its actuation, explains where the gear shift dwell comes from, presents the maneuvering model used for training together with its identification, and specifies the disturbance model. The presentation follows the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011}.
+This section describes the vessel and its actuation, explains where the gear shift dwell comes from, presents the maneuvering model used for training together with the formulation of its identification, and specifies the disturbance model. The presentation follows the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011}.
 
 \subsection{Vessel and Actuation System}\label{sec_vessel}
 
-The experimental platform is a Neo AURA 240 EXP, an open top experimental version of the AURA 240 leisure motorboat with a deep V planing hull, shown in Fig.~\ref{fig_vessel}. Propulsion is provided by a single inboard diesel engine \pending{engine model to be confirmed, the vendor deck lists two models} driving a MerCruiser Bravo~1 sterndrive, and the principal dimensions and actuation specifications are listed in Table~\ref{tab_vessel}.
+The experimental platform is a Neo AURA 240 EXP with a deep V planing hull, propelled by a single inboard diesel engine \pending{model} driving a MerCruiser Bravo~1 sterndrive, and shown in Fig.~\ref{fig_vessel}(a) with the GPS antenna on the T top and the attitude and heading reference system (AHRS) and the control PC, a laptop computer running ROS~2, at the console. Three actuation channels are exposed to the controller through the chain shown in Fig.~\ref{fig_vessel}(b). The engine speed is commanded over a CAN interface, while the gear shift among reverse, neutral, and forward and the steering angle of the drive are executed by two electric linear servo cylinders, one acting on the shift cable and one mounted on the drive pivot, both driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so that the results concern a single engine sterndrive configuration, and the specifications of the platform and its sensors are listed in Table~\ref{tab_boat}.
 
 \begin{figure*}[!t]
 \centering
-\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel photograph and control hardware.}{5cm}}
-\caption{Experimental vessel and its actuation hardware. (a) The vessel. (b) Control hardware and the communication interface of each link.}
+\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
+\caption{Experimental vessel and its hardware. (a) The vessel with the GPS antenna, the AHRS, and the control PC. (b) Control hardware and the communication interface of each link.}
 \label{fig_vessel}
 \end{figure*}
-
-\begin{table}[!t]
-\renewcommand{\arraystretch}{1.3}
-\caption{Vessel and Actuation Specifications}
-\label{tab_vessel}
-\centering
-\footnotesize
-\begin{tabular}{ll}
-\toprule
-Item & Value \\
-\midrule
-Hull & Neo AURA 240 EXP, deep V planing hull \\
-Length overall & 8.29 m \\
-Length between perpendiculars & 6.96 m \\
-Breadth & 2.62 m \\
-Depth & 0.66 m \\
-Draft & 0.34 m \\
-Capacity & 12 persons \\
-Engine & single inboard diesel, \pending{model} \\
-Drive & MerCruiser Bravo 1 sterndrive \\
-Gear positions & reverse, neutral, forward \\
-Minimum shift dwell & 3 s (\pending{measured basis}) \\
-Steering angle limit & \pending{TBD} deg \\
-Steering rate limit & \pending{TBD} deg/s \\
-Throttle per gear & \pending{TBD} \\
-Shift actuation & electric linear servo cylinder via PLC \\
-Steering actuation & servo cylinder on drive pivot via PLC \\
-Engine speed command & CAN \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Three actuation channels are exposed to the controller through the chain shown in Fig.~\ref{fig_vessel}(b). The engine speed is commanded over a CAN interface, while the gear shift among reverse, neutral, and forward and the steering angle of the drive are executed by two electric linear servo cylinders, one acting on the shift cable and one mounted on the drive pivot, both driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so that the results concern a single engine sterndrive configuration.
 
 \subsection{Gear Shift Dwell}\label{sec_dwell}
 
@@ -191,13 +158,12 @@ where $\bm{x} = [x, y, \psi, u, v, r]^\top$ and $\bm{u} = [g, \delta_c]^\top$ ar
 
 \begin{figure}[!t]
 \centering
-%\includegraphics[width=0.8\linewidth]{figures/fig_frames.pdf}
-\figph{Fig. 3 placeholder. Inertial frame and body fixed frame of the vessel, the setpoint and the keep in circle of radius R, the position error, the surge, sway, and yaw rates, the steering angle of the sterndrive at the stern, and the direction of the vectored thrust.}{4cm}
-\caption{Coordinate frames, keep in region, and sterndrive steering geometry.}
+\IfFileExists{figures/fig_frames.pdf}{\includegraphics[width=\linewidth]{figures/fig_frames.pdf}}{\figph{Fig. 3 placeholder. Coordinate frames and sterndrive photograph.}{4cm}}
+\caption{Coordinate frames and sterndrive geometry. (a) Inertial and body fixed frames, the keep in disk of radius $R$ around the setpoint, and the thrust $F_g$ vectored by the steering angle $\delta$ at the distance $l_d$ behind the origin. (b) The MerCruiser Bravo~1 sterndrive of the vessel.}
 \label{fig_frames}
 \end{figure}
 
-The unknown parameters of \eqref{eq_complete} were identified from maneuvering data recorded on the vessel by posing the nonlinear programming problem of \cite{lee2024canal},
+The unknown parameters of \eqref{eq_complete} are identified from maneuvering data recorded on the vessel by posing the nonlinear programming problem of \cite{lee2024canal},
 \begin{subequations}\label{eq_si}
 \begin{align}
 P^{\ast} &= \arg\min_{P} \sum_{i=0}^{N} (\bm{x}_i - \bar{\bm{x}}_i)^\top W (\bm{x}_i - \bar{\bm{x}}_i) \\
@@ -205,37 +171,7 @@ P^{\ast} &= \arg\min_{P} \sum_{i=0}^{N} (\bm{x}_i - \bar{\bm{x}}_i)^\top W (\bm{
 \bm{x}_0 &= \bm{x}_{\mathrm{init}},
 \end{align}
 \end{subequations}
-where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. Acceleration and deceleration runs at fixed gear and throttle settings excite the surge equation, and zigzag runs excite the sway and yaw equations. To simplify the problem with many unknown parameters, the surge model and the sway and yaw model are decoupled and identified sequentially. The surge parameters are identified first from the acceleration and deceleration data, and the sway and yaw parameters are then identified from the zigzag data with the surge parameters fixed \pending{weight matrices $W$ of the two stages, initial guesses, and the solver used}. Fig.~\ref{fig_si} compares the identified model with a validation run not used in the fit, and Table~\ref{tab_si} lists the estimated value of every entry of $P$.
-
-\begin{figure}[!t]
-\centering
-%\includegraphics[width=\linewidth]{figures/fig_si.pdf}
-\figph{Fig. 4 placeholder. System identification validation. Measured and simulated surge rate for an acceleration and deceleration run, and measured and simulated sway and yaw rates and heading for a zigzag run.}{4.5cm}
-\caption{System identification results. Measured data and the response of the identified model on validation runs. \pending{Runs and dates to be stated.}}
-\label{fig_si}
-\end{figure}
-
-\begin{table}[!t]
-\renewcommand{\arraystretch}{1.3}
-\caption{System Identification Results}
-\label{tab_si}
-\centering
-\footnotesize
-\begin{tabular}{lclc}
-\toprule
-Item & Estimated value & Item & Estimated value \\
-\midrule
-$m_{11}$ & \pending{TBD} & $X_{u|u|}$ & \pending{TBD} \\
-$m_{22}$ & \pending{TBD} & $Y_{v|v|}$ & \pending{TBD} \\
-$m_{33}$ & \pending{TBD} & $Y_{r|r|}$ & \pending{TBD} \\
-$X_u$ & \pending{TBD} & $N_{v|v|}$ & \pending{TBD} \\
-$Y_v$ & \pending{TBD} & $N_{r|r|}$ & \pending{TBD} \\
-$Y_r$ & \pending{TBD} & $F_{\gF}$ & \pending{TBD} \\
-$N_v$ & \pending{TBD} & $F_{\gR}$ & \pending{TBD} \\
-$N_r$ & \pending{TBD} & $l_d$ & \pending{TBD} \\
-\bottomrule
-\end{tabular}
-\end{table}
+where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. The identification data, the sequential procedure, and the resulting parameter values are reported in Section~\ref{sec_si_results}.
 
 \subsection{Disturbance Model}\label{sec_disturbance}
 
@@ -416,13 +352,78 @@ c = \begin{cases} c^{t}, & q(\xi, c^{t}) \ge \tau, \\ \pi_h(\xi), & \text{otherw
 \end{equation}
 so that the safety policy takes over only when the task action would leave the deployed set under the worst disturbance. The filter uses the same networks and the same margin as the certificate. \pending{Exact onboard switching rule to be confirmed against the deployed code, including whether the filter evaluates the task action alone or also the hold action.}
 
-\section{Simulation Results}\label{sec_sim}
+\section{Simulation and Experimental Results}\label{sec_results}
 
-This section audits the learned certificate, contrasts it with a dwell unaware certificate, and compares the closed loop behavior of the proposed controller against three baselines on the identified model.
+The effectiveness of the proposed approach is validated through numerical simulation and full scale field experiments. The vessel model of Section~\ref{sec_model} is first identified from experimental data, simulations are then conducted with the identified model to audit the certificate and to compare the closed loop behavior against the baselines, and field experiments on the vessel follow.
 
-\subsection{Setup and Baselines}\label{sec_baselines}
+\subsection{System Identification Results}\label{sec_si_results}
 
-Training and simulation use the model of Section~\ref{sec_model} with the identified parameters, the disturbance box \eqref{eq_wbox}, and the settings listed in Table~\ref{tab_params}.
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Boat Specifications}
+\label{tab_boat}
+\centering
+\footnotesize
+\begin{tabular}{ll}
+\toprule
+\multicolumn{2}{l}{(a) Platform specification} \\
+\midrule
+Hull & Neo AURA 240 EXP, deep V planing hull \\
+Length overall & 8.29 m \\
+Length between perpendiculars & 6.96 m \\
+Breadth & 2.62 m \\
+Depth & 0.66 m \\
+Draft & 0.34 m \\
+Capacity & 12 persons \\
+Engine & single inboard diesel, \pending{model} \\
+Minimum shift dwell & 3 s, \pending{measured basis} \\
+\midrule
+\multicolumn{2}{l}{(b) Sensor specification} \\
+\midrule
+GPS & \pending{model and accuracy} \\
+AHRS & \pending{model and resolution} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+To identify the system, data were gathered in an open water area \pending{site}. Acceleration and deceleration runs and zigzag runs were performed. In the acceleration and deceleration runs the gear was engaged in forward or reverse at the throttle setting of this study and each setting was held until the vessel reached a steady state \pending{gear and throttle sequence of the runs}. The zigzag runs were performed with \pending{heading angle, steering command, and termination criterion}. To simplify the problem with many unknown parameters, the surge model and the sway and yaw model were decoupled, and the optimization of \eqref{eq_si} was performed sequentially using the two datasets. The surge model was identified first from the acceleration and deceleration data with the weight matrix $W = \pending{surge stage weights}$ \pending{initial guesses}. The sway and yaw model was then identified from the zigzag data with the surge parameters fixed and with $W = \pending{sway and yaw stage weights}$ \pending{initial guesses and solver}. Validation was performed on operational data of the vessel that were not used in the fit. The results are shown in Fig.~\ref{fig_si}, in which the measured data and the response of the identified model are compared, and the estimated values of the unknown parameters in $P$ are provided in Table~\ref{tab_si}.
+
+\begin{figure}[!t]
+\centering
+\IfFileExists{figures/fig_si.pdf}{\includegraphics[width=\linewidth]{figures/fig_si.pdf}}{\figph{Fig. 4 placeholder. System identification validation. Measured and simulated surge rate for an acceleration and deceleration run, and measured and simulated sway and yaw rates and heading for a zigzag run.}{4.5cm}}
+\caption{System identification results. Measured data and the response of the identified model on validation runs. \pending{Runs and dates to be stated.}}
+\label{fig_si}
+\end{figure}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{System Identification Results}
+\label{tab_si}
+\centering
+\footnotesize
+\begin{tabular}{lclc}
+\toprule
+Item & Estimated value & Item & Estimated value \\
+\midrule
+$m_{11}$ & \pending{TBD} & $X_{u|u|}$ & \pending{TBD} \\
+$m_{22}$ & \pending{TBD} & $Y_{v|v|}$ & \pending{TBD} \\
+$m_{33}$ & \pending{TBD} & $Y_{r|r|}$ & \pending{TBD} \\
+$X_u$ & \pending{TBD} & $N_{v|v|}$ & \pending{TBD} \\
+$Y_v$ & \pending{TBD} & $N_{r|r|}$ & \pending{TBD} \\
+$Y_r$ & \pending{TBD} & $F_{\gF}$ & \pending{TBD} \\
+$N_v$ & \pending{TBD} & $F_{\gR}$ & \pending{TBD} \\
+$N_r$ & \pending{TBD} & $l_d$ & \pending{TBD} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Simulation Results}\label{sec_sim}
+
+The simulations audit the learned certificate, contrast it with a dwell unaware certificate, and compare the closed loop behavior of the proposed controller against three baselines on the identified model.
+
+\subsubsection{Setup and Baselines}\label{sec_baselines}
+
+Training and simulation use the model of Section~\ref{sec_model} with the parameters of Table~\ref{tab_si}, the disturbance box \eqref{eq_wbox}, and the settings listed in Table~\ref{tab_params}.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
@@ -454,13 +455,13 @@ Monte Carlo audit & \pending{TBD} scenarios, \pending{TBD} s \\
 
 Three baselines are compared under identical plant, disturbance, and initial conditions. The first, denoted A1, is a dwell unaware RIS trained with the same plant, disturbance bound, networks, and training budget, but without the timer in the state and with the dwell ignored in the backup, so that its critic believes the gear can be shifted at every step. It is then deployed on the plant that enforces the dwell, as any dwell unaware certificate would be in practice. The second, denoted B1, is a PID station keeping controller whose thrust output is quantized to the gear levels and whose shift requests are held by the plant during locks \pending{gains and quantization thresholds}. The third, denoted C1, is a nonlinear MPC on the identified model with the gear dwell imposed on the predicted shift sequence \pending{formulation, horizon, solver, and solve time}. B1 and C1 represent current practice and the strongest model based alternative, respectively, and both are run in simulation and in the field, whereas A1 is a deliberate failure experiment run in simulation only.
 
-\subsection{Certified Set and Monte Carlo Audit}\label{sec_sim_audit}
+\subsubsection{Certified Set and Monte Carlo Audit}\label{sec_sim_audit}
 
 The learned certificate is audited by Monte Carlo rollouts. Initial augmented states are sampled over the operating envelope, each is rolled out under the safety policy $\pi_h$ against the adversary $\mu$ and against random disturbance sequences for \pending{TBD} seconds, and the realized minimum margin $\min_k h(\xi_k)$ is recorded. Four quantities summarize the audit, namely the certified fraction of sampled states with $q \ge \tau$, the hit rate of certified states that indeed remain inside the disk, the false safety rate of certified states that are violated, which a safety method must drive to zero, and the correlation between the predicted value and the realized minimum margin, which measures whether the value ranks states correctly beyond the binary verdict. The margin $\tau$ is the smallest value at which the false safety rate falls to \pending{target} over the audit.
 
 At $\tau = 0$ the certificate attains a hit rate of \pending{TBD} with a false safety rate of \pending{TBD} and a correlation of \pending{TBD}, and at the deployment margin $\tau = \pending{TBD}$ the hit rate rises to \pending{TBD} with a false safety rate of \pending{TBD}, while the certified fraction of the operating envelope is \pending{TBD}. The slices of Fig.~\ref{fig_family} show the family structure of Section~\ref{sec_family} directly. The slice at $\tau_g = 0$ nearly fills the disk, the slices shrink as the timer grows, and the neutral slices are the smallest, as the sterndrive argument predicts. These results would confirm that the dwell indexed value is a usable certificate whose errors are absorbed by the margin, \pending{to be stated once the audit numbers are final}.
 
-\subsection{Dwell Aware Versus Dwell Unaware Certificates}\label{sec_sim_a1}
+\subsubsection{Dwell Aware Versus Dwell Unaware Certificates}\label{sec_sim_a1}
 
 The central claim of Remark~\ref{rem_masking} is tested by auditing A1 on the plant that enforces the dwell. Because A1 believes that a shift is available at every step, it certifies states near the boundary of the disk from which the vessel would need an immediate reversal of thrust, and on the real plant such a reversal is refused whenever the gear was shifted during the preceding three seconds. The expected mechanism is a false certification. States declared safe by A1 are violated when the adversary times its push to a fresh lock, so the false safety rate of A1 should be large and its value should correlate poorly with the realized margin, while the proposed certificate, having reserved the margin for the lock in advance, should retain a small false safety rate at the cost of a smaller certified fraction. Fig.~\ref{fig_a1} compares the two certificates. On the audit, A1 reaches a false safety rate of \pending{TBD} against \pending{TBD} for the proposed certificate, with correlations of \pending{TBD} and \pending{TBD}, respectively, and A1 certifies \pending{TBD} of the envelope against \pending{TBD}. These results would demonstrate that the dwell axis is a load bearing part of the certificate rather than an implementation detail, and that a dwell unaware certificate fails in the most dangerous way, by reporting safety that does not exist, \pending{to be stated once the audit numbers are final}.
 
@@ -472,7 +473,7 @@ The central claim of Remark~\ref{rem_masking} is tested by auditing A1 on the pl
 \label{fig_a1}
 \end{figure}
 
-\subsection{Closed Loop Comparison}\label{sec_sim_closed}
+\subsubsection{Closed Loop Comparison}\label{sec_sim_closed}
 
 Table~\ref{tab_sim} compares the closed loop behavior of A1, B1, C1, and the proposed controller from the same set of initial states under the same disturbance realizations, which include the adversarial disturbance and random sequences inside $\calW$. The metrics are the mean, root mean square, and maximum distance from the setpoint, the fraction of time inside the disk, the number of gear switches per minute as a wear indicator, the maximum excursion during locked intervals, which is the only direct evidence that the dwell is physically consequential, the shield intervention rate, and the computation time per step.
 
@@ -500,10 +501,6 @@ Time per step (ms) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pe
 
 The comparison is read from the weakest to the proposed controller. A1 is expected to leave the disk from states it certifies, since its shield is triggered by a value that does not see the lock. B1 is expected to switch the gear frequently, because a quantized continuous command chatters around the neutral threshold, and each unnecessary shift opens a three second window of lost authority. C1 respects the dwell by construction, but its disturbance handling is nominal and its solve time per step is the largest of the four. The proposed controller is expected to hold the disk with few switches, because the certified value penalizes shifts that open a lock near the boundary, at the fixed cost of a network evaluation per step. These results would confirm that respecting the dwell inside the certificate rather than only inside the plant is what preserves safety under disturbance, \pending{to be stated once the simulation numbers are final}.
 
-\section{Experimental Results}\label{sec_exp}
-
-This section reports the full scale field validation of the proposed controller against the PID and NMPC baselines. Only the runs designated by the authors as the official trials are reported, and every quantitative entry is pending their designation.
-
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
 The experiments were conducted on the vessel of Section~\ref{sec_vessel} at \pending{site} on \pending{dates}, in the area shown in Fig.~\ref{fig_site}. The wind during the trials was \pending{speed and direction, measurement source}, and the current was \pending{TBD}. A setpoint was fixed in the inertial frame, the keep in radius was set to $R = \pending{TBD}$~m, and each run lasted \pending{TBD} s after the vessel had been brought inside the disk by the operator. The proposed controller, B1, and C1 were run back to back on the same setpoint so that they faced comparable conditions \pending{confirm sequencing and the number of runs per controller}. The proposed controller ran with the deployment margin $\tau$ and the networks trained in simulation without any field retraining. A video of the trials is available at \pending{link}.
@@ -516,11 +513,15 @@ The experiments were conducted on the vessel of Section~\ref{sec_vessel} at \pen
 \label{fig_site}
 \end{figure}
 
-\subsection{Onboard Implementation}\label{sec_onboard}
+\subsubsection{Onboard Implementation}\label{sec_onboard}
 
-The controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}(b). The position, heading, and body rates are estimated by an extended Kalman filter at 10~Hz on the onboard navigation sensors \pending{sensor description to be added by the authors}. At each control period of 0.5~s the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request to the PLC. Inference of the three networks takes \pending{TBD} ms per step on the onboard computer, well within this period. The PID and NMPC baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, so that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
+The controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. The position, heading, and body rates are estimated by an extended Kalman filter at 10~Hz from the measurements of the GPS and the AHRS of Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request to the PLC. Inference of the three networks takes \pending{TBD} ms per step on the control PC, well within the control period. The PID and NMPC baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, so that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
 
-\subsection{Comparison With Baselines}\label{sec_exp_comp}
+\subsection{Experimental Results}\label{sec_exp}
+
+The field validation of the proposed controller against the PID and NMPC baselines is reported here. Only the runs designated by the authors as the official trials are reported, and every quantitative entry is pending their designation.
+
+\subsubsection{Comparison With Baselines}\label{sec_exp_comp}
 
 Fig.~\ref{fig_traj} shows the trajectories of the three controllers in the setpoint frame together with the keep in circle, and Fig.~\ref{fig_time} shows the time histories of the distance to the setpoint, the certified value, the gear level and its timer, and the shield flag for the proposed controller, together with the distance and gear histories of the baselines. Table~\ref{tab_field} summarizes the field metrics, which are the same as in Section~\ref{sec_sim_closed} with the addition of the realized disturbance level discussed below.
 
@@ -566,7 +567,7 @@ Realized disturbance to bound & \pending{TBD} & \pending{TBD} & \textbf{\pending
 
 The comparison is again read from the weakest to the proposed controller. The PID controller B1 held station with a mean distance of \pending{TBD}~m and left the disk \pending{TBD} times, and it shifted the gear \pending{TBD} times per minute, each shift opening a lock during which the distance grew by up to \pending{TBD}~m. The NMPC controller C1 held station with a mean distance of \pending{TBD}~m and \pending{TBD} excursions, with \pending{TBD} shifts per minute and a solve time of \pending{TBD}~ms per step. The proposed controller held station with a mean distance of \pending{TBD}~m, remained inside the disk for \pending{TBD} of the run, shifted \pending{TBD} times per minute, and triggered the shield in \pending{TBD} of the steps. These results would demonstrate that the certified controller transfers to the vessel without retraining and holds the disk against the real environmental load with fewer gear shifts than the baselines, \pending{to be stated once the designated runs are analyzed}.
 
-\subsection{Discussion}\label{sec_exp_disc}
+\subsubsection{Discussion}\label{sec_exp_disc}
 
 Three observations deserve comment. First, the behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. In Fig.~\ref{fig_time} the distance to the setpoint should rise during each lock and recover after the timer expires, and the certified value should dip at the moment of a shift and recover with the timer, which is the signature of a value that reserves margin for the lock. The maximum excursion during locks in Table~\ref{tab_field} quantifies this reserve, and its comparison across controllers shows which of them opens locks at the wrong moments. \pending{Observed behavior to be described from the designated runs.}
 
