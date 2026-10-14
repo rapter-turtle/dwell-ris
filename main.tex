@@ -159,12 +159,12 @@ The vessel is described by the three degree of freedom maneuvering model of \cit
 \dot{r} &= -N_v v - N_r r - b_r T_g\sin\delta + d_r,
 \label{eq_model}
 \end{align}
-where $T_g$ is the thrust of gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $T_{\gN} = 0$ and $T_{\gR} < 0 < T_{\gF}$, $\delta$ is the steering angle of the drive, $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear damping coefficients, $X_{|u|u}$ and $Y_{|v|v}$ are the quadratic damping coefficients, $b_u$, $b_v$, and $b_r$ are the mass normalized thrust gains in surge, sway, and yaw, respectively, and $d = (d_u, d_v, d_r)$ is the disturbance acceleration described in Section~\ref{sec_disturbance}. The thrust terms encode the sterndrive geometry. The propeller race is vectored by $\delta$, so the lateral force $b_v T_g\sin\delta$ and the yaw moment $b_r T_g\sin\delta$ vanish with the thrust, which is the physical basis of the simultaneous loss of thrust and steering in neutral. The steering angle responds to its command $\delta_c$ through a rate limited first order lag
+where $T_g$ is the thrust of gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $T_{\gN} = 0$ and $T_{\gR} < 0 < T_{\gF}$, $\delta$ is the steering angle of the drive, $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear damping coefficients, $X_{|u|u}$ and $Y_{|v|v}$ are the quadratic damping coefficients, $b_u$, $b_v$, and $b_r$ are the mass normalized thrust gains in surge, sway, and yaw, respectively, and $d = (d_u, d_v, d_r)$ is the disturbance acceleration described in Section~\ref{sec_disturbance}. The thrust terms encode the sterndrive geometry. The propeller race is vectored by $\delta$, so the lateral force $b_v T_g\sin\delta$ and the yaw moment $b_r T_g\sin\delta$ vanish with the thrust, which is the physical basis of the simultaneous loss of thrust and steering in neutral. The steering angle moves toward its command $\delta_c$ at no more than the slew rate of the servo cylinder, which over an integration substep of length $\Delta t_s$ reads
 \begin{equation}
-\dot{\delta} = \operatorname{sat}_{\dot{\delta}_{\max}}\!\bigl(k_\delta(\delta_c - \delta)\bigr), \qquad |\delta| \le \delta_{\max},
+\delta^{+} = \delta + \operatorname{sat}_{\dot{\delta}_{\max}\Delta t_s}\!\bigl(\delta_c - \delta\bigr), \qquad |\delta_c| \le \delta_{\max},
 \label{eq_steer}
 \end{equation}
-with the angle limit $\delta_{\max}$, the rate limit $\dot{\delta}_{\max}$, and the gain $k_\delta$ matched to the servo cylinder \pending{values}. The model is integrated by a fourth order Runge Kutta scheme with ten substeps per control period of 0.5~s.
+with the angle limit $\delta_{\max}$ and the rate limit $\dot{\delta}_{\max}$ matched to the servo cylinder \pending{values}. The model is integrated by a fourth order Runge Kutta scheme with ten substeps per control period of 0.5~s.
 
 \begin{figure}[!t]
 \centering
