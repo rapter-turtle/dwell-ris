@@ -1,0 +1,18 @@
+# 학교 라이선스로 받은 IEEE 참고 논문 PDF (저작권 때문에 업로드하지 않음)
+/Active_Physical_Interaction_Control_for_Aerial_Manipulator_Based_on_External_Wrench_Estimation.pdf
+/Fault_Tolerant_Control_for_Unmanned_Aerial_Vehicle_Formation_Based_on_Distributed_Nonlinear_Model_Predictive_Control.pdf
+/Finite-Time_LOS_Path_Following_of_Unmanned_Surface_Vessels_With_Time-Varying_Sideslip_Angles_and_Input_Saturation.pdf
+/Nonlinear_Model_Predictive_Control_With_Obstacle_Avoidance_Constraints_for_Autonomous_Navigation_in_a_Canal_Environment.pdf
+
+# LaTeX 빌드 부산물
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+/main.pdf

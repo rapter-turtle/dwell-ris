@@ -1,0 +1,521 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{cite}
+
+% Theorem environments (author convention, amsthm with bracketed names)
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+\renewcommand{\qedsymbol}{$\blacksquare$}
+
+% NOTE TO EDITORS. Prose in this manuscript deliberately avoids colons,
+% semicolons, and hyphens or dashes. Mathematical minus signs, the author
+% footnote, and bibliographic entries are exempt.
+
+\begin{document}
+
+\title{Dwell Indexed Robust Invariant Sets for Safe Control Under Asynchronous Actuator Dwell Times}
+
+\author{Kiyong~Park and Jinwhan~Kim%
+\thanks{The authors are with the Department of Mechanical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon 34141, Republic of Korea (e-mail: qkrrldyd777@gmail.com; jinwhan@kaist.ac.kr).}%
+\thanks{Manuscript received XXXX; revised XXXX.}}
+
+\maketitle
+
+\begin{abstract}
+This paper presents a dwell indexed robust invariant set framework for the safe control of systems whose actuators must hold each commanded mode for a minimum dwell time. Such constraints are ubiquitous in physical plants, where gearboxes, thrusters, valves, and power converters cannot switch arbitrarily fast. However, existing safe set methods either handle dwell times through linear set recursions without a value function or handle disturbances and nonlinear dynamics without dwell times, and no existing method addresses all three simultaneously. The central observation of this work is that a minimum dwell time binds only the control player of the underlying two player zero sum safety game, while the disturbance remains free to act at every instant, so the optimal adversary exploits timing rather than magnitude and the safe set becomes a family indexed by the elapsed dwell of each actuator channel. The proposed framework promotes the actuator modes and their timers to state variables, proves that this augmentation preserves the contraction structure of the discounted safety backup, and computes the family with an epoch based backup that avoids an optimistic fixed point observed in one step learning. Validation on a linear switched benchmark shows close agreement with exactly computed tube based sets while recovering substantially more information than their hull, and application to autonomous ship dynamic positioning yields certified safe sets and a deployable safety shield under realistic asynchronous gear and bow thruster dwell times.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Safe reinforcement learning, reachability analysis, robust invariant sets, switched systems, dwell time, dynamic positioning, autonomous surface vessels.
+\end{IEEEkeywords}
+
+\section{Introduction}\label{sec_intro}
+
+\IEEEPARstart{M}{any} physical systems change their operating mode through actuators that cannot switch arbitrarily fast. A marine gearbox needs seconds to move between astern, neutral, and ahead detents. A tunnel thruster must not be restarted immediately after it stops. Valves, relays, clutches, power converters, reconfigurable mechanisms, and thermally limited drives all impose a minimum interval between consecutive mode changes, and Chen and Lazar observe that such minimum dwell time conditions are required in most physical systems for stability, power, or mechanical reasons \cite{chenlazar2022}. Dwell is therefore not an exceptional nuisance but a generic feature of actuation, and any controller that is deployed on such hardware inherits it whether the design acknowledges it or not.
+
+Control under dwell constraints has been studied extensively in the switched systems and model predictive control literature. The classical line of work computes a minimum dwell time that guarantees stability, based on the insight that each switch injects a transient that the subsequent decay must repay \cite{hespanha1999,vicente2019}. Later work extends the computation to recursive feasibility under constraints \cite{zhang2016,zhuang2023} and to robustness against additive disturbances through tube constructions \cite{zhang2016,vicente2019,lavaei2021}. However, this literature answers the question of how long the system must dwell. In practice the hardware answers that question by itself. The gearbox delay is a given physical constant, not a design variable, and the question that remains is where the system may operate so that it survives the locks that the hardware will impose. This reversal, from computing a dwell time to computing a set under a given dwell time, is the starting point of the present work.
+
+Safety under a given dwell time is considerably harder than stability. The natural object is the set of states from which safety can be maintained against all admissible disturbances while respecting the dwell constraint, together with a controller that renders the set invariant. However, the existing tools each cover only part of the problem. Exact set recursions characterize disturbance invariant sets under dwell time restrictions for constrained switched linear systems \cite{dehghan2012}, but they are confined to linear polytopic dynamics and return only a binary membership verdict. Nonlinear model predictive schemes with dwell constraints establish nominal recursive feasibility through $\ell$ step control invariant terminal sets \cite{chenlazar2022}, but they lack a tightening mechanism for additive disturbances. Learning based reachability methods handle nonlinear dynamics and adversarial disturbances \cite{fisac2019,yu2022,li2023cdc,bansal2021deepreach}, but none of them models actuators that lock. Table~\ref{tab_gap} summarizes the resulting gap. To the best of our knowledge, this study represents the first framework that addresses dwell constraints, adversarial disturbances, and nonlinear dynamics simultaneously.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Coverage of Prior Work}
+\label{tab_gap}
+\centering
+\begin{tabular}{lccc}
+\toprule
+Method & Dwell & Disturbance & Nonlinear \\
+\midrule
+Zhang et al. 2016 \cite{zhang2016} & $\checkmark$ & $\checkmark$ & $\times$ \\
+Vicente and Trodden 2019 \cite{vicente2019} & $\checkmark$ & $\checkmark$ & $\times$ \\
+Dehghan and Ong 2012 \cite{dehghan2012} & $\checkmark$ & $\checkmark$ & $\times$ \\
+Chen and Lazar 2022 \cite{chenlazar2022} & $\checkmark$ & $\times$ & partial \\
+Zhuang et al. 2023 \cite{zhuang2023} & $\checkmark$ & $\times$ & partial \\
+Yu et al. 2022 \cite{yu2022} & $\times$ & $\times$ & $\checkmark$ \\
+Li et al. 2023 \cite{li2023cdc} & $\times$ & $\checkmark$ & $\checkmark$ \\
+DeepReach 2021 \cite{bansal2021deepreach} & $\times$ & $\checkmark$ & $\checkmark$ \\
+\textbf{This work} & $\bm\checkmark$ & $\bm\checkmark$ & $\bm\checkmark$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In this paper, we reinterpret the dwell constraint not as a scheduling restriction but as an asymmetry of the underlying safety game. Safety against disturbances is naturally posed as a two player zero sum game in which the controller maximizes and the disturbance minimizes the worst safety margin along the trajectory \cite{bansal2017,isaacs1965}. The dwell constraint binds only the maximizing player. While the gear is locked in neutral the ship produces no thrust and the rudder has no flow to act on, yet the wind and current act freely at every instant. When two actuator channels lock asynchronously, the adversary does not need a larger disturbance. It needs the right timing, namely the windows in which both channels are locked simultaneously. As a consequence, the safe set is not a single set but a family indexed by the elapsed dwell of each channel. A state that is safe immediately after a gear change may be unsafe three seconds into the lock, because the margin that the disturbance can erode during the remaining lock must be reserved in advance. The switched tube of the linear literature \cite{zhang2016} is recovered as the hull of this family, so the tube is not wrong. It erases the time information that the family retains, and the present work decomposes it.
+
+The reformulation is validated in two stages. On a linear switched benchmark from \cite{zhang2016}, the proposed sets are computed exactly by value iteration and compared against certified tube based sets computed with established reachability tools. Under matched assumptions the two constructions agree to within a few percent, while the dwell indexed slices carry up to twelve times more information than their hull. The framework is then applied to autonomous ship dynamic positioning with a seven level gear subject to a three second dwell and a bow thruster subject to a two second dwell, a hybrid problem with an eleven dimensional augmented state that is far beyond grid based reachability. In this setting we also document a failure mode of independent interest. One step learning of the safety value collapses once the dwell exceeds a threshold, not because the fixed point equation is wrong but because smoothing across the timer axis produces an optimistic fixed point that certifies safety which does not exist. An epoch based backup that folds each lock window into a single exact composite update removes the failure.
+
+The main contributions of this paper are summarized as follows.
+\begin{itemize}
+\item A reformulation of robust safety under physically given minimum dwell times is proposed, in which the dwell constraint is interpreted as an asymmetry of a two player zero sum reachability game on an augmented hybrid state, and the safe set is characterized as a family indexed by the elapsed dwell of each actuator channel whose hull recovers the switched tube of the linear literature.
+\item An exact validation methodology is formulated on a linear switched benchmark, in which the proposed sets are computed by value iteration and cross checked against certified tube based sets, and a matched tube experiment isolates the additional information carried by the dwell index.
+\item A nonlinear application to autonomous ship dynamic positioning with asynchronous gear and bow thruster dwell times is developed, including certified safe sets verified by adversarial Monte Carlo simulation, a deployable safety shield, and the design of full scale experiments.
+\end{itemize}
+
+The remainder of this paper is organized as follows. Section~\ref{sec_prelim} reviews the required background on reachability, discounted safety backups, dwell times, and tube based model predictive control. Section~\ref{sec_problem} formulates the problem on an augmented hybrid state and establishes that the augmentation preserves the game structure. Section~\ref{sec_dwellris} develops the methodology, namely the dwell indexed robust invariant set, the control disturbance asymmetry, the epoch based computation, and the contrast with exact set recursion. Section~\ref{sec_linear} validates the construction on a linear benchmark for which exact computation is possible. Section~\ref{sec_ship} applies the framework to ship dynamic positioning in simulation and specifies the planned full scale field validation. Section~\ref{sec_conclusion} concludes with limitations. Proofs and solver validation are deferred to the Appendix.
+
+\section{Preliminaries}\label{sec_prelim}
+
+This section collects the background that the later development reuses, namely the safety value function of Hamilton Jacobi reachability, its discounted contraction form, the two notions of dwell time, and the tube based treatment of disturbances in switched model predictive control.
+
+\subsection{Safety Value Functions and Robust Invariant Sets}
+
+Consider the discrete time perturbed system
+\begin{equation}
+x_{k+1} = f(x_k, a_k, w_k), \qquad a_k \in \mathcal{A}, \quad w_k \in \mathcal{W},
+\label{eq_plant}
+\end{equation}
+where $x_k \in \mathbb{R}^n$ is the state, $a_k$ is the control, and $w_k$ is a bounded disturbance. Safety is encoded by a Lipschitz function $h(x)$ whose zero superlevel set $\{x \,:\, h(x) \ge 0\}$ is the constraint set, so that $h$ measures the signed margin to the constraint boundary. The safety value function is defined by
+\begin{equation}
+V_h^{*}(x) = \max_{\pi} \min_{\mu} \, \min_{k \ge 0} \, h(x_k),
+\label{eq_value}
+\end{equation}
+where $\pi$ ranges over control policies and $\mu$ over nonanticipative disturbance strategies in the sense of Isaacs \cite{isaacs1965,bansal2017}. The value $V_h^{*}(x)$ is the best worst margin achievable from $x$, and the set $\{x \,:\, V_h^{*}(x) \ge 0\}$ is the maximal set on which safety can be maintained forever against every admissible disturbance. Grid based solvers compute \eqref{eq_value} exactly but are limited in practice to five or six continuous dimensions \cite{mitchell2005,bansal2017}.
+
+The undiscounted self consistency condition associated with \eqref{eq_value} is not a contraction, which precludes convergent temporal difference learning. Fisac et al. introduced a discount $\gamma_h \in (0,1)$ that restores contraction \cite{fisac2019}, and this device was extended to the disturbed two player setting by Li et al. \cite{li2023cdc}, whose operator we adopt. The discounted safety backup is given by
+\begin{equation}
+(\mathcal{T}_h V)(x) = (1-\gamma_h)\, h(x) + \gamma_h \min\Bigl\{ h(x),\ \max_{a \in \mathcal{A}} \min_{w \in \mathcal{W}} V\bigl(f(x,a,w)\bigr) \Bigr\}.
+\label{eq_backup}
+\end{equation}
+The operator $\mathcal{T}_h$ is a $\gamma_h$ contraction in the supremum norm and is monotone \cite[Theorems~2 and~3]{li2023cdc}, so it admits a unique fixed point $V_h$ whose zero superlevel set
+\begin{equation}
+\mathcal{S} = \{x \,:\, V_h(x) \ge 0\}
+\label{eq_ris}
+\end{equation}
+is a robust invariant set (RIS) within the constraint set. This construction descends from reachability constrained reinforcement learning \cite{yu2022}, of which the RIS formulation of \cite{li2023cdc} is the disturbance extension. Throughout the paper we use $\gamma_h = 0.995$. Since $\gamma_h < 1$, the zero level set of the discounted fixed point is optimistic relative to the undiscounted value, a point we return to in Section~\ref{sec_dwellris} and in Appendix~B.
+
+\subsection{Dwell Times and Switched Tube Model Predictive Control}
+
+Two distinct notions of dwell time appear in the literature, and confusing them obscures the contribution of this paper. The first is theoretical. Even when every mode of a switched system is individually stable, fast switching can destabilize the ensemble, because each mode passes through a transient that temporarily inflates the state before its decay takes hold. If $\|e^{A_m t}\| \le c_m e^{-\lambda_m t}$ with $c_m \ge 1$, then requiring
+\begin{equation}
+c_m e^{-\lambda_m \tau} < 1 \iff \tau > \frac{\ln c_m}{\lambda_m}
+\label{eq_mdt}
+\end{equation}
+guarantees that the decay repays the switching jump before the next switch \cite{hespanha1999}. Vicente and Trodden carry the same argument into model predictive control, where the mode dependent value function serves as a Lyapunov function that jumps at each switch, and the stability minimum dwell time is the interval over which the decay repays that jump \cite{vicente2019}. When modes carry different constraints a feasibility dwell time arises in addition, defined by Zhang et al. as the number of steps until the reachable set from the starting region enters the target region of the next mode \cite{zhang2016}, and the operative dwell time is the maximum of the two. In all of these works the dwell time is a design output.
+
+The second notion is physical. The gearbox, the thruster, and the valve impose a dwell time as a hardware constant, and no computation can shorten it. This paper works with the physical notion. The dwell time $\tau$ is given, and the object to be computed is the set of states from which survival is possible.
+
+Tube MPC controls the nominal trajectory and confines the error to a robust positively invariant set $S$, tightening the constraints to $\mathcal{X} \ominus S$ and $\mathcal{U} \ominus KS$ \cite{mayne2005}. For switched systems a complication arises because the minimal robust positively invariant set of mode $m$ is not invariant for mode $n$. Zhang et al. resolve this with a switched tube whose cross section depends on the active mode \cite{zhang2016}, Vicente and Trodden with a multiset invariance condition that holds simultaneously for all admissible transitions \cite{vicente2019}, and Lavaei et al. with control invariant sets that are robust to both the disturbance and the switch \cite{lavaei2021}. Chen and Lazar treat nonlinear dynamics with dwell constraints through move blocking and sum up rounding, and they prove nominal recursive feasibility by means of an $\ell$ step control invariant terminal set where $\ell$ is the minimum dwell in steps \cite{chenlazar2022}. However, that guarantee is nominal. There is no tightening mechanism for additive disturbances, so the $\ell$ step control invariance certificate is voided as the disturbance grows. Zhuang et al. extend feasibility and stability results to persistent dwell time switching, which strictly contains ordinary dwell time switching \cite{zhuang2023}. In this work ordinary dwell time is the appropriate class, because a physical gearbox or thruster imposes a fixed minimum interval per channel rather than a persistent switching pattern.
+
+\section{Problem Formulation}\label{sec_problem}
+
+This section promotes the actuator modes and their timers to state variables, defines the legality structure that the dwell constraint induces, and establishes that the resulting augmented game retains the structure required by the discounted backup. The formulation is written for $N$ independent switching channels and then specialized to the ship application with $N = 2$.
+
+\subsection{Why Dwell Breaks the Markov Property}
+
+Consider two situations with identical physical states. In situation A the gear was shifted three seconds ago, so any gear command is admissible now. In situation B the gear was shifted a tenth of a second ago, so no gear command is admissible for a while. Identical states, different admissible action sets. The process is therefore not Markov in the physical state alone, and any value function learned on the physical state alone conflates the two situations. The remedy is to promote the relevant past into the state.
+
+\subsection{Augmented State and Legal Action Set}
+
+Let the plant carry $N$ switching channels, where channel $i$ takes modes $m_i$ in a finite set $\mathcal{M}_i$ and is subject to a minimum dwell of $D_i$ steps. Let $\tau_i \in \{0, 1, \ldots, D_i - 1\}$ denote the remaining lock time of channel $i$, with $\tau_i = 0$ meaning that the channel may switch now. The augmented state is
+\begin{equation}
+\xi = \bigl(x,\ m_1, \tau_1,\ \ldots,\ m_N, \tau_N\bigr) \in \Xi,
+\label{eq_xi_general}
+\end{equation}
+and the legal action set is the product
+\begin{equation}
+C(\xi) = \mathcal{A}_{c} \times \prod_{i=1}^{N} C_i(m_i, \tau_i), \qquad
+C_i = \begin{cases} \{m_i\}, & \tau_i > 0,\\ \mathcal{M}_i, & \tau_i = 0, \end{cases}
+\label{eq_legal}
+\end{equation}
+where $\mathcal{A}_c$ collects the continuous actuation channels that carry no dwell. Whenever channel $i$ switches to a new mode its timer resets to $D_i - 1$, and otherwise the timer counts down toward zero. Holding the current mode is always legal, so $C(\xi)$ is nonempty, and it is compact as a finite product of finite sets and compact intervals.
+
+For the ship application of Section~\ref{sec_ship} the augmented state reads
+\begin{equation}
+\xi = (\tilde{x}, \tilde{y}, \tilde{\psi}, u, v, r,\ \delta,\ g, \tau_g,\ b, \tau_b) \in \mathbb{R}^{11},
+\label{eq_xi_ship}
+\end{equation}
+where $(\tilde{x}, \tilde{y}, \tilde{\psi})$ are the position and heading errors, $(u, v, r)$ are the surge, sway, and yaw rates, $\delta$ is the rudder angle, $g \in \{1, \ldots, 7\}$ is the gear level with timer $\tau_g$, and $b \in \{-1, 0, 1\}$ is the bow thruster state with timer $\tau_b$, respectively. The discrete part comprises four variables whose joint grid has $7 \times 6 \times 3 \times 4 = 504$ points. We stress that $504$ is the number of grid points and not a dimension, in the same way that a chessboard has two coordinates and sixty four squares. The problem is eleven dimensional, with seven continuous and four discrete coordinates.
+
+\begin{definition}[Asynchronous Minimum Dwell]\label{def_async}
+A system satisfies an asynchronous minimum dwell constraint if each switching channel $i$ carries its own dwell constant $D_i$ and its own timer $\tau_i$, the timers evolve independently according to \eqref{eq_legal}, and no common switching signal synchronizes the channels.
+\end{definition}
+
+The definition deliberately departs from the switched systems literature, in which a single switching signal $\sigma(t)$ selects one mode for the whole plant. Under Definition~\ref{def_async} the plant can be locked in one channel and free in another, and the set of jointly locked time windows is determined by the interleaving of the two timers. This interleaving is exactly what the adversary of Section~\ref{sec_dwellris} exploits.
+
+\begin{remark}[Masking Lives in Two Places]\label{rem_masking}
+The legality structure \eqref{eq_legal} must be enforced in two distinct places. First, in the environment physics, where a switch request issued during a lock is ignored and the current mode is held. Second, in the backup \eqref{eq_backup}, where the maximization must range over $C(\xi)$ and not over the full action set. It is tempting to omit the second enforcement and expect a neural network to learn the restriction from data. This expectation is unsafe. If the approximation error lets the learned value believe that a locked channel can correct immediately, the fixed point certifies safety that does not exist. The failure is not conservative but optimistic, and Section~\ref{sec_dwellris} quantifies it.
+\end{remark}
+
+\subsection{The Augmented Safety Game}
+
+On the augmented state the safety value function is defined by
+\begin{equation}
+V_h^{*}(\xi) = \max_{\pi} \min_{\mu} \min_{k \ge 0} h(\xi_k),
+\label{eq_value_aug}
+\end{equation}
+where the control policy is restricted at every step to $C(\xi_k)$ and $h$ depends only on the physical components of $\xi$. The corresponding backup replaces $\max_{a \in \mathcal{A}}$ in \eqref{eq_backup} by $\max_{c \in C(\xi)}$. The following lemma states that nothing else changes.
+
+\begin{lemma}[Preservation of the Game Structure]\label{lem_aug}
+Let the augmented dynamics follow \eqref{eq_xi_general} and \eqref{eq_legal}, and let the backup operator be
+\begin{equation}
+(\mathcal{T}_h V)(\xi) = (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi), \max_{c \in C(\xi)} \min_{w \in \mathcal{W}} V\bigl(F(\xi,c,w)\bigr) \Bigr\}.
+\label{eq_backup_aug}
+\end{equation}
+Then $\mathcal{T}_h$ is a monotone $\gamma_h$ contraction in the supremum norm, it admits a unique bounded fixed point $V_h$, and the set $\{\xi \,:\, V_h(\xi) \ge 0\}$ is a robust invariant set of the augmented system under legally restricted policies. The statement holds for any number $N$ of channels.
+\end{lemma}
+
+The proof is given in Appendix~A. In plain terms, the lemma says that the dwell constraint does not damage the mathematical machinery. The contraction argument of \cite{li2023cdc} uses only the fact that the admissible action set is a nonempty compact set that may depend on the state, and the product structure \eqref{eq_legal} satisfies this for every $N$. All difficulty introduced by the dwell constraint is therefore concentrated not in the operator but in the shape of its fixed point, which the next section examines.
+
+\section{Methodology}\label{sec_dwellris}
+
+This section contains the conceptual core of the paper. We first show that the safe set under dwell constraints is a family of sets indexed by the elapsed dwell, whose hull is the switched tube of the linear literature. We then locate the physical origin of the family in the asymmetry between control and disturbance, and document a cliff in learnability that this asymmetry produces. We describe the epoch based computation that restores convergence, with the proof deferred to Appendix~A. We close by contrasting the value function formulation with exact set recursion. Fig.~\ref{fig_framework} shows the overall framework.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/framework.pdf}
+\caption{Overview of the proposed framework. The actuator modes and their timers are promoted to state variables, a first stage epoch based backup certifies the dwell indexed value function, its zero superlevel set is the dwell indexed robust invariant set, a second stage task policy is trained under the certified value, and the margin shifted level set is deployed as a safety shield.}
+\label{fig_framework}
+\end{figure*}
+
+\subsection{The Safe Set Is a Family and the Tube Is Its Hull}
+
+Fix the discrete coordinates of the augmented state and consider the slice of the RIS over the physical coordinates,
+\begin{equation}
+\mathcal{S}(m_1, \tau_1, \ldots, m_N, \tau_N) = \bigl\{ x \,:\, V_h(\xi) \ge 0 \bigr\}.
+\label{eq_family}
+\end{equation}
+Each choice of modes and timers produces a different slice, so the safe set is a family indexed by the elapsed dwell of every channel. The dependence is monotone in the natural direction. When $\tau_g = 0$ the gear can react immediately and the slice is large. When $\tau_g$ equals the full dwell the ship must survive the entire lock without gear authority, so the margin that the disturbance can erode during the lock must be reserved in advance and the slice is small. Fig.~\ref{fig_family} illustrates the nested family and its hull.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/set_family.pdf}
+\caption{The safe set is a family indexed by the elapsed dwell of each channel. Larger elapsed dwell reserves more margin and yields a smaller slice, and the switched tube of the linear literature is recovered as the hull of the family.}
+\label{fig_family}
+\end{figure}
+
+A dwell agnostic construction cannot see this structure. The switched tube of \cite{zhang2016} certifies a single cross section per mode, valid for every admissible switching signal, which corresponds to taking the union of the family over the timer index and using the hull for all timers alike. The tube is not wrong. Its guarantee has a different semantics. It answers whether a state is safe for some admissible timing history, whereas the family answers whether the state is safe for the specific timing situation the system is actually in. Section~\ref{sec_linear} quantifies the difference on a benchmark where both objects can be computed exactly, and finds that a single timer slice carries up to twelve times more information than the hull.
+
+\subsection{The Control Disturbance Asymmetry and the Dwell Cliff}
+
+The physical origin of the family is an asymmetry in the game \eqref{eq_value_aug}. The dwell constraint binds only the maximizing player. During the three seconds in which the gear is locked in neutral the propeller produces no thrust, the rudder has no propeller race to act on, and if the bow thruster is also locked the control authority is essentially zero. Throughout those seconds the disturbance acts freely at every step. In a zero sum game, tying one player's hands lowers the value, and the amount by which the value drops is exactly the amount by which the safe set shrinks.
+
+Asynchrony makes this worse. With a gear dwell of three seconds and a bow dwell of two seconds running on independent timers, the adversary maximizes damage not by increasing its magnitude, which is bounded, but by concentrating its effort on the windows in which both channels are locked simultaneously. The worst case is a matter of timing, and an adversary model that cannot search over timing underestimates it.
+
+This asymmetry produces a sharp practical consequence that we call the dwell cliff. Lemma~\ref{lem_aug} guarantees that the operator is sound for any dwell, yet one step temporal difference learning of $V_h$ collapses once the dwell crosses a threshold. Table~\ref{tab_cliff} reports a controlled experiment on the ship plant of Section~\ref{sec_ship}, in which the continuous dynamics, the disturbance bound, and the safety specification are held fixed and only the dwell is increased. Each certificate is audited by Monte Carlo rollouts from five hundred initial conditions against a worst case adversary over one hundred seconds. The hit rate is the fraction of states certified safe that indeed remain safe, the false safety rate is the fraction of certified states that are violated, and the correlation is between the predicted value and the realized minimum margin.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.35}
+\caption{The Dwell Cliff. One Step Learning Versus the Epoch Based Backup Under Increasing Dwell}
+\label{tab_cliff}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Dwell (gear/bow) & Seconds & \makecell{Hit rate\\at $\tau=0$} & \makecell{False\\safety} & \makecell{corr$(V,$\\$\min h)$} \\
+\midrule
+\multicolumn{5}{l}{\emph{One step backup}} \\
+none (1/1) & 0 & 98.8\% & 0.8\% & 0.95 \\
+2/2 & 1.0 & 99.7\% & 0.2\% & 0.96 \\
+3/3 & 1.5 & 2.3\% & 42\% & 0.03 \\
+4/4 & 2.0 & 26.1\% & 34\% & 0.34 \\
+6/4 (asynchronous) & 3/2 & 12.7\% & 30\% & 0.10 \\
+\midrule
+\multicolumn{5}{l}{\emph{Epoch based backup (proposed)}} \\
+\textbf{3/3} & \textbf{1.5} & \textbf{93.2\%} & \textbf{n/a} & \textbf{0.87} \\
+\textbf{6/4 (asynchronous)} & \textbf{3/2} & \textbf{99.4\%} & \textbf{0.4\%} & \textbf{0.94} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/dwell_cliff.pdf}
+\caption{The dwell cliff. One step learning of the safety value collapses once the dwell reaches three steps, while the epoch based backup of Section~\ref{subsec_macro} restores the audited hit rate. The numbers are the audited rates of Table~\ref{tab_cliff}.}
+\label{fig_cliff}
+\end{figure}
+
+The collapse at a dwell of three steps is total, as Fig.~\ref{fig_cliff} makes visible. The certificate retains a hit rate of $2.3\%$, certifies unsafe states at a rate of $42\%$, and its value is uncorrelated with the realized margin. The operator has not changed. The function approximation has fallen into an optimistic fixed point, and three mechanisms conspire to put it there. First, cliff smoothing. The true value is nearly discontinuous along the timer axis, since the state locked for the full dwell faces ruin while the same physical state with a free timer can recover, and a smooth network interpolates between the two. Second, adversary weakness. Under long locks the recovery margins are thin, so even a mildly suboptimal adversary fails to expose the optimism, and the learned value is validated against an opponent that flatters it. Third, coverage. The ruinous manifold on which both channels are locked simultaneously is rarely visited by random exploration. The three mechanisms are mutually reinforcing, and the resulting failure is silent. The value function is self consistent, reports safety, and receives no corrective signal, so further training does not repair it.
+
+This experiment also settles a question of attribution. In reachability constrained reinforcement learning the observation may reach a hundred and twelve dimensions \cite{yu2022}, yet the safety value is learned on a low dimensional reduction such as the distance and relative velocity of the nearest obstacle, and the resulting function is smooth. In the present problem the eleven coordinates admit no reduction, four of them are discrete, and the value is nearly discontinuous along the timer axes. Table~\ref{tab_cliff} shows a collapse produced purely by increasing the dwell in a fixed continuous problem. These results confirm that the difficulty is caused by the hybrid structure rather than by the number of dimensions. To be fair, exploration and policy optimization are far harder in the high dimensional benchmarks, but value accuracy and safety certification are harder here, and the failure modes differ in kind. A value error in a dense reward benchmark produces visible violations that training corrects, whereas the optimistic fixed point certifies its own errors.
+
+\subsection{Computation by an Epoch Based Backup}\label{subsec_macro}
+
+The diagnosis above dictates the remedy. If one step bootstrapping across the timer cliff is the problem, the backup should not bootstrap inside a lock window at all. We compress each lock window into a single composite update. Values are stored only at decision epochs, defined as the states in which at least one channel is free,
+\begin{equation}
+\mathcal{D} = \{\xi \,:\, \exists\, i,\ \tau_i = 0\},
+\end{equation}
+and within a window of length $D(\xi)$ steps the trajectory is unrolled with the model while the discrete actions are forced by the lock. The window value is folded backward through
+\begin{equation}
+g_{D} = V(\xi_{D}), \qquad
+g_{j} = (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \},
+\label{eq_fold}
+\end{equation}
+where the continuous channel and the disturbance are evaluated stepwise by the actor and the adversary inside the unroll.
+
+\begin{proposition}[Exactness of the Epoch Based Backup]\label{prop_macro}
+Inside a lock window the discrete components of $C(\xi_j)$ are singletons, so the maximization over the discrete channels in \eqref{eq_backup_aug} is trivial at every interior step. Consequently the fold \eqref{eq_fold} coincides exactly with the $D(\xi)$ fold composition of the one step operator $\mathcal{T}_h$, the composite operator is a monotone contraction with modulus $\gamma_h^{D(\xi)}$, and it admits the same unique fixed point and the same robust invariant set as $\mathcal{T}_h$. For asynchronous channels the window length $D(\xi)$ is state dependent and the statement holds pointwise.
+\end{proposition}
+
+The proof is given in Appendix~A. In plain terms, the proposition says that the epoch based backup changes nothing about what is computed and everything about how reliably it is computed. The fold is not an approximation of the one step backup but an exact composition of it, available precisely because the lock removes the discrete decision from the interior steps. The composite update never bootstraps across the timer cliff, its effective contraction is faster, and the window replay concentrates learning on exactly the jointly locked segments that random exploration misses. Table~\ref{tab_cliff} shows the effect. The failed case at dwell three recovers from $2.3\%$ to $93.2\%$ at $\tau = 0$ and reaches $98.5\%$ under the deployment margin, and the realistic asynchronous case reaches a hit rate of $99.4\%$ with a false safety rate of $0.4\%$.
+
+\begin{remark}[This Is Not an $n$ Step Return]\label{rem_nstep}
+The fold \eqref{eq_fold} superficially resembles an $n$ step temporal difference return. The resemblance is superficial for two reasons. In an $n$ step method the horizon $n$ is a tuning parameter chosen by the designer, whereas here the window length is dictated by the hardware. More importantly, the exactness of Proposition~\ref{prop_macro} holds because the maximization over the discrete channels is trivial inside the lock, which is false for an arbitrary window in which actions remain free. The construction is a consequence of the dwell structure, not a generic variance reduction device, and we do not claim it as a standalone contribution.
+\end{remark}
+
+\begin{remark}[Scope of the Guarantee]\label{rem_honest}
+Contraction, exactness, and invariance hold at the operator level. The value function itself is represented by a neural network, and no bound on the approximation error is claimed here. The deployed certificate is therefore the shifted level set $\{\xi \,:\, V_h(\xi) \ge \tau\}$ with a margin $\tau$ calibrated by Monte Carlo verification against a worst case adversary, and every certified rate reported in Sections~\ref{sec_linear} and \ref{sec_ship} refers to this verified level set. The margin also absorbs the optimism induced by $\gamma_h < 1$, under which the zero level set of the discounted fixed point is enlarged relative to the undiscounted value. In the experiments $\tau \approx 0.5$ for the ship and $\tau \approx 0.6$ for the linear benchmark.
+\end{remark}
+
+\subsection{Why a Value Function}\label{sec_whyvalue}
+
+Before presenting results we address a natural question. Exact recursions that characterize disturbance invariant sets under dwell time restrictions exist for constrained switched linear systems \cite{dehghan2012}, so why introduce a value function at all. Table~\ref{tab_whyvalue} contrasts the two approaches.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.35}
+\caption{Set Recursion Versus the Dwell Indexed Value Function}
+\label{tab_whyvalue}
+\centering
+\begin{tabular}{lll}
+\toprule
+ & Set recursion \cite{dehghan2012} & Dwell indexed RIS \\
+\midrule
+Output & in or out verdict & margin $V_h(\xi)$ \\
+Use & membership test & \makecell[l]{shield threshold,\\constraint $Q_h \ge 0$} \\
+Dynamics & linear polytopic & nonlinear \\
+Disturbance & \makecell[l]{universal quantifier\\over sequences} & \makecell[l]{nonanticipative\\adversary game} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The decisive difference is the last column of the first row. A set recursion answers whether a state is safe. A value function answers how safe it is, and this scalar margin is what makes a deployable architecture possible. The safety shield of Section~\ref{sec_ship} filters a task policy through the threshold test $Q_h(\xi, a) \ge \tau$, and the task policy itself is trained under a Lagrangian penalty on the same value. Neither construction exists without a differentiable margin. A binary membership oracle provides no gradient, no ranking of actions, and no threshold to calibrate. Moreover, the recursion of \cite{dehghan2012} is confined to linear polytopic dynamics and quantifies universally over disturbance sequences, whereas the game formulation supports nonlinear dynamics and the sharper nonanticipative adversary. A closely related motivation appears in \cite{li2311decomp}, where a predictive safety filter is learned from a decomposition of a robust invariant set.
+
+We state the relationship to \cite{dehghan2012} carefully. That work is the exact computation predecessor of the present idea, and we do not claim to be the first to compute safe sets under dwell restrictions. The claim of this paper is the reformulation of dwell constrained robust safety as a value function problem on an augmented hybrid state, which buys nonlinearity, the adversary game, a model free implementation, and a margin that downstream learning can consume.
+
+\section{Benchmark Validation}\label{sec_linear}
+
+This section validates the dwell indexed construction on a benchmark where everything can be computed exactly, so that no conclusion depends on learning quality. We use Example~4 of \cite{zhang2016}, a two mode population ecology model with
+\begin{equation}
+A_1 = \begin{bmatrix} 0.8 & -1 \\ 1 & 0.7 \end{bmatrix}, \quad
+A_2 = \begin{bmatrix} 1.2 & 0.5 \\ 0 & 1.2 \end{bmatrix}, \quad
+B_2 = \begin{bmatrix} 0 \\ 0.5 \end{bmatrix},
+\label{eq_zhang_sys}
+\end{equation}
+additive disturbance $\|w\|_\infty \le W$, and a minimum dwell of five steps. Both modes are open loop unstable, with the spectral radius of $A_1$ near $1.248$, so neither mode forgives a long lock. Moreover, the first state receives no direct input, since the first row of $B_2$ is zero, so it can be steered only through the second state. Recovery after a lock is therefore slow in exactly the coordinate that matters, which makes this small benchmark a faithful miniature of the ship problem. The proposed sets are computed by exact value iteration on the augmented state, and the tube based sets are computed with the reachability tool CORA \cite{althoff2015cora}.
+
+\subsection{Soundness Against the Certified Tube}
+
+The first question is soundness. States certified by the switched tube construction of \cite{zhang2016} should lie inside the dwell indexed RIS, since the tube guarantee implies survival under some admissible timing. Numerically, $97.57\%$ of the certified set of mode one and $100\%$ of the certified set of mode two lie inside the corresponding RIS hull, with zero deep violations, and the intersection over union between the two constructions is $0.872$ and $0.527$ for the two modes, respectively. The small mode one discrepancy sits on the set boundary at the resolution of the grid.
+
+The converse containment fails by a wide margin, and the failure is informative. Of the converged tube envelope, only $70\%$ and $76\%$ lies inside the RIS for the two modes. We emphasize that this is not an error in \cite{zhang2016}. The two objects carry different guarantee semantics. The tube certifies recursive feasibility for switching signals that respect the computed minimum dwell time, whereas the RIS certifies survival against an adversary that may hold the system in a mode for the full lock at the worst moment. States in the envelope but outside the RIS are exactly the states whose safety depends on a favorable timing history.
+
+The dwell index resolves such states individually. Consider the state $z_0 = (400, 500)$ in mode one. Exact value iteration on the augmented state shows that $z_0$ is safe if the elapsed dwell is one, two, or three steps and unsafe if it is four, with the transition at step four agreeing with the feasibility computation reported in \cite{zhang2016}. A single augmented value function answers a question that a single unindexed set cannot even pose. These results confirm that the family structure of Section~\ref{sec_dwellris} is real and exactly computable in the linear case.
+
+\subsection{Matched Tube Cross Validation Under a Fixed Gain}
+
+A direct comparison between the RIS and the tube cross sections would be unfair, because the RIS maximizes over all admissible controls while the tube fixes an error feedback gain $K$. For a clean comparison we therefore restrict the proposed construction to the same policy, computing the value $V_h^{\pi = K}$ of the fixed gain error loop under the same dwell process, and compare its hull to the tube cross section $E_m$ computed for the same loop. This is a validation of set definitions, not a competition.
+
+Under these matched assumptions, as Fig.~\ref{fig_matched} shows, the two constructions agree to within $0.7\%$ to $3.4\%$ across modes, verified three ways with CORA, with a forward reachability grid computation, and with an independent support function computation in Python agreeing to $0.02\%$. Within this agreement the dwell index retains its added value. For mode one the hull occupies $294$ grid cells while the slice at elapsed dwell four occupies $24$, so a controller that knows its timer works with a set description up to twelve times more informative than the hull that a dwell agnostic construction provides. These results verify that the proposed object and the classical tube are the same set when they are asked the same question, and that the dwell index is precisely the information the classical object discards.
+
+\subsection{Disturbance and Dwell Sweeps}
+
+Two sweeps probe how the constructions degrade. Sweeping the disturbance bound $W$, the certified tube construction collapses at $W = 5$ for mode two and $W = 6$ for mode one, where the tightened input bound becomes negative and the design is declared infeasible. Over the same range the RIS contracts smoothly by $7\%$ to $10\%$. This brittleness of tightening under growing disturbance is also the reason a tube cannot simply be added to the nominal nonlinear scheme of \cite{chenlazar2022}, and it previews the role of the disturbance to region ratio in Section~\ref{sec_ship}.
+
+Sweeping the dwell, the RIS area is a continuous decreasing function of the dwell length, while the tube construction is nearly insensitive to it, since the dwell enters only through a feasibility check. The insensitivity has consequences. Auditing the tube certified set by adversarial rollouts at each dwell, the fraction of the set that actually survives is $24\%$ at a dwell of two steps and rises to between $86\%$ and $98\%$ at a dwell of eight, converging toward the RIS prediction as the dwell grows. These results demonstrate that the dwell axis carries real safety information that only the indexed family tracks.
+
+\subsection{Learning Pipeline Sanity and Comparison with MPC}
+
+Finally the benchmark anchors the learned pipeline used in the nonlinear application. Training the model free RIS with a soft actor critic learner \cite{haarnoja2018} on the same benchmark and auditing the learned certificate against the exact sets gives a correlation of $0.90$ with the exact value on the box specification, with a hit rate of $78.6\%$ and a false safety rate of $6.9\%$ at $\tau = 0$, improving to $97.0\%$ and $0.6\%$ under the deployment margin $\tau = 0.5$. The margin mechanism of Remark~\ref{rem_honest} is thus already exercised, and its effect is measurable where ground truth exists.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.4}
+\caption{Closed Loop Comparison on the Linear Benchmark}
+\label{tab_linear_baseline}
+\centering
+\begin{tabular}{lccc}
+\toprule
+ & \makecell{Switched\\tube MPC \cite{zhang2016}} & \makecell{CIA NMPC\\\cite{chenlazar2022,sager2011}} & \makecell{\textbf{RIS + SAC}\\\textbf{(proposed)}} \\
+\midrule
+Closed loop cost & $1.43\times10^{6}$ & $3.8\times10^{11}$ & $\bm{1.05\times10^{7}}$ \\
+Violations & 0 & 28 & $\bm{0}$ \\
+Time per step (ms) & 3.4 & 99 & $\bm{1.2}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab_linear_baseline} reports closed loop control comparisons under identical disturbance realizations. The faithfully implemented switched tube MPC of \cite{zhang2016} performs well within its design envelope, achieving the lowest cost with two switches. The combinatorial integral approximation NMPC, implemented with CasADi and IPOPT \cite{andersson2019casadi,wachter2006} and the combinatorial solver pycombina \cite{buerger2020pycombina} and equipped with the dwell constraints of the plant, diverges when the dwell is enforced faithfully, accumulating twenty eight violations after being locked for eight steps in the unstable second mode. The proposed pipeline completes the task with zero violations at the lowest computational cost per step, although its quadratic cost is higher than that of the tube MPC, which is expected since the tube controller solves the linear quadratic problem it was designed for. These results confirm that the value of the proposed method lies not in outperforming a linear tube controller on a linear problem but in retaining a certificate where enumeration and tightening break down.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.86\textwidth]{figures/matched_tube.pdf}
+\caption{Matched tube cross validation on the linear benchmark. In panel (a) the hull of the dwell indexed family under the fixed gain agrees with the tube cross section to within a few percent, while individual timer slices are much smaller. In panel (b) the indexed slice shrinks with elapsed dwell down to about one twelfth of the hull, which is the information a dwell agnostic construction discards.}
+\label{fig_matched}
+\end{figure*}
+
+\section{Ship Validation}\label{sec_ship}
+
+This section applies the framework to station keeping of an autonomous surface vessel whose actuators impose realistic asynchronous dwell times. We describe the plant and specification, revisit the dwell cliff as a deployment experiment, present the certified safe sets, report structural findings, describe the deployed shield, and specify the baseline comparison design.
+
+\subsection{Plant, Actuators, and Safety Specification}
+
+The vessel is modeled by the standard three degree of freedom maneuvering equations \cite{fossen2011}
+\begin{equation}
+M\dot{\nu} + C(\nu)\nu + D\nu = \tau_c + \tau_w,
+\label{eq_fossen}
+\end{equation}
+where $\nu = (u, v, r)$ collects surge, sway, and yaw rates, $\tau_c$ is the actuator wrench, and $\tau_w$ is the disturbance wrench. The actuation comprises a rudder limited to $\pm30^\circ$ with a rate limit and no dwell, a seven level gear whose commanded level must be held for $3$~s, and a bow thruster with three states that must be held for $2$~s. With a sampling period of $0.5$~s the dwell constants are $D_g = 6$ and $D_b = 4$ steps, giving the augmented state \eqref{eq_xi_ship} with the $504$ point discrete grid. The delay from gear command to thrust is thus modeled as a hard hold, which the characterization plan of Section~\ref{sec_fullscale} is designed to validate on the actual vessel.
+
+The adversary acts through body frame acceleration bounds of $\pm0.01$~m/s$^2$ in surge and sway and $\pm0.005$~rad/s$^2$ in yaw. The yaw bound is anchored to one half of the moment produced by a $5$~m/s wind on the superstructure under a conservative coefficient, so the disturbance level is tied to a physical wind scenario, while the equal surge and sway bounds follow common practice rather than a per axis calibration. A full conversion from measured wind coefficients to force bounds is part of the experimental plan of Section~\ref{sec_fullscale}. The safety specification is a keep in region for the position error, with $h$ the signed distance to its boundary, optionally intersected with a heading cone.
+
+\subsection{The Dwell Cliff as a Deployment Experiment}
+
+Table~\ref{tab_cliff} was produced on this plant, and it doubles as the deployment experiment for the central claim of the paper. The row with no dwell corresponds to a certificate trained with the disturbance game active but the dwell ignored, which is precisely the recent lineage of safe reinforcement learning with disturbances \cite{li2023cdc,yu2022}. Deployed on the plant that actually locks, such a certificate declares states safe and then watches them violated, with false safety rates between $30\%$ and $42\%$ across the dwell configurations. The failure is not a performance deficit but a wrong certification, which is the most dangerous way for a safety method to fail. These results demonstrate that the dwell axis is not an implementation detail but a load bearing part of the certificate, and they establish in simulation the argument that the full scale baseline A1 of Section~\ref{sec_fullscale} is designed to exhibit in the field.
+
+\subsection{Certified Safe Sets Under Realistic Asynchronous Dwell}
+
+The epoch based backup of Section~\ref{subsec_macro} is trained on the full asynchronous configuration with the gear locked for six steps and the bow thruster for four. The quality of the certificate depends critically on the strength of the adversary used in training and audit. At a synchronous dwell of three steps, a stochastic value gradient adversary reaches only $59.4\%$ audited hit rate, an analytic saturating adversary reaches $93.2\%$, and a deterministic policy gradient adversary reaches $98.8\%$, so all headline audits use the strongest adversary available together with the analytic worst case.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.4}
+\caption{Certified Safe Sets for Ship Dynamic Positioning Under Asynchronous Dwell (Gear 3 s, Bow 2 s)}
+\label{tab_ship_sets}
+\centering
+\begin{tabular}{lccc}
+\toprule
+Specification & \makecell{Hit rate\\at $\tau=0$} & \makecell{Hit rate\\with margin} & \makecell{False\\safety} \\
+\midrule
+Circle $R=7$ m & 99.4\% & 100\% ($\tau{=}0.5$) & 0.4\% \\
+Circle $R=5$ m, cone $\pm45^\circ$ & 100\% & 100\% & n/a \\
+Ellipse $5{\times}4$ m, cone $\pm45^\circ$ & n/a & 100\% ($\tau{=}0.75$) & n/a \\
+Ellipse $5{\times}4$ m, cone $\pm30^\circ$ & 91.7\% & n/a & n/a \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.86\linewidth]{figures/ship_sets.pdf}
+\caption{Certified station keeping sets for the ship. The certified core of the seven meter keep in region occupies about $0.535$ of the nominal region, the reduction being the margin that the dwell reserves consume, and the sway axis is the binding direction along which the three meter region becomes infeasible.}
+\label{fig_ship_sets}
+\end{figure}
+
+Table~\ref{tab_ship_sets} and Fig.~\ref{fig_ship_sets} summarize the certified sets, each audited by five hundred scenario Monte Carlo rollouts of at least one hundred seconds against the worst case adversary. On the circular specification of radius $7$~m the certificate reaches a hit rate of $99.4\%$ at $\tau = 0$ and $100\%$ under the deployment margin, with a false safety rate of $0.4\%$ and a value to outcome correlation of $0.94$, and the audit against a learned adversary yields $99.7\%$. The certified region occupies roughly $0.535$ of the specification volume, which quantifies how much of the nominal region the dwell reserves consume. Elliptical specifications with heading cones are certified as well, with the $\pm45^\circ$ cone variants reaching perfect audited rates under margin and the tighter $\pm30^\circ$ cone remaining harder. Sweeps over box specifications of five and seven meters complete the picture. These results confirm that the framework certifies practically shaped station keeping regions under the actuator timing of a real vessel.
+
+\subsection{Structural Findings}
+
+Three structural findings emerge from the sweeps. First, the sway axis is the binding constraint. Shrinking the specification, the radius $4$~m case sits at the feasibility edge and the radius $3$~m case is infeasible, and the infeasibility appears first along the sway direction, where control authority is weakest under gear locks. Second, feasibility is governed by the ratio of the disturbance magnitude to the region size rather than by either quantity alone, which matches the tightening collapse observed on the linear benchmark. Third, without the bow thruster the limiting capability is yaw defense. The vessel can hold a corridor in which the surge error and heading are constrained while the sway coordinate is left free, and this crab corridor with $|\tilde{x}| \le 5$~m and $|\tilde{\psi}| \le 45^\circ$ is held with roughly $99\%$ audited safety. These findings translate directly into operational guidance about which specifications a given actuator suite can defend.
+
+\subsection{Shield Deployment and Task Training}
+
+The certificate is deployed as a safety shield around a task policy. In the second training stage the certified value network is frozen and a task policy is trained by soft actor critic \cite{haarnoja2018} under a hinge Lagrangian on the safety value, with the multiplier floored at a minimum of two so that the safety pressure never vanishes. The floored Lagrangian is itself the deployed shield, filtering actions through the certified margin at run time. On the five meter box specification the best configuration attains a worst seed audited safety of $95.7\%$ with a final positioning error of $1.4$~m. A variant without the bow thruster confirms the yaw defense limitation, and a variant that also augments the state with a bow duty timer demonstrates that additional hardware protections integrate by the same state augmentation route.
+
+Robustness to wind uncertainty is handled by teacher student distillation. A teacher trained with omniscient wind information holds the worst direction error to $1.46$~m at a wind speed of $2.5$~m/s, and a wind blind recurrent student trained with domain randomization flattens the worst direction error to about $2.08$~m without wind measurements. Finally, training variance is addressed with a symmetry equivariant wrapper that averages the value over the reflection orbit of the problem, which reduced the left right asymmetry of the certified set on the $\pm45^\circ$ cone specification from $10.94\%$ to $0.00\%$ and collapsed the variance across seeds. These results demonstrate a complete deployable pipeline from certification to task performance under realistic sensing assumptions.
+
+\subsection{Baseline Comparison Design}\label{subsec_baselines}
+
+% NOTE. The ship baselines below are DESIGN ONLY. Do not add numbers here
+% until the runs exist. See PAPER_WRITING_GUIDE section 4.2.
+
+Two closed loop baselines complete the simulation study, and we state their design here while their quantitative results are pending. The first baseline, denoted B1, is the current field practice, a PID position controller with thrust allocation, in which the allocated commands are rounded to the discrete gear and bow levels and held during locks. The second baseline, denoted C1, is a combinatorial integral approximation NMPC in the corrected sense of \cite{chenlazar2022,sager2011}, with move blocking, sum up rounding, the dwell constraints imposed explicitly, and an $\ell$ step control invariant terminal set included so that the method is represented at full strength. C1 is a nominal design and will be deployed in the disturbed environment, which reflects the design assumptions of that method, and we state this deployment choice in advance. The dwell unaware certificate A1 has been trained, and its false certification behavior is already established by the controlled experiment of Table~\ref{tab_cliff}, while its closed loop comparison alongside B1 and C1 is pending.
+
+The planned comparison is laid out in Table~\ref{tab_ship_baseline}. The comparison will report the false safety rate as the headline metric, together with violation rates, maximum excursion, the correlation between certified value and realized margin, RMS position and heading errors, total thrust energy, the number of mode switches as a wear indicator, computation time per step, and the maximum excursion during locked intervals, which is the only direct evidence that dwell is physically consequential. \textcolor{red}{[Results pending. The ship runs for B1 and C1 have not been executed, and no quantitative claims are made here.]}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.4}
+\caption{Ship Baseline Comparison (Design, Results Pending)}
+\label{tab_ship_baseline}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+ & A1 & B1 & C1 & \textbf{Proposed} \\
+\midrule
+False safety rate & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{\textbf{pending}} \\
+Violation rate & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{\textbf{pending}} \\
+Max excursion (m) & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{\textbf{pending}} \\
+RMS error (m) & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{\textbf{pending}} \\
+Switch count & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{\textbf{pending}} \\
+Time per step (ms) & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{pending} & \textcolor{red}{\textbf{pending}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Planned Full Scale Field Validation}\label{sec_fullscale}
+
+% NOTE. This entire subsection is DESIGN ONLY. No field data exists yet.
+
+We finally specify the planned full scale validation on an autonomous vessel. No field data has been collected at the time of writing, and every quantitative entry here is pending.
+
+\subsubsection{Actuator Characterization}
+
+The first field activity is a characterization of the actuators that motivated the entire formulation. Three quantities will be measured. The delay from a commanded gear level change to the corresponding change in measured thrust, over all level pairs. The minimum interval between a bow thruster stop and a subsequent restart. The achievable rudder rate across the operating envelope. These measurements serve three purposes at once. They ground the dwell constants of Section~\ref{sec_ship} in cited hardware data rather than in operator experience, they calibrate the simulation plant for the transfer argument, and they permit a comparison between the computed feasibility limits, such as the infeasible three meter region, and the wind levels at which experienced operators report that station keeping becomes untenable. \textcolor{red}{[Measurements pending.]}
+
+\subsubsection{Trial Design and Baselines}
+
+The field trials mirror the simulation comparison with five configurations. B1 runs the PID controller with thrust allocation. C1 runs the combinatorial NMPC provided that its solve time fits the control period, and if it does not, we will either report the exclusion itself as a result or rerun with a shortened horizon under an equal computation budget, with the choice declared before the trials rather than after. A1 deploys the dwell unaware certificate and is a deliberate failure experiment, so it will be attempted only if a water margin of two to three times the safety region is available, with a manual intervention hard limit, and every intervention will be recorded as a violation. If the margin cannot be secured, A1 remains simulation only and the field study proceeds with four configurations, which does not weaken the logic since the false certification mechanism is already demonstrated in simulation. The proposed method runs twice, once with the shield off and once with the shield on. The two shield configurations are variants of the proposed method rather than baselines, and their contrast isolates the contribution of the shield itself. Metrics follow Section~\ref{subsec_baselines}. \textcolor{red}{[Results pending. No trials have been conducted.]}
+
+\subsubsection{Scope of the Field Claim}
+
+We state the claim scope in advance. Real wind is not a worst case adversary, and a field trial cannot demonstrate a worst case guarantee. What the field trial can demonstrate is the consistency of the certified set under transfer, namely that states certified safe in simulation remain unviolated in the field, and that the structural predictions, such as which specifications are defensible with which actuators, hold on the water. The conclusion sought is transfer consistency of the certificate, not an empirical proof of the guarantee.
+
+\section{Conclusion}\label{sec_conclusion}
+
+This paper reinterpreted minimum dwell time constraints as an asymmetry of the zero sum safety game. Because the dwell binds only the control player while the disturbance acts at every instant, the safe set becomes a family indexed by the elapsed dwell of each actuator channel, and the switched tube of the linear literature is the hull of that family. The construction was formalized on an augmented hybrid state, shown to preserve the contraction structure of the discounted safety backup, and computed with an epoch based backup whose exactness follows from the lock structure itself. Exact validation on a linear benchmark showed agreement with certified tube based sets within a few percent under matched assumptions, together with up to twelve times more information in the timer slices, and the ship application delivered certified station keeping sets and a deployed shield under realistic asynchronous gear and bow thruster timing.
+
+Several limitations bound these claims, and we state them plainly. First, the guarantees hold at the operator level, and no approximation bound is claimed for the neural representation. The deployed certificate is a margin shifted level set verified by adversarial Monte Carlo audit, which is evidence rather than proof. Second, adversarial training of the certificate exhibits high variance. On one heading cone family four out of five seeds failed before mitigation, and although a symmetry equivariant wrapper eliminated the asymmetry and collapsed the variance on the specifications where it was applied, it has not been retrofitted to every certified set. Third, the task training stage is currently biased toward the crab corridor specifications, and its generalization across elliptical and box regions is incomplete. Fourth, the field claim, once the experiments of Section~\ref{sec_fullscale} are complete, will concern transfer consistency of the certificate rather than a demonstration of the worst case guarantee. Fifth, the formulation extends to any number of dwell channels at the price of notation only, but the verification burden does not. The adversary must search over which subset of channels to attack, a space that grows exponentially with the channel count, and the variance of that search is the practical bottleneck. Channel decomposition in the spirit of \cite{li2311decomp}, permutation symmetry of identical actuators, timer embeddings, and structured adversaries that enumerate the attacked subset explicitly are the mitigation paths we consider promising. Beyond these, dual robustness formulations \cite{li2309dual} suggest a route to tightening the interaction between the task policy and the safety policy.
+
+\appendices
+
+\section{Proofs}\label{app_proofs}
+
+\subsection{Proof of Lemma \ref{lem_aug}}
+
+The proof of \cite[Theorems~2 and~3]{li2023cdc}, which itself builds on the discounted construction of \cite{fisac2019}, establishes contraction and monotonicity of the backup using only the following structural facts. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over $w \in \mathcal{W}$ is nonexpansive, and the maximization over the admissible action set is nonexpansive, which requires only that the admissible set be nonempty and compact at every state. It does not require the admissible set to be constant across states. Under \eqref{eq_legal} the set $C(\xi)$ is nonempty for every $\xi$, since holding every current mode is always legal, and compact as a finite product of finite sets and compact intervals. Therefore, for bounded $V$ and $V'$,
+\begin{equation}
+\bigl| \max_{c \in C(\xi)} \min_{w} V - \max_{c \in C(\xi)} \min_{w} V' \bigr| \le \sup_{\xi'} |V(\xi') - V'(\xi')|,
+\end{equation}
+and composing with the outer structure of \eqref{eq_backup_aug} gives
+\begin{equation}
+\|\mathcal{T}_h V - \mathcal{T}_h V'\|_\infty \le \gamma_h \|V - V'\|_\infty .
+\end{equation}
+Monotonicity is inherited term by term. The Banach fixed point theorem yields the unique bounded fixed point $V_h$, and the standard argument of \cite{li2023cdc} shows that on $\{V_h \ge 0\}$ the greedy legal action keeps the successor in the set for every disturbance, which is robust invariance under legally restricted policies. No step of the argument counts the channels, so the statement holds for every $N$. $\blacksquare$
+
+\subsection{Proof of Proposition \ref{prop_macro}}
+
+Fix $\xi_0$ immediately after a decision and let $D = D(\xi_0)$ be the number of steps until the earliest timer expires, so that for $j = 1, \ldots, D-1$ every discrete component of $C(\xi_j)$ is a singleton by \eqref{eq_legal}. Apply the one step operator \eqref{eq_backup_aug} at $\xi_{D-1}$. Its maximization over the discrete channels ranges over a singleton and reduces to the maximization over the continuous channel alone. Substituting the result into the application of \eqref{eq_backup_aug} at $\xi_{D-2}$ and proceeding backward, each interior step contributes exactly one layer of the form \eqref{eq_fold} with the continuous maximization and disturbance minimization evaluated stepwise, and no approximation is introduced at any layer. The fold \eqref{eq_fold} is therefore identical to the $D$ fold composition $\mathcal{T}_h^{D}$ evaluated at $\xi_0$ under the forced discrete actions. Since $\mathcal{T}_h$ is a monotone $\gamma_h$ contraction by Lemma~\ref{lem_aug}, the composition is a monotone contraction with modulus $\gamma_h^{D}$, and a fixed point of $\mathcal{T}_h$ is a fixed point of $\mathcal{T}_h^{D}$. Conversely, the unique fixed point of the composition coincides with that of $\mathcal{T}_h$ because both operators are contractions on the same complete space and $\mathcal{T}_h$ maps the fixed point set of $\mathcal{T}_h^{D}$ into itself. Hence the epoch based backup computes the same $V_h$ and the same robust invariant set. For asynchronous channels the window length $D(\xi)$ varies with the state, and since the equality of operators was established pointwise at each $\xi_0$, the conclusion is unaffected. $\blacksquare$
+
+\begin{corollary}[Decision Epochs Under Asynchrony]
+With decision epochs $\mathcal{D} = \{\xi \,:\, \exists i,\ \tau_i = 0\}$ and window length $D(\xi) = \min_{i} \{\tau_i \,:\, \tau_i > 0\}$, the epoch based backup restricted to $\mathcal{D}$ has the same fixed point restricted to $\mathcal{D}$, and interior values are recovered exactly by the fold \eqref{eq_fold}.
+\end{corollary}
+
+We remark once more that the exactness fails for an arbitrary $n$ step window in which discrete actions remain free, since the interior maximizations would then not be trivial, which is the content of Remark~\ref{rem_nstep}.
+
+\section{Solver Validation on Air3D and a Ship Avoidance Problem}\label{app_air3d}
+
+The value iteration solver used for the exact computations of Section~\ref{sec_linear} is validated on the standard Air3D pursuit problem, for which a mature reference implementation exists. On a $51 \times 40 \times 50$ grid the zero level set computed by our solver attains an intersection over union of $0.944$ against the reference C\texttt{++} level set implementation \cite{mitchell2005}, and published learning based results on the same problem recover the same set \cite{bansal2021deepreach}. We frame this as three independent methods converging to the same set, and we make no claim of superiority for any of them. Our reimplementation was tuned for set agreement rather than for the value error metrics reported elsewhere, so comparisons beyond the zero level set would not be meaningful.
+
+One apparent anomaly deserves explanation. The mean absolute difference between our discounted value and the undiscounted reference value is $1.127$, which is large relative to the value scale. This is not an error but a structural property of the discounted formulation. By construction the fixed point of \eqref{eq_backup} with $\gamma_h < 1$ is compressed toward $h$ by the $(1-\gamma_h)h$ term, so the discounted value differs from the undiscounted value everywhere except on scale invariant features such as the zero level set. Comparing the two values pointwise is therefore biased by design, and the zero level set is the only object for which agreement should be expected. This is also why the deployment margin of Remark~\ref{rem_honest} is calibrated on outcomes rather than on values.
+
+On a six dimensional ship avoidance problem, grid resolution limits the comparison, with intersection over union between $0.6$ and $0.84$ dominated by thin shell effects at the set boundary. A Monte Carlo self consistency audit is sharper. Policies extracted from the computed value avoid the obstacle in $100\%$ of rollouts, with a false safety rate of $0\%$ and a value to outcome correlation of $0.99$. These results verify that the solver underlying the exact computations is trustworthy at the level at which its outputs are used.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
