@@ -60,7 +60,7 @@
 \maketitle
 
 \begin{abstract}
-This article presents a dwell constrained robust invariant set (RIS) framework for the safe weathervaning station keeping of an autonomous surface vessel (ASV) driven by a single engine and a sterndrive. Station keeping with this propulsion system is challenging because each gear position is held for a minimum dwell time, and a lock in neutral removes both thrust and steering authority since the sterndrive steers by vectoring the thrust. Existing safety certificates do not consider this dwell, which can lead to an optimistic certificate that declares unsafe states safe. To address this problem, the proposed framework augments the gear state and its remaining lock time to the state and learns the dwell constrained safety value by a one step adversarial backup with legality masking. Since the dwell restricts only the control player of the safety game, the safe set becomes a family of sets that depends on the remaining lock time, on which a task policy and a value threshold shield are built. The proposed framework is validated through numerical simulations and full scale field experiments on an 8 m ASV compared with a dwell unaware certificate and with PID and NMPC baselines, \pending{demonstrating the headline result of the simulations and the field trials, to be stated once the designated runs are analyzed}.
+This article presents a dwell constrained robust invariant set (RIS) framework for the safe weathervaning station keeping of an autonomous surface vessel (ASV) driven by a single engine and a sterndrive. Station keeping with this propulsion system is challenging because each gear position is held for a minimum dwell time, and a lock in neutral removes both thrust and steering authority since the sterndrive steers by vectoring the thrust. Existing safety certificates do not consider this dwell, which can lead to an optimistic certificate that declares unsafe states safe. To address this problem, the proposed framework augments the gear state and its remaining lock time to the state and learns the dwell constrained safety value by a one step adversarial backup with legality masking. Since the dwell restricts only the control player of the safety game, the safe set becomes a family of sets that depends on the remaining lock time, on which a task policy and a value threshold shield are built. The proposed framework is validated through numerical simulations against a dwell unaware certificate, \pending{simulation headline to be stated once the simulation numbers are final}, and through full scale field experiments on an 8 m ASV. In the field, the ASV remained inside the 4 m disk for 95.6\% of the time compared with 78.5\% and 69.6\% for the PID and NMPC baselines.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -525,7 +525,7 @@ As summarized in Table~\ref{tab_sim}, the proposed controller \pending{headline 
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
-The experiments were conducted on the ASV of Section~\ref{sec_vessel} at \pending{site} on \pending{dates} in the area shown in Fig.~\ref{fig_site}. During the trials, the wind was \pending{speed and direction, measurement source}, and the current was \pending{TBD}. A setpoint was fixed in the inertial frame, the keep in radius was set to $R = \pending{TBD}$~m, and each run lasted \pending{TBD} s after the operator had brought the ASV inside the disk. For a fair comparison, the proposed controller, B1, and C1 were run back to back on the same setpoint to ensure comparable conditions \pending{confirm sequencing and the number of runs per controller}. The proposed controller was run with the deployment margin $\tau$ and the networks trained in simulation without any field retraining, and a video of the trials is available at \pending{link}.
+The experiments were conducted on the ASV of Section~\ref{sec_vessel} at \pending{site} in the sea area shown in Fig.~\ref{fig_site}. The baselines B1 and C1 were tested on September 11, 2026, and the proposed controller on September 17, 2026, in the same sea area. Since the baselines and the proposed controller were run on different days, the wind conditions may differ between the two days, and the wind and the current were not measured during the trials \pending{wind and current on each day, if available}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, so that every run started at the setpoint, and the keep in radius was set to $R = 4$~m for all controllers. Three runs of 400.5, 362.5, and 325.0~s were recorded with the proposed controller, one run of 364.5~s with B1, and three runs of 280.0, 116.9, and 213.0~s with C1. The proposed controller ran the task policy of Section~\ref{sec_shield} under the shield with the deployment margin $\tau = 0.5$ and the networks trained in simulation without any field retraining. At each step, the proposal of the task policy was checked one step ahead against the certificate and replaced by the action of $\pi_h$ when the check failed. The heading was left free for all controllers, and a video of the trials is available at \pending{link}.
 
 \begin{figure}[!t]
 \centering
@@ -537,31 +537,36 @@ The experiments were conducted on the ASV of Section~\ref{sec_vessel} at \pendin
 
 \subsubsection{Onboard Implementation}\label{sec_onboard}
 
-The proposed controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. An extended Kalman filter estimates the position, heading, and body rates at 10~Hz from the measurements of the GPS and the AHRS listed in Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, ensuring consistent legality between the controller and the plant. Based on the assembled state, the node evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request to the PLC. Inference of the three networks takes \pending{TBD} ms per step on the control PC, well within the control period of 0.5~s. The PID and NMPC baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, ensuring that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
+The proposed controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. An extended Kalman filter estimates the position, heading, and body rates at 10~Hz from the measurements of the GPS and the AHRS listed in Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, ensuring consistent legality between the controller and the plant. Based on the assembled state, the node evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request to the PLC. The computation time per step logged by the proposed node was 32.6~ms on average and 86.3~ms at most on the control PC, well within the control period of 0.5~s. The PID and NMPC baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, ensuring that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
 
 \subsection{Experimental Results}\label{sec_exp}
 
-To validate the proposed controller under real sea conditions, the field results of the proposed controller compared with the PID and NMPC baselines are reported in this subsection. Only the runs designated by the authors as the official trials are reported, and every quantitative entry is pending their designation.
+To validate the proposed controller under real sea conditions, the field results of the proposed controller are compared with those of the PID and NMPC baselines in this subsection. Only the designated runs of Section~\ref{sec_exp_setup} are reported, and all statistics are computed over these runs with the common criterion $R = 4$~m.
 
 \subsubsection{Comparison With Baselines}\label{sec_exp_comp}
 
-As shown in Fig.~\ref{fig_traj}, the trajectories of the three controllers are plotted in the setpoint frame together with the keep in circle. The time histories of the distance to the setpoint, the certified value, the gear state $(g, \tau_g)$, and the shield flag of the proposed controller are shown in Fig.~\ref{fig_time}, together with the distance and gear histories of the baselines. The field metrics are summarized in Table~\ref{tab_field}, and they are the same as in Section~\ref{sec_sim_closed} with the addition of the realized disturbance level discussed below.
+As illustrated in Figs.~\ref{fig_field_prop}, \ref{fig_field_b1}, and \ref{fig_field_c1}, a representative run of each controller is plotted over a 300~s axis. Each figure shows the trajectory in the setpoint frame, the distance to the setpoint, the gear level, and the heading $\tilde{\psi}$, and Fig.~\ref{fig_field_prop} also shows the safety value $V_h$ of the proposed controller. The position error $(\tilde{x}, \tilde{y})$ is expressed in an inertial frame whose $x$ axis is aligned with the heading at engagement, and $\tilde{\psi}$ is measured from that heading, while the distance is independent of the frame. In the three representative runs, the heading changed by up to about $37^\circ$ from the heading at engagement. The field metrics over the designated runs are summarized in Table~\ref{tab_field}, where the growth in lock denotes the growth of the distance within the 3~s after a shift, and the shield rate is the fraction of the logged status samples at which the shield replaced the task action.
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-%\includegraphics[width=\linewidth]{figures/fig_traj.pdf}
-\figph{Fig. 8 placeholder. Trajectories in the setpoint frame for B1, C1, and the proposed controller, with the keep in circle, the heading indicated along the trajectory, and the wind direction.}{5cm}
-\caption{Field trajectories in the setpoint frame with the keep in circle of radius $R$. \pending{Designated runs to be inserted.}}
-\label{fig_traj}
-\end{figure}
+\IfFileExists{figures/fig_field_proposed.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_proposed.pdf}}{\figph{Fig. 8 placeholder. Field run of the proposed controller.}{4cm}}
+\caption{Field run of the proposed controller on September 17, 2026, showing the first 300~s of the 325.0~s run. (a) Trajectory in the setpoint frame with the keep in circle of radius $R = 4$~m, where the open circle, the filled square, and the red dots mark the start, the end, and the samples outside the circle, respectively. (b) Distance to the setpoint with $R$ dashed. (c) Gear level. (d) Heading $\tilde{\psi}$ relative to the heading at engagement. (e) Safety value $V_h$ with the zero threshold dotted.}
+\label{fig_field_prop}
+\end{figure*}
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-%\includegraphics[width=\linewidth]{figures/fig_time.pdf}
-\figph{Fig. 9 placeholder. Time histories for the proposed controller. Panels for the distance to the setpoint with the radius R, the certified value with the margin tau, the gear level with the timer, and the shield flag. Overlaid distance and gear histories of B1 and C1.}{6cm}
-\caption{Time histories of the distance to the setpoint, the certified value, the gear level and the remaining lock time, and the shield flag in the field. \pending{Designated runs to be inserted.}}
-\label{fig_time}
-\end{figure}
+\IfFileExists{figures/fig_field_b1.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_b1.pdf}}{\figph{Fig. 9 placeholder. Field run of the PID controller B1.}{4cm}}
+\caption{Field run of the PID controller B1 on September 11, 2026, showing the first 300~s of the 364.5~s run. (a) Trajectory in the setpoint frame with the keep in circle of radius $R = 4$~m, where the open circle, the filled square, and the red dots mark the start, the end, and the samples outside the circle, respectively. (b) Distance to the setpoint with $R$ dashed. (c) Gear level. (d) Heading $\tilde{\psi}$ relative to the heading at engagement.}
+\label{fig_field_b1}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\IfFileExists{figures/fig_field_c1.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_c1.pdf}}{\figph{Fig. 10 placeholder. Field run of the NMPC controller C1.}{4cm}}
+\caption{Field run of the NMPC controller C1 on September 11, 2026, showing the 280.0~s run. (a) Trajectory in the setpoint frame with the keep in circle of radius $R = 4$~m, where the open circle, the filled square, and the red dots mark the start, the end, and the samples outside the circle, respectively. (b) Distance to the setpoint with $R$ dashed. (c) Gear level. (d) Heading $\tilde{\psi}$ relative to the heading at engagement.}
+\label{fig_field_c1}
+\end{figure*}
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.35}
@@ -573,33 +578,45 @@ As shown in Fig.~\ref{fig_traj}, the trajectories of the three controllers are p
 \toprule
 Metric & B1 & C1 & \textbf{Proposed} \\
 \midrule
-Run duration (s) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Mean distance (m) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-RMS distance (m) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Max distance (m) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Time inside disk (\%) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Switches per minute & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Max excursion in lock (m) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Shield rate (\%) & n/a & n/a & \textbf{\pending{TBD}} \\
-Time per step (ms) & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Realized disturbance to bound & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
+Runs, total duration (s) & 1, 364.5 & 3, 609.9 & \textbf{3, 1088.0} \\
+Mean distance (m) & 2.86 & 3.26 & \textbf{1.91} \\
+RMS distance (m) & 3.18 & 3.59 & \textbf{2.17} \\
+Max distance (m) & 5.66 & 7.52 & \textbf{6.06} \\
+Time inside disk (\%) & 78.5 & 69.6 & \textbf{95.6} \\
+Longest excursion (s) & 78.5 & 59.0 & \textbf{12.0} \\
+Switches per minute & 11.03 & 10.03 & \textbf{10.43} \\
+Min.\ interval between shifts (s) & 3.49 & 3.48 & \textbf{3.48} \\
+Growth in lock, mean (m) & 0.26 & 0.36 & \textbf{0.21} \\
+Growth in lock, max (m) & 1.01 & 1.40 & \textbf{1.73} \\
+Time in $\gR$ (\%) & 47.0 & 55.6 & \textbf{46.7} \\
+Time in $\gN$ (\%) & 32.3 & 28.9 & \textbf{50.6} \\
+Time in $\gF$ (\%) & 20.7 & 15.5 & \textbf{2.8} \\
+Shield rate (\%) & n/a & n/a & \textbf{21.8} \\
+Time per step, mean (ms) & 0.3 & 38.8 & \textbf{32.6} \\
+Time per step, max (ms) & 0.6 & 68.3 & \textbf{86.3} \\
 \bottomrule
 \end{tabular}
+\par\vspace{3pt}
+\begin{minipage}{\columnwidth}\scriptsize\raggedright
+All statistics are time weighted over the designated runs with $R = 4$~m.
+\end{minipage}
 \end{table}
 
-As summarized in Table~\ref{tab_field}, the proposed controller \pending{headline of the field comparison to be stated once the designated runs are analyzed}. The PID controller B1 held station with a mean distance of \pending{TBD}~m and left the disk \pending{TBD} times. In addition, it shifted the gear \pending{TBD} times per minute, and each shift opened a lock during which the distance grew by up to \pending{TBD}~m. The NMPC controller C1 held station with a mean distance of \pending{TBD}~m and \pending{TBD} excursions with \pending{TBD} shifts per minute, while its solve time was \pending{TBD}~ms per step. In contrast, the proposed controller held station with a mean distance of \pending{TBD}~m, remained inside the disk for \pending{TBD} of the run, shifted the gear \pending{TBD} times per minute, and triggered the shield in \pending{TBD} of the steps. These results confirm that \pending{claim on the transfer to the ASV without retraining and on the number of gear shifts compared with the baselines to be stated once the designated runs are analyzed}.
+As summarized in Table~\ref{tab_field}, the proposed controller achieved the best station keeping performance in terms of the mean and RMS distance and the time inside the disk. The PID controller B1 held station with a mean distance of 2.86~m and remained inside the disk for 78.5\% of the time. It left the disk only once, but this single excursion lasted 78.5~s and reached 5.66~m, as shown in Fig.~\ref{fig_field_b1}(b), while the gear cycled regularly through forward, neutral, and reverse. The poorest performance was observed with the NMPC controller C1, which held station with a mean distance of 3.26~m and remained inside the disk for only 69.6\% of the time with a maximum distance of 7.52~m. In the run of Fig.~\ref{fig_field_c1}, the ASV left the disk ten times for 4.5 to 12.5~s at intervals of about 25~s, and in the shortest run it stayed outside for 59.0~s, which is consistent with the nominal disturbance handling of C1. Its computation time of 38.8~ms per step remained within the control period.
+
+In contrast, the proposed controller held station with a mean distance of 1.91~m and an RMS distance of 2.17~m, and it remained inside the disk for 95.6\% of the time, with 3.0\%, 5.5\%, and 4.9\% of the time outside the disk in the three runs. Its excursions were short, and the longest lasted 12.0~s compared with 78.5~s for B1 and 59.0~s for C1, as illustrated by the four excursions of at most 6.5~s in Fig.~\ref{fig_field_prop}(b). The maximum distance of 6.06~m occurred in the last 10~s of one run, which ended before the ASV returned inside the disk, whereas every other excursion returned inside the disk within 12~s. Moreover, the three controllers shifted the gear at a similar rate of 10.03 to 11.03 times per minute, so the improvement was not obtained by shifting more often. In addition, the proposed controller engaged forward for only 2.8\% of the time compared with 20.7\% for B1 and 15.5\% for C1. These results confirm that the task policy and the shield trained in simulation transferred to the ASV without retraining and kept the ASV inside the disk for 95.6\% of the time under real sea conditions with a shift frequency comparable to the baselines.
 
 \subsubsection{Discussion}\label{sec_exp_disc}
 
-The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. In Fig.~\ref{fig_time}, \pending{observed behavior of the distance and the certified value during each lock to be described from the designated runs}. In Table~\ref{tab_field}, the maximum excursion during locks quantifies the margin reserved for the lock, and its comparison across controllers indicates which controller opens locks at unfavorable moments.
+The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. The PLC enforced the dwell for every controller, and the measured minimum interval between shifts was from 3.48 to 3.50~s in every run, as listed in Table~\ref{tab_field}. During the locks the mean growth of the distance was the smallest for the proposed controller, 0.21~m compared with 0.26~m for B1 and 0.36~m for C1. However, its maximum growth of 1.73~m was the largest among the three controllers, indicating that a single lock opened at an unfavorable moment can still consume a large part of the margin. The gear usage also differed, as shown in panel (c) of each figure. The proposed controller held station mainly by alternating between reverse and neutral with brief forward engagements and spent 50.6\% of the time in neutral, whereas B1 and C1 cycled regularly through all three gear levels. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. The baselines repeatedly committed to such full reversals, whereas the proposed controller mostly switched only between reverse and neutral.
 
-The shield interventions mark the moments at which the task policy proposed an action whose certified value fell below the margin. Since the task policy is trained under the floored Lagrangian penalty of \eqref{eq_lagrange}, an intervention occurs only when the task action leaves the deployed set under the worst disturbance, \pending{intervention count and locations to be described from the designated runs}.
+The safety value $V_h$ in Fig.~\ref{fig_field_prop}(e) explains the interventions of the shield. Since $V_h \le h$ holds by construction, every sample outside the disk had $V_h < 0$. More importantly, in every one of the nine excursions over the three runs, $V_h$ had already fallen below zero before the ASV crossed the circle, on average 4.2~s earlier and from 0.5 to 7.0~s earlier. In addition, five of the fourteen episodes with $V_h < 0$ ended without any excursion. Therefore, the learned value anticipated the loss of the margin before it was realized, and $V_h$ was below zero during 4.4\%, 9.0\%, and 14.3\% of the three runs. The shield replaced the task action in 21.8\% of the logged status samples, which exceeds the fraction of time with $V_h < 0$ because the shield applies the margin $\tau = 0.5$ to the proposed action one step ahead, a stricter test than the zero threshold on $V_h$. Since the task policy is trained under the floored Lagrangian penalty of \eqref{eq_lagrange}, an intervention occurs only when the task action leaves the deployed set under the worst disturbance, so the shield rate measures how often the task policy approached the boundary of the deployed set in the field.
 
-While the certificate is computed against the worst case adversary, the real disturbance encountered in the field is not a worst case. The realized disturbance during the trials, estimated from the drift during neutral locks and from the residual of the state estimate, amounted to \pending{TBD} of the bound \eqref{eq_wbox}. \pending{Statement on the portion of the certified margin consumed by the real disturbance, to be made once the realized disturbance is quantified.} The portion of the margin not consumed by the real disturbance acts as a reserve against unmodeled effects such as wave induced motion, estimation error, and actuator timing jitter. This reserve is desirable for a safety layer on an ASV that will meet stronger winds than those of the trial days.
+While the certificate is computed against the worst case adversary, the real disturbance encountered in the field is not a worst case. The wind and the current were not measured during the trials, and the realized disturbance relative to the bound \eqref{eq_wbox} is \pending{realized disturbance level, if estimated from the drift during neutral locks}. The portion of the margin not consumed by the real disturbance acts as a reserve against unmodeled effects such as wave induced motion, estimation error, and actuator timing jitter. This reserve is desirable for a safety layer on an ASV that will meet stronger winds than those of the trial days.
 
 \section{Conclusion}\label{sec_conclusion}
 
-This article presented a dwell constrained RIS framework for the safe weathervaning station keeping of an ASV driven by a single engine and a sterndrive. Since the dwell restricts only the control player of the safety game while the disturbance acts at every step, the safe set becomes a family of sets that shrinks with the remaining lock time. The gear state and its remaining lock time were augmented to the state, and the dwell constrained safety value was learned by a one step adversarial scheme with legality masking. A task policy and a value threshold shield were built on the learned value. The proposed framework was validated through simulations and full scale field experiments with an 8~m ASV compared with PID and NMPC baselines, \pending{headline of the simulation and field results to be stated once the designated runs are analyzed}. The current approach provides no bound on the approximation error of the neural representation, and the field validation covers a single dwell channel. Future work will address these limitations by quantifying the approximation error and by extending the validation to several dwell channels.
+This article presented a dwell constrained RIS framework for the safe weathervaning station keeping of an ASV driven by a single engine and a sterndrive. Since the dwell restricts only the control player of the safety game while the disturbance acts at every step, the safe set becomes a family of sets that shrinks with the remaining lock time. The gear state and its remaining lock time were augmented to the state, and the dwell constrained safety value was learned by a one step adversarial scheme with legality masking. A task policy and a value threshold shield were built on the learned value. The proposed framework was validated through simulations, \pending{simulation headline to be stated once the simulation numbers are final}, and through full scale field experiments with an 8~m ASV. In the field, the ASV remained inside the 4~m disk for 95.6\% of the time with a mean distance of 1.91~m, compared with 78.5\% and 2.86~m for the PID baseline and 69.6\% and 3.26~m for the NMPC baseline. The current approach provides no bound on the approximation error of the neural representation, and the field validation covers a single dwell channel. Future work will address these limitations by quantifying the approximation error and by extending the validation to several dwell channels.
 
 \appendix[Proof of Lemma 1]
 
