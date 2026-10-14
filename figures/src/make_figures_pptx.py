@@ -425,7 +425,7 @@ def make_fig1():
     # ----- Stage 1 -----
     s1x, s1y, s1w, s1h = 1.36, 0.34, 3.08, 1.10
     t.rect(s1x, s1y, s1w, s1h, C_OFF, 'FFFFFF', name='stage1')
-    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Stage 1', 'b'), '  dwell indexed RIS by adversarial RL')],
+    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Stage 1', 'b'), '  dwell constrained RIS by adversarial RL')],
             size=7.0, color=C_OFF, align='left')
     t.cylinder(s1x + 0.10, s1y + 0.32, 0.44, 0.52, [T('replay'), T('buffer')], C_OFF, C_OFF_BG, size=6.0,
                name='replay_buffer')
@@ -504,7 +504,7 @@ def make_fig1():
     t.label(xs_ + 0.04, 0.92, 0.36, 0.14, [T(I('g'), ', ', I('δ'))], size=6.6, align='left')
     xm_ = NX + 0.37
     t.arrow((xm_, py), (xm_, 0.72), color=C_ON)
-    t.label(xm_ + 0.04, 0.92, 0.80, 0.14, [T('GNSS, IMU')], size=6.0, color=C_GRAY, align='left')
+    t.label(xm_ + 0.04, 0.92, 0.80, 0.14, [T('GPS, AHRS')], size=6.0, color=C_GRAY, align='left')
 
     out = os.path.join(OUTDIR, 'fig1_framework.pptx')
     _save(prs, out)
