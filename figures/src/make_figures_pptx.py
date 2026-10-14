@@ -182,6 +182,118 @@ class Canvas:
         return sh
 
 
+class TC:
+    """위쪽 왼쪽이 원점인 좌표계 (인치) 로 그리는 도구. Fig. 1 용."""
+
+    def __init__(self, slide):
+        self.s = slide
+
+    def rect(self, x, y, w, h, ec, fc='FFFFFF', lw=0.7, radius=0.04, dash=False, name=None):
+        sh = self.s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+        sh.adjustments[0] = min(0.5, radius / min(w, h))
+        if fc is None:
+            sh.fill.background()
+        else:
+            sh.fill.solid()
+            sh.fill.fore_color.rgb = RGBColor.from_string(fc)
+        sh.line.color.rgb = RGBColor.from_string(ec)
+        sh.line.width = Pt(lw)
+        if dash:
+            sh.line.dash_style = 4
+        sh.shadow.inherit = False
+        if name:
+            sh.name = name
+        return sh
+
+    def node(self, x, y, w, h, lines, ec, fc='FFFFFF', size=7.0, color='000000', lw=0.7, bold=False, name=None):
+        sh = self.rect(x, y, w, h, ec, fc, lw=lw, name=name)
+        fill_text(sh.text_frame, lines, size, color=color, bold=bold, spacing=1.05)
+        return sh
+
+    def label(self, x, y, w, h, lines, size=6.5, color='000000', align='center', bold=False, italic=False,
+              anchor=MSO_ANCHOR.MIDDLE, name=None):
+        tb = self.s.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+        al = {'center': PP_ALIGN.CENTER, 'left': PP_ALIGN.LEFT, 'right': PP_ALIGN.RIGHT}[align]
+        fill_text(tb.text_frame, lines, size, color=color, align=al, bold=bold, italic=italic,
+                  anchor=anchor, spacing=1.05)
+        if name:
+            tb.name = name
+        return tb
+
+    def _end(self, shape, tag):
+        ln = shape.line._get_or_add_ln()
+        e = etree.SubElement(ln, qn(tag))
+        e.set('type', 'triangle')
+        e.set('w', 'sm')
+        e.set('len', 'sm')
+
+    def arrow(self, p0, p1, color='000000', lw=0.9, both=False, head=True, dash=False):
+        c = self.s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(p0[0]), Inches(p0[1]),
+                                        Inches(p1[0]), Inches(p1[1]))
+        c.line.color.rgb = RGBColor.from_string(color)
+        c.line.width = Pt(lw)
+        if dash:
+            c.line.dash_style = 4
+        if both:
+            self._end(c, 'a:headEnd')
+        if head:
+            self._end(c, 'a:tailEnd')
+        return c
+
+    def poly(self, pts, color='000000', lw=0.9, head=True):
+        e = [(Inches(x), Inches(y)) for x, y in pts]
+        fb = self.s.shapes.build_freeform(e[0][0], e[0][1], scale=1.0)
+        fb.add_line_segments(e[1:], close=False)
+        sh = fb.convert_to_shape()
+        sh.fill.background()
+        sh.line.color.rgb = RGBColor.from_string(color)
+        sh.line.width = Pt(lw)
+        sh.shadow.inherit = False
+        if head:
+            self._end(sh, 'a:tailEnd')
+        return sh
+
+    def polygon(self, pts, fc, ec=None, lw=0.6, name=None):
+        e = [(Inches(x), Inches(y)) for x, y in pts]
+        fb = self.s.shapes.build_freeform(e[0][0], e[0][1], scale=1.0)
+        fb.add_line_segments(e[1:], close=True)
+        sh = fb.convert_to_shape()
+        sh.fill.solid()
+        sh.fill.fore_color.rgb = RGBColor.from_string(fc)
+        if ec:
+            sh.line.color.rgb = RGBColor.from_string(ec)
+            sh.line.width = Pt(lw)
+        else:
+            sh.line.fill.background()
+        sh.shadow.inherit = False
+        if name:
+            sh.name = name
+        return sh
+
+    def ellipse(self, cx, cy, a, b, color, alpha):
+        sh = self.s.shapes.add_shape(MSO_SHAPE.OVAL, Inches(cx - a / 2), Inches(cy - b / 2), Inches(a), Inches(b))
+        sh.fill.solid()
+        sh.fill.fore_color.rgb = RGBColor.from_string(color)
+        clr = sh.fill._xPr.find(qn('a:solidFill')).find(qn('a:srgbClr'))
+        etree.SubElement(clr, qn('a:alpha')).set('val', str(int(alpha * 100000)))
+        sh.line.color.rgb = RGBColor.from_string(color)
+        sh.line.width = Pt(0.6)
+        sh.shadow.inherit = False
+        return sh
+
+    def boat(self, x, y, L, B, color=C_PLANT):
+        """위에서 본 선체 (선미 왼쪽, 선수 오른쪽) 와 선미 드라이브."""
+        hull = [(x, y + 0.12 * B), (x + 0.62 * L, y), (x + 0.86 * L, y + 0.12 * B), (x + L, y + 0.5 * B),
+                (x + 0.86 * L, y + 0.88 * B), (x + 0.62 * L, y + B), (x, y + 0.88 * B)]
+        self.polygon(hull, color, name='boat_hull')
+        self.polygon([(x - 0.07 * L, y + 0.38 * B), (x, y + 0.38 * B), (x, y + 0.62 * B),
+                      (x - 0.07 * L, y + 0.62 * B)], '1B3A5C', name='boat_sterndrive')
+
+    def gusts(self, x, y, n=3, dy=0.07, L=0.16, color='8A8A8A'):
+        for i in range(n):
+            self.arrow((x, y + i * dy), (x + L, y + i * dy), color=color, lw=0.8)
+
+
 def new_pres(W, H):
     prs = Presentation()
     prs.slide_width = Inches(W)
@@ -192,95 +304,96 @@ def new_pres(W, H):
 
 # ======================= Fig. 1 =======================
 def make_fig1():
-    W, H = 7.16, 2.85
+    """왼쪽 Offline 학습(시뮬레이션), 오른쪽 Online 배포(실선). 학습된 네트워크는 주황 테두리."""
+    W, H = 7.16, 2.45
     prs, slide = new_pres(W, H)
-    c = Canvas(slide, H)
-    YB, YT = 0.42, 2.52
+    t = TC(slide)
 
-    def panel(x, w, title, ec, fc):
-        c.rbox(x, YB, w, YT, ec, fc, lw=0.9, radius=0.06)
-        c.text(x + w / 2, YT - 0.12, [T(title)], size=7.6, color=ec, bold=True, w=w)
+    # ----- 두 영역 -----
+    OX, OY, OW, OH = 0.04, 0.04, 4.38, 2.37   # Offline
+    NX, NY, NW, NH = 4.86, 0.04, 2.26, 2.37   # Online
+    t.rect(OX, OY, OW, OH, C_OFF, C_OFF_BG, lw=1.0, radius=0.08, name='region_offline')
+    t.rect(NX, NY, NW, NH, C_ON, C_ON_BG, lw=1.0, radius=0.08, name='region_online')
+    t.label(OX + 0.10, OY + 0.05, 3.0, 0.22, [T(('Offline', 'b'), ' training in simulation')],
+            size=8.0, color=C_OFF, align='left')
+    t.label(NX + 0.10, NY + 0.05, 2.1, 0.22, [T(('Online', 'b'), ' deployment on the vessel')],
+            size=8.0, color=C_ON, align='left')
 
-    P1x, P1w = 0.05, 1.62
-    P2x, P2w = 1.93, 2.20
-    P3x, P3w = 4.39, 1.17
-    P4x, P4w = 5.82, 1.29
+    # ----- Offline 안쪽 -----
+    # 시뮬레이터
+    sx, sy, sw, sh = OX + 0.12, 0.40, 1.02, 1.88
+    t.rect(sx, sy, sw, sh, C_PLANT, 'FFFFFF', name='simulator')
+    t.label(sx, sy + 0.06, sw, 0.18, [T('Simulator')], size=7.2, bold=True, color=C_PLANT)
+    t.boat(sx + 0.20, sy + 0.74, 0.68, 0.25)
+    t.gusts(sx + 0.10, sy + 0.42, n=3, dy=0.06, L=0.15)
+    t.label(sx + 0.30, sy + 0.41, 0.6, 0.14, [T(I('d'), ' ∈ ', M('𝒲'))], size=6.5, color=C_GRAY, align='left')
+    t.label(sx, sy + 1.18, sw, 0.62, [T('gear ', I('g'), ' ∈ {R, N, F}'),
+                                      T('dwell ', I('D'), ISUB('g'), ' = 3 s'),
+                                      T('steering ', I('δ'))], size=6.5)
 
-    # (1) 선박
-    panel(P1x, P1w, 'Vessel with gear shift dwell', C_PLANT, C_PLANT_BG)
-    bx, bw = P1x + 0.09, P1w - 0.18
-    c.box(bx, 1.86, bw, 2.26, [T('Gear shift ', I('g'), ' ∈ {R, N, F}'),
-                               T('held ', I('D'), ISUB('g'), ' = 6 steps (3 s)')], C_PLANT)
-    c.box(bx, 1.36, bw, 1.76, [T('Sterndrive steering ', I('δ')), T('rate limited, no dwell')], C_PLANT)
-    c.box(bx, 0.86, bw, 1.26, [T('Disturbance ', I('d'), ' ∈ ', M('𝒲')), T('wind and current')], C_PLANT)
-    c.text(P1x + P1w / 2, 0.64, [T('Locked in N, thrust and'), T('steering force both vanish')],
-           size=6.8, color=C_RED, italic=True, w=P1w)
+    # Stage 1
+    s1x, s1y, s1w, s1h = 1.42, 0.40, 2.86, 0.98
+    t.rect(s1x, s1y, s1w, s1h, C_OFF, 'FFFFFF', name='stage1')
+    t.label(s1x + 0.08, s1y + 0.04, 2.6, 0.18, [T(('Stage 1', 'b'), '  dwell indexed safety value')],
+            size=7.0, color=C_OFF, align='left')
+    nh = 0.26
+    t.node(s1x + 0.12, s1y + 0.30, 0.46, nh, [T(I('π'), ISUB('h'))], C_OFF, size=7.5)
+    t.node(s1x + 0.12, s1y + 0.64, 0.46, nh, [T(I('μ'))], C_OFF, size=7.5)
+    t.node(s1x + 0.98, s1y + 0.40, 0.52, 0.40, [T(I('Q'), ISUB('h'))], C_OFF, size=7.5)
+    t.arrow((s1x + 0.58, s1y + 0.43), (s1x + 0.98, s1y + 0.53), color=C_OFF)
+    t.arrow((s1x + 0.58, s1y + 0.77), (s1x + 0.98, s1y + 0.67), color=C_OFF)
+    t.label(s1x + 0.60, s1y + 0.27, 0.36, 0.14, [T('max')], size=6.2, color=C_GRAY)
+    t.label(s1x + 0.60, s1y + 0.80, 0.36, 0.14, [T('min')], size=6.2, color=C_GRAY)
+    # 안전집합 족
+    ex, ey = s1x + 2.20, s1y + 0.56
+    for a, b, al in [(0.86, 0.48, 0.16), (0.58, 0.32, 0.30), (0.30, 0.17, 0.55)]:
+        t.ellipse(ex, ey, a, b, C_OFF, al)
+    t.label(ex - 0.43, s1y + 0.13, 0.86, 0.14, [T(M('𝒮'), '(', I('g'), ', ', I('τ'), ISUB('g'), ')')],
+            size=6.5, color=C_OFF)
+    for dx, lab, col in [(0.36, '0', C_OFF), (0.22, '3', C_OFF), (0.0, '5', 'FFFFFF')]:
+        t.label(ex + dx - 0.05, ey - 0.07, 0.10, 0.14, [T(lab)], size=6.0, color=col)
+    t.arrow((s1x + 1.50, s1y + 0.60), (ex - 0.45, ey + 0.04), color=C_OFF)
 
-    # (2) Stage 1
-    panel(P2x, P2w, 'Stage 1 offline, dwell indexed RIS', C_OFF, C_OFF_BG)
-    bx, bw = P2x + 0.09, P2w - 0.18
-    c.box(bx, 1.90, bw, 2.26, [T('Augmented state'),
-                               T(I('ξ'), ' = (', I('x̃'), ', ', I('ỹ'), ', ', I('ψ̃'), ', ', I('u'), ', ',
-                                 I('v'), ', ', I('r'), ', ', I('δ'), ', ', I('g'), ', ', I('τ'), ISUB('g'), ')')],
-          C_OFF)
-    half = (bw - 0.08) / 2
-    c.box(bx, 1.42, half, 1.80, [T('Protagonist ', I('π'), ISUB('h')), T('max over ', I('C'), '(', I('ξ'), ')')], C_OFF)
-    c.box(bx + half + 0.08, 1.42, half, 1.80, [T('Adversary ', I('μ')), T('min over ', M('𝒲'))], C_OFF)
-    c.box(bx, 0.94, bw, 1.32, [T('Twin safety critics ', I('Q'), ISUB('h,1'), ', ', I('Q'), ISUB('h,2')),
-                               T('one step discounted backup, masked')], C_OFF)
-    cx, cy = bx + 0.40, 0.64
-    for a, b, al in [(0.74, 0.34, 0.16), (0.50, 0.23, 0.30), (0.26, 0.12, 0.55)]:
-        c.ellipse(cx, cy, a, b, C_OFF, al)
-    for dx, lab, col in [(0.31, '0', C_OFF), (0.19, '3', C_OFF), (0.0, '5', 'FFFFFF')]:
-        c.text(cx + dx, cy, [T(lab)], size=6.2, color=col, w=0.12)
-    c.text(cx, cy + 0.235, [T(I('τ'), ISUB('g'), ' = 0, 3, 5')], size=6.3, color=C_OFF, w=0.8)
-    c.text(bx + bw - 0.02, 0.67, [T('Safe set family'), T(M('𝒮'), '(', I('g'), ', ', I('τ'), ISUB('g'), '), smaller'),
-                                  T('deeper in a lock')], size=6.8, ha='right', w=1.1)
+    # Stage 2
+    s2x, s2y, s2w, s2h = 1.42, 1.48, 2.86, 0.80
+    t.rect(s2x, s2y, s2w, s2h, C_OFF, 'FFFFFF', name='stage2')
+    t.label(s2x + 0.08, s2y + 0.04, 2.6, 0.18, [T(('Stage 2', 'b'), '  task policy')],
+            size=7.0, color=C_OFF, align='left')
+    t.node(s2x + 0.12, s2y + 0.34, 0.86, 0.32, [T(I('Q'), ISUB('h'), ' frozen')], C_GRAY, C_GRAY_BG, size=7.0)
+    t.node(s2x + 1.40, s2y + 0.34, 0.56, 0.32, [T(I('π'), ISUB('t'))], C_OFF, size=7.5)
+    t.arrow((s2x + 0.98, s2y + 0.50), (s2x + 1.40, s2y + 0.50), color=C_OFF)
+    t.label(s2x + 2.02, s2y + 0.30, 0.80, 0.40, [T('reward'), T('s.t. ', I('q'), ' ≥ ', I('τ'))], size=6.5)
+    # Stage 1 에서 Stage 2 로
+    t.arrow((s1x + 0.40, s1y + s1h), (s2x + 0.40, s2y + 0.34), color=C_OFF)
 
-    # (3) Stage 2
-    panel(P3x, P3w, 'Stage 2 offline', C_OFF, C_OFF_BG)
-    bx, bw = P3x + 0.08, P3w - 0.16
-    c.box(bx, 1.70, bw, 2.24, [T('Task policy ', I('π'), ISUB('t')), T('soft actor critic')], C_OFF)
-    c.box(bx, 1.06, bw, 1.58, [T('Lagrangian on'),
-                               T(I('q'), ' ≥ ', I('τ'), ', ', I('λ'), ' ≥ ', I('λ'), SUB('min'))], C_OFF)
-    c.text(P3x + P3w / 2, 0.74, [T('safety critic ', I('q')), T('frozen from'), T('Stage 1')],
-           size=6.6, color=C_GRAY, w=P3w)
+    # 시뮬레이터 왕복 (rollout)
+    for yy in (s1y + s1h / 2, s2y + s2h / 2):
+        t.arrow((sx + sw, yy), (s1x, yy), color=C_PLANT, both=True)
 
-    # (4) 온보드
-    panel(P4x, P4w, 'Onboard, every 0.5 s', C_ON, C_ON_BG)
-    bx, bw = P4x + 0.08, P4w - 0.16
-    c.box(bx, 1.88, bw, 2.26, [T('EKF state ', I('ξ'), ISUB('k')), T('at 10 Hz')], C_ON)
-    c.box(bx, 1.16, bw, 1.76, [T('Shield'),
-                               T('apply ', I('a'), ISUB('t'), ' if ', I('q'), '(', I('ξ'), ', ', I('a'), ISUB('t'), ') ≥ ', I('τ')),
-                               T('else apply ', I('π'), ISUB('h'), '(', I('ξ'), ')')], C_ON)
-    c.box(bx, 0.52, bw, 1.04, [T('PLC and'), T('servo cylinders')], C_ON)
-    c.arrow((P4x + P4w / 2, 1.88), (P4x + P4w / 2, 1.76), color=C_ON)
-    c.arrow((P4x + P4w / 2, 1.16), (P4x + P4w / 2, 1.04), color=C_ON)
+    # ----- Offline 에서 Online 으로 -----
+    ym = 1.24
+    t.arrow((OX + OW, ym), (NX, ym), color='000000', lw=1.4)
+    t.label(OX + OW - 0.02, ym - 0.24, 0.48, 0.16, [T('deploy')], size=6.5)
+    t.label(OX + OW - 0.02, ym + 0.06, 0.48, 0.16, [T('frozen')], size=6.5, color=C_GRAY)
 
-    # 패널 사이 화살표
-    ym = 1.56
-    c.arrow((P1x + P1w, ym), (P2x, ym))
-    c.text((P1x + P1w + P2x) / 2, ym + 0.13, [T('model')], size=6.5, w=0.4)
-    c.arrow((P2x + P2w, ym), (P3x, ym))
-    c.text((P2x + P2w + P3x) / 2, ym + 0.13, [T(I('q'), ', ', I('π'), ISUB('h'))], size=6.5, w=0.4)
-    c.arrow((P3x + P3w, ym), (P4x, ym))
-    c.text((P3x + P3w + P4x) / 2, ym + 0.13, [T(I('π'), ISUB('t'))], size=6.5, w=0.4)
-
-    # 위쪽 경로
-    yt = 2.68
-    xs, xe = P2x + P2w * 0.75, P4x + P4w * 0.30
-    c.poly([(xs, YT), (xs, yt), (xe, yt), (xe, YT)])
-    c.text((xs + xe) / 2, yt + 0.09, [T('certified ', I('q'), ', ', I('π'), ISUB('h'), ', and margin ', I('τ'))],
-           size=6.5, w=2.4)
-
-    # 아래쪽 폐루프
-    y1, y2 = 0.27, 0.11
-    x_on, x_pl = P4x + P4w * 0.5, P1x + P1w * 0.5
-    c.poly([(x_on, YB), (x_on, y1), (x_pl + 0.15, y1), (x_pl + 0.15, YB)], color=C_ON)
-    c.text((x_on + x_pl) / 2, y1 + 0.08, [T('gear and steering commands to the vessel')], size=6.5,
-           color=C_ON, w=3.0)
-    c.poly([(x_pl - 0.15, YB), (x_pl - 0.15, y2), (x_on + 0.25, y2), (x_on + 0.25, YB)], color=C_PLANT)
-    c.text((x_on + x_pl) / 2, y2 - 0.075, [T('GNSS and IMU measurements')], size=6.5, color=C_PLANT, w=3.0)
+    # ----- Online 안쪽 (폐루프) -----
+    t.node(NX + 0.14, 0.40, 0.56, 0.32, [T('EKF')], C_ON, size=7.0)
+    t.node(NX + 0.86, 0.40, 0.50, 0.32, [T(I('π'), ISUB('t'))], C_OFF, size=7.5)
+    t.node(NX + 1.50, 0.40, 0.64, 0.46, [T('Shield'), T(I('q'), ' ≥ ', I('τ')), T('else ', I('π'), ISUB('h'))], C_OFF, size=6.8)
+    t.arrow((NX + 0.70, 0.56), (NX + 0.86, 0.56), color=C_ON)
+    t.arrow((NX + 1.36, 0.56), (NX + 1.50, 0.56), color=C_ON)
+    # 선박
+    vx, vy, vw, vh = NX + 0.30, 1.46, 1.62, 0.82
+    t.rect(vx, vy, vw, vh, C_PLANT, 'FFFFFF', name='vessel')
+    t.boat(vx + 0.42, vy + 0.16, 0.86, 0.30)
+    t.gusts(vx + 0.10, vy + 0.08, n=3, dy=0.07, L=0.18)
+    t.label(vx, vy + 0.52, vw, 0.24, [T('Vessel, PLC, servo cylinders')], size=6.5)
+    # 명령과 측정
+    t.poly([(NX + 1.82, 0.86), (NX + 1.82, vy)], color=C_ON)
+    t.label(NX + 1.86, 1.12, 0.40, 0.24, [T(I('g'), ', ', I('δ'))], size=6.8, align='left')
+    t.poly([(NX + 0.42, vy), (NX + 0.42, 0.72)], color=C_ON)
+    t.label(NX + 0.02, 1.00, 0.38, 0.34, [T('GNSS'), T('IMU')], size=6.3, color=C_GRAY, align='right')
+    t.label(NX + 0.62, 1.10, 1.10, 0.16, [T('every 0.5 s')], size=6.3, color=C_ON)
 
     out = os.path.join(OUTDIR, 'fig1_framework.pptx')
     prs.save(out)

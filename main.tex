@@ -84,7 +84,7 @@ The remainder of this article is organized as follows. Section~\ref{sec_system} 
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell indexed safe station keeping. The gear state and its timer are promoted to state variables, and a one step adversarial backup with legality masking learns the dwell indexed safety value offline in Stage~1. A task policy is trained in Stage~2 under a Lagrangian on the frozen safety critic, and onboard the certified value acts as a shield with the margin $\tau$, closing the loop through the PLC and the servo cylinders of the vessel.}
+\caption{Overall framework of the proposed dwell indexed safe station keeping. Offline, the dwell indexed safety value $Q_h$ is learned in simulation through a one step adversarial game between the safety policy $\pi_h$ and the adversary $\mu$ (Stage~1), and the task policy $\pi_t$ is trained under the frozen safety critic (Stage~2). Online, the frozen networks run on the vessel every 0.5~s, and the shield replaces the task action by $\pi_h$ whenever the certified value falls below the margin $\tau$.}
 \label{fig_framework}
 \end{figure*}
 
