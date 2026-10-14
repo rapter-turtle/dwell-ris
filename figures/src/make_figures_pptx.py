@@ -401,91 +401,146 @@ def make_fig1():
 
 
 # ======================= Fig. 2 =======================
+C_LINK = '00A0E0'   # 연결선 (원본 5번 슬라이드의 하늘색)
+C_PROTO = '1F6FB2'  # 통신 방식 글자
+C_BOUND = 'D62828'  # 선박 제어부 점선
+
+
+def _media(name):
+    """원본 'Ship mechanical system.pptx' 의 그림 파일을 읽는다."""
+    import io
+    import zipfile
+    z = zipfile.ZipFile(os.path.join(HERE, '..', '..', '..', 'Ship mechanical system.pptx'))
+    return Image.open(io.BytesIO(z.read('ppt/media/' + name))).convert('RGB')
+
+
+def _crop_frac(im, l, t, r, b):
+    w, h = im.size
+    return im.crop((int(l * w), int(t * h), int(w - r * w), int(h - b * h)))
+
+
+def _green_bbox(im, pad=4):
+    """CAN 컨버터 사진에서 초록 기판 영역만 남긴다 (둘레의 한글 주석 제거)."""
+    px = im.load()
+    w, h = im.size
+    xs, ys = [], []
+    for y in range(h):
+        for x in range(w):
+            r, g, b = px[x, y]
+            if g > 90 and g > r + 25 and g > b + 25:
+                xs.append(x)
+                ys.append(y)
+    return im.crop((max(0, min(xs) - pad), max(0, min(ys) - pad), min(w, max(xs) + pad), min(h, max(ys) + pad)))
+
+
 def make_fig2():
     W, H = 7.16, 2.45
     prs, slide = new_pres(W, H)
-    c = Canvas(slide, H)
-    tmp = os.path.join(HERE, '_crop')
+    t = TC(slide)
+    tmp = os.path.join(PH, 'crops')
     os.makedirs(tmp, exist_ok=True)
 
-    # (a) 선박 사진
+    def pic(im, fname, x, y, w=None, h=None, name=None):
+        path = os.path.join(tmp, fname)
+        im.save(path, quality=92)
+        if w is not None and h is None:
+            h = w * im.height / im.width
+        elif h is not None and w is None:
+            w = h * im.width / im.height
+        p = slide.shapes.add_picture(path, Inches(x), Inches(y), Inches(w), Inches(h))
+        if name:
+            p.name = name
+        return x, y, w, h
+
+    # ---------- (a) 선박 ----------
     im = Image.open(os.path.join(PH, 'vessel_side.jpg')).crop((140, 300, 1340, 1040))
-    pa = os.path.join(tmp, 'a.jpg')
-    im.save(pa, quality=92)
-    wa = 2.62
+    wa = 2.20
     ha = wa * im.height / im.width
-    ya = 0.26 + (2.05 - ha) / 2
-    pic = slide.shapes.add_picture(pa, Inches(0.02), Inches(c.Y(ya + ha)), Inches(wa), Inches(ha))
-    pic.name = 'photo_a_vessel'
+    pic(im, 'a.jpg', 0.02, 0.05 + (2.05 - ha) / 2, w=wa, name='photo_a_vessel')
 
-    # (b) 선미 기관실 사진
+    # ---------- (b) 선미 기관실 ----------
     x0, y0, x1, y1 = 300, 360, 760, 960
-    im = Image.open(os.path.join(PH, 'stern_bay.jpg')).crop((x0, y0, x1, y1))
-    pb = os.path.join(tmp, 'b.jpg')
-    im.save(pb, quality=92)
-    hb = 2.05
-    wb = hb * im.width / im.height
-    xb = 0.02 + wa + 0.10
-    pic = slide.shapes.add_picture(pb, Inches(xb), Inches(c.Y(0.26 + hb)), Inches(wb), Inches(hb))
-    pic.name = 'photo_b_stern_bay'
+    imb = Image.open(os.path.join(PH, 'stern_bay.jpg')).crop((x0, y0, x1, y1))
+    wb = 1.40
+    hb = wb * imb.height / imb.width
+    xb, yb = 2.32, 0.05 + (2.05 - hb) / 2
+    pic(imb, 'b.jpg', xb, yb, w=wb, name='photo_b_stern_bay')
 
-    def px(ix, iy):  # 잘린 사진 픽셀 → 그림 좌표 (y 아래에서 위로)
-        return xb + ix / im.width * wb, 0.26 + hb - iy / im.height * hb
+    def bp(ix, iy):
+        return xb + ix / imb.width * wb, yb + iy / imb.height * hb
 
     targets = {'shift': (638, 691), 'steer': (413, 539), 'pivot': (485, 858)}
     labels = [('steer', ['Steering servo', 'cylinder'], (120, 40)),
-              ('shift', ['Shift servo', 'cylinder (R/N/F)'], (345, 150)),
+              ('shift', ['Shift servo', 'cylinder'], (345, 150)),
               ('pivot', ['Drive steering', 'pivot'], (150, 560))]
+    lw_, lh_ = 0.66, 0.22
     for key, lines, (lx, ly) in labels:
         tx, ty = targets[key]
-        p_t = px(tx - x0, ty - y0)
-        p_l = px(lx, ly)
-        bw_, bh_ = 0.78, 0.24
-        # 화살표를 먼저 그려 라벨 상자 아래에 깔리게 함
-        c.arrow((p_l[0], p_l[1] - bh_ / 2 if p_t[1] < p_l[1] else p_l[1] + bh_ / 2), p_t, color=C_YEL, lw=1.0)
-        c.box(p_l[0] - bw_ / 2, p_l[1] - bh_ / 2, bw_, p_l[1] + bh_ / 2, [T(t) for t in lines], C_PLANT,
-              size=6.4, lw=0.6)
+        pt = bp(tx - x0, ty - y0)
+        pl = bp(lx, ly)
+        start = (pl[0], pl[1] + lh_ / 2) if pt[1] > pl[1] else (pl[0], pl[1] - lh_ / 2)
+        t.arrow(start, pt, color=C_YEL, lw=1.0)
+        t.node(pl[0] - lw_ / 2, pl[1] - lh_ / 2, lw_, lh_, [T(s) for s in lines], C_PLANT, size=6.0, lw=0.6)
 
-    # (c) 하드웨어 연결도
-    xc = xb + wb + 0.12
-    wc = W - xc - 0.02
-    oy = 0.26  # 패널 아래쪽 기준
+    # ---------- (c) 제어 하드웨어 구성 (원본 5번 슬라이드 형식, Pixhawk 제외) ----------
+    cx0 = 3.84
+    # 선박 제어부 점선
+    t.rect(cx0 + 0.02, 0.58, 3.26, 1.50, C_BOUND, None, lw=1.2, radius=0.18, dash=True, name='boat_control_boundary')
+    t.label(cx0 + 1.70, 0.43, 1.58, 0.13, [T('Boat control hardware')], size=6.4, color=C_BOUND,
+            bold=True, align='right')
 
-    def B(x, y, w, h, lines, ec, fc, size=6.6):
-        c.box(xc + x, oy + y, w, oy + y + h, lines, ec, fc, size=size)
+    # Control PC
+    pc = _media('image12.jpg')
+    px_, py_, pw_, ph_ = pic(pc, 'pc.jpg', cx0 + 0.10, 0.06, w=0.62, name='control_pc')
+    t.label(cx0 + 0.78, 0.08, 0.9, 0.34, [T(('Control PC', 'b')), T('ROS 2')], size=6.6, align='left')
 
-    def L(p0, p1):
-        c.arrow((xc + p0[0], oy + p0[1]), (xc + p1[0], oy + p1[1]), lw=0.8)
+    # PLC (빨간 테두리)
+    plc = _media('image15.jpeg')
+    lx_, ly_, lw2, lh2 = pic(plc, 'plc.jpg', cx0 + 0.14, 0.86, w=0.58, name='plc')
+    t.rect(lx_, ly_, lw2, lh2, C_BOUND, None, lw=1.0, radius=0.01)
+    t.label(lx_ - 0.10, ly_ + lh2 + 0.02, lw2 + 0.20, 0.13, [T(('LS XGB PLC', 'b'))], size=6.4)
 
-    def LT(x, y, s, ha='center'):
-        c.text(xc + x, oy + y, [T(s)], size=5.9, color=C_GRAY, ha=ha, w=0.6)
+    # Control PC → PLC
+    xl = px_ + pw_ / 2
+    t.arrow((xl, py_ + ph_), (xl, ly_), color=C_LINK, lw=1.3, head=False)
+    t.label(xl + 0.04, 0.43, 0.6, 0.13, [T('Ethernet')], size=6.0, color=C_PROTO, align='left')
 
-    bw2 = (wc - 0.12) / 2
-    B(0.0, 1.62, bw2, 0.38, [T('Here3 GNSS'), T('receiver')], C_PLANT, C_PLANT_BG)
-    B(bw2 + 0.12, 1.62, bw2, 0.38, [T('Pixhawk Cube'), T('with IMU')], C_PLANT, C_PLANT_BG)
-    L((bw2, 1.81), (bw2 + 0.12, 1.81))
-    B(0.0, 1.00, wc, 0.42, [T('Onboard computer, ROS 2'), T('EKF at 10 Hz, shielded controller every 0.5 s')],
-      C_ON, C_ON_BG)
-    xm = bw2 + 0.12 + bw2 / 2
-    L((xm, 1.62), (xm, 1.42))
-    LT(xm + 0.05, 1.52, 'serial', ha='left')
-    B(0.0, 0.58, wc, 0.26, [T('LS XGB PLC')], C_GRAY, C_GRAY_BG)
-    L((wc / 2, 1.00), (wc / 2, 0.84))
-    LT(wc / 2 + 0.05, 0.92, 'Ethernet', ha='left')
-    aw = (wc - 0.16) / 3
-    acts = [[T('Shift servo'), T('cylinder'), T('R/N/F')],
-            [T('Steering servo'), T('cylinder'), T(I('δ'))],
-            [T('Engine'), T('speed')]]
-    for i, lines in enumerate(acts):
-        B(i * (aw + 0.08), 0.0, aw, 0.40, lines, C_PLANT, C_PLANT_BG, size=6.2)
-    for i, t in enumerate(['EtherCAT', 'EtherCAT', 'CAN']):
-        cxx = i * (aw + 0.08) + aw / 2
-        L((cxx, 0.58), (cxx, 0.40))
-        LT(cxx + 0.04, 0.49, t, ha='left')
+    # 버스
+    xbus = cx0 + 1.02
+    t.arrow((lx_ + lw2, ly_ + lh2 / 2), (xbus, ly_ + lh2 / 2), color=C_LINK, lw=1.3, head=False)
+
+    # CAN 컨버터
+    can = _green_bbox(_media('image16.png'))
+    cx_, cy_, cw_, ch_ = pic(can, 'can.jpg', cx0 + 1.18, 0.66, w=0.50, name='can_converter')
+    t.label(cx_ - 0.1, cy_ + ch_ + 0.02, cw_ + 0.2, 0.13, [T(('CAN converter', 'b'))], size=6.4)
+    yc = cy_ + ch_ / 2
+    # 서보 실린더
+    srv = _crop_frac(_media('image17.jpeg'), 0.0645, 0.1363, 0.1306, 0.1351)
+    sx_, sy_, sw_, sh_ = pic(srv, 'servo.jpg', cx0 + 1.18, 1.42, w=0.84, name='servo_cylinder')
+    t.label(sx_ - 0.1, sy_ + sh_ + 0.02, sw_ + 0.2, 0.13, [T(('Servo cylinders', 'b'))], size=6.4)
+    ys = sy_ + sh_ / 2
+    t.arrow((xbus, yc), (xbus, ys), color=C_LINK, lw=1.3, head=False)
+    t.arrow((xbus, yc), (cx_, yc), color=C_LINK, lw=1.3)
+    t.arrow((xbus, ys), (sx_, ys), color=C_LINK, lw=1.3)
+    t.label(xbus - 0.31, yc - 0.15, 0.30, 0.13, [T('RS232C')], size=6.0, color=C_PROTO, align='right')
+    t.label(xbus - 0.53, ys + 0.02, 0.50, 0.13, [T('EtherCAT')], size=6.0, color=C_PROTO, align='right')
+
+    # 엔진과 선미 드라이브
+    eng = _crop_frac(_media('image14.jpg'), 0.19817, 0.17253, 0.13359, 0.46496)
+    ex_, ey_, ew_, eh_ = pic(eng, 'engine.jpg', cx0 + 2.32, 0.88, w=0.90, name='engine_sterndrive')
+    # CAN 컨버터 → 엔진 회전수
+    xe1 = ex_ + ew_ * 0.35
+    t.poly([(cx_ + cw_, yc), (xe1, yc), (xe1, ey_)], color=C_LINK, lw=1.3)
+    t.label(cx_ + cw_ + 0.03, yc - 0.15, 0.4, 0.13, [T('CAN')], size=6.0, color=C_PROTO, align='left')
+    t.label(xe1 - 0.75, ey_ - 0.27, 0.72, 0.13, [T(('Engine speed', 'b'))], size=6.4, align='right')
+    # 서보 실린더 → 시프트와 조향
+    xe2 = ex_ + ew_ * 0.80
+    t.poly([(sx_ + sw_, ys + 0.10), (xe2, ys + 0.10), (xe2, ey_ + eh_)], color=C_LINK, lw=1.3)
+    t.label(sx_ + sw_ + 0.05, ys + 0.13, 1.25, 0.13, [T(('Shift and steering', 'b'))], size=6.4, align='left')
 
     # 패널 이름
-    for xx, s in [(0.02 + wa / 2, '(a)'), (xb + wb / 2, '(b)'), (xc + wc / 2, '(c)')]:
-        c.text(xx, 0.10, [T(s)], size=7.5, w=0.4)
+    for xx, s in [(0.02 + wa / 2, '(a)'), (xb + wb / 2, '(b)'), (cx0 + 1.65, '(c)')]:
+        t.label(xx - 0.2, 2.28, 0.4, 0.14, [T(s)], size=7.5)
 
     out = os.path.join(OUTDIR, 'fig2_vessel.pptx')
     prs.save(out)

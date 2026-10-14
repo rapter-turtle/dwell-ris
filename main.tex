@@ -98,8 +98,8 @@ The experimental platform is a Neo AURA 240 EXP, an open top experimental versio
 
 \begin{figure*}[!t]
 \centering
-\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel photograph, stern machinery bay with labeled cylinders, and hardware signal path.}{5cm}}
-\caption{Experimental vessel and its actuation hardware. (a) The vessel. (b) Stern machinery bay with the shift servo cylinder, the steering servo cylinder, and the drive steering pivot. (c) Signal path from the navigation sensors through the onboard computer and the PLC to the actuators. The bow thruster is installed but is not used in this study.}
+\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel photograph, stern machinery bay with labeled cylinders, and control hardware.}{5cm}}
+\caption{Experimental vessel and its actuation hardware. (a) The vessel. (b) Stern machinery bay with the shift servo cylinder, the steering servo cylinder, and the drive steering pivot. (c) Control hardware from the control PC through the PLC to the engine and the servo cylinders, with the communication interface of each link. The bow thruster is installed but is not used in this study.}
 \label{fig_vessel}
 \end{figure*}
 
@@ -133,13 +133,13 @@ Engine speed command & CAN \\
 Navigation & Pixhawk Cube IMU, Here3 GNSS \\
 Positioning accuracy & \pending{TBD} m \\
 State estimation & extended Kalman filter at 10 Hz \\
-Onboard computer & mini PC running ROS 2 \\
+Control computer & control PC running ROS 2 \\
 Control period & 0.5 s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Three actuation channels are exposed to the controller. The engine speed is commanded over a CAN interface. The gear shift among reverse, neutral, and forward is executed by an electric linear servo cylinder acting on the shift cable, and the steering angle of the drive is set by a servo cylinder mounted on the drive pivot. Both cylinders are driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so that the results concern a single engine sterndrive configuration. Navigation relies on a Pixhawk Cube flight controller with its inertial measurement unit and a Here3 GNSS receiver, and an onboard mini PC running ROS~2 fuses the measurements in an extended Kalman filter at 10~Hz and runs the controller at a period of 0.5~s.
+Three actuation channels are exposed to the controller. The engine speed is commanded over a CAN interface. The gear shift among reverse, neutral, and forward is executed by an electric linear servo cylinder acting on the shift cable, and the steering angle of the drive is set by a servo cylinder mounted on the drive pivot. Both cylinders are driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so that the results concern a single engine sterndrive configuration. Navigation relies on a Pixhawk Cube flight controller with its inertial measurement unit and a Here3 GNSS receiver, and a control PC running ROS~2 fuses the measurements in an extended Kalman filter at 10~Hz and runs the controller at a period of 0.5~s.
 
 \subsection{Gear Shift Dwell}\label{sec_dwell}
 
@@ -390,7 +390,7 @@ so that the safety policy takes over only when the task action would leave the d
 
 \subsection{Onboard Implementation}\label{sec_onboard}
 
-The controller runs as a ROS~2 node on the onboard mini PC. The extended Kalman filter publishes the position, heading, and body rates at 10~Hz from the Pixhawk inertial unit and the Here3 GNSS receiver. At each control period of 0.5~s the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request. The PLC executes the steering command on the drive pivot cylinder and the gear request on the shift cylinder, discards any shift request that arrives during a lock, and the engine speed setpoint for each gear direction is sent over CAN. Inference of the three networks takes \pending{TBD} ms per step on the onboard computer, against the control period of 500~ms, so the computation budget is not a constraint. The same node structure runs the PID and NMPC baselines of Section~\ref{sec_baselines}, which differ only in the policy evaluation block.
+The controller runs as a ROS~2 node on the control PC. The extended Kalman filter publishes the position, heading, and body rates at 10~Hz from the Pixhawk inertial unit and the Here3 GNSS receiver. At each control period of 0.5~s the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request. The PLC executes the steering command on the drive pivot cylinder and the gear request on the shift cylinder, discards any shift request that arrives during a lock, and the engine speed setpoint for each gear direction is sent over CAN. Inference of the three networks takes \pending{TBD} ms per step on the onboard computer, against the control period of 500~ms, so the computation budget is not a constraint. The same node structure runs the PID and NMPC baselines of Section~\ref{sec_baselines}, which differ only in the policy evaluation block.
 
 \section{Simulation Results}\label{sec_sim}
 
