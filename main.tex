@@ -81,13 +81,12 @@ In this article, the dwell is reinterpreted not as a scheduling restriction but 
 
 The remainder of this article is organized as follows. Section~\ref{sec_system} describes the vessel, the physical origin of the shift dwell, the maneuvering model, and the disturbance model. Section~\ref{sec_problem} formulates the augmented safety game and establishes that the augmentation preserves its structure. Section~\ref{sec_method} develops the dwell indexed safe controller, its learning scheme, the task policy, the shield, and the onboard implementation. Sections~\ref{sec_sim} and \ref{sec_exp} present the simulation and field results, respectively. Section~\ref{sec_conclusion} concludes this article, and the proof of the lemma is given in the Appendix. Fig.~\ref{fig_framework} shows the overall framework.
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-%\includegraphics[width=\linewidth]{figures/fig_framework.pdf}
-\figph{Fig. 1 placeholder. Overall framework. Left, the vessel with the gear shift (R/N/F, 3 s dwell) and the sterndrive steering. Center, the augmented state with the gear and its timer, the one step adversarial backup with legality masking, and the dwell indexed value. Right, the task policy, the value threshold shield, and the onboard ROS 2 and PLC pipeline.}{5cm}
-\caption{Overall framework of the proposed dwell indexed safe station keeping. The gear state and its timer are promoted to state variables, a one step adversarial backup with legality masking learns the dwell indexed safety value, and the margin shifted level set is deployed as a shield around a task policy on the vessel.}
+\IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
+\caption{Overall framework of the proposed dwell indexed safe station keeping. The gear state and its timer are promoted to state variables, and a one step adversarial backup with legality masking learns the dwell indexed safety value offline in Stage~1. A task policy is trained in Stage~2 under a Lagrangian on the frozen safety critic, and onboard the certified value acts as a shield with the margin $\tau$, closing the loop through the PLC and the servo cylinders of the vessel.}
 \label{fig_framework}
-\end{figure}
+\end{figure*}
 
 \section{System Description and Modeling}\label{sec_system}
 
@@ -97,13 +96,12 @@ This section describes the vessel and its actuation, explains where the gear shi
 
 The experimental platform is a Neo AURA 240 EXP, an open top experimental version of the AURA 240 leisure motorboat with a deep V planing hull, shown in Fig.~\ref{fig_vessel}. The vessel has a length overall of 8.29~m, a length between perpendiculars of 6.96~m, a breadth of 2.62~m, a depth of 0.66~m, and a draft of 0.34~m, and it is rated for twelve persons. Propulsion is provided by a single inboard diesel engine \pending{engine model to be confirmed, the vendor deck lists two models} driving a MerCruiser Bravo~1 sterndrive. The principal specifications are listed in Table~\ref{tab_vessel}.
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-%\includegraphics[width=\linewidth]{figures/fig_vessel.pdf}
-\figph{Fig. 2 placeholder. Photograph of the Neo AURA 240 EXP with labeled hardware. Labels for the sterndrive, the shift servo cylinder, the steering servo cylinder on the drive pivot, the PLC cabinet, the Pixhawk Cube and Here3 GNSS receiver, the onboard mini PC, and the unused bow thruster.}{5cm}
-\caption{Experimental vessel and its actuation and navigation hardware. The bow thruster is installed but is not used in this study.}
+\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel photograph, stern machinery bay with labeled cylinders, and hardware signal path.}{5cm}}
+\caption{Experimental vessel and its actuation hardware. (a) The vessel. (b) Stern machinery bay with the shift servo cylinder, the steering servo cylinder, and the drive steering pivot. (c) Signal path from the navigation sensors through the onboard computer and the PLC to the actuators. The bow thruster is installed but is not used in this study.}
 \label{fig_vessel}
-\end{figure}
+\end{figure*}
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
