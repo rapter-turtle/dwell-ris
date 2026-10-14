@@ -152,6 +152,7 @@ class Canvas:
         c.line.width = Pt(lw)
         if head:
             self._arrowhead(c, color)
+        no_effect(c)
         return c
 
     def poly(self, pts, color='000000', lw=0.9, head=True):
@@ -238,6 +239,7 @@ class TC:
             self._end(c, 'a:headEnd')
         if head:
             self._end(c, 'a:tailEnd')
+        no_effect(c)
         return c
 
     def poly(self, pts, color='000000', lw=0.9, head=True):
@@ -322,6 +324,7 @@ class TC:
                     c = shp.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(p[0]), Inches(p[1]), Inches(q[0]), Inches(q[1]))
                     c.line.color.rgb = RGBColor.from_string(edge_c)
                     c.line.width = Pt(0.35)
+                    no_effect(c)
         for col in pts:
             for (px_, py_) in col:
                 o = shp.add_shape(MSO_SHAPE.OVAL, Inches(px_ - dd / 2), Inches(py_ - dd / 2), Inches(dd), Inches(dd))
@@ -355,6 +358,33 @@ class TC:
         if name:
             p.name = name
         return x, y, w, h
+
+
+def no_effect(shape):
+    """선 도형에 '효과 없음' 을 직접 지정해 테마 그림자를 끈다."""
+    spPr = shape._element.spPr
+    if spPr.find(qn('a:effectLst')) is None:
+        etree.SubElement(spPr, qn('a:effectLst'))
+
+
+def _save(prs, out):
+    """저장한 뒤 테마의 효과 스타일에서 그림자를 지운다 (복사해 간 도형에도 그림자가 생기지 않게)."""
+    import re
+    import shutil
+    import zipfile
+    prs.save(out)
+    tmp = out + '.tmp'
+    with zipfile.ZipFile(out) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename.startswith('ppt/theme/') and item.filename.endswith('.xml'):
+                x = data.decode('utf-8')
+                x = re.sub(r'<a:effectStyleLst>.*?</a:effectStyleLst>',
+                           '<a:effectStyleLst>' + '<a:effectStyle><a:effectLst/></a:effectStyle>' * 3 +
+                           '</a:effectStyleLst>', x, flags=re.S)
+                data = x.encode('utf-8')
+            zout.writestr(item, data)
+    shutil.move(tmp, out)
 
 
 def new_pres(W, H):
@@ -477,7 +507,7 @@ def make_fig1():
     t.label(xm_ + 0.04, 0.92, 0.80, 0.14, [T('GNSS, IMU')], size=6.0, color=C_GRAY, align='left')
 
     out = os.path.join(OUTDIR, 'fig1_framework.pptx')
-    prs.save(out)
+    _save(prs, out)
     return out
 
 
@@ -517,7 +547,7 @@ def _green_bbox(im, pad=4):
 
 def make_fig2():
     """(a) 실험선과 센서 (사용자 합성 사진), (b) 제어 하드웨어 구성 (원본 5번 슬라이드 형식)."""
-    W, H = 7.16, 2.30
+    W, H = 7.16, 1.96
     prs, slide = new_pres(W, H)
     t = TC(slide)
     tmp = os.path.join(PH, 'crops')
@@ -536,32 +566,34 @@ def make_fig2():
     # ---------- (b) 제어 하드웨어 ----------
     b0 = 3.76
     bw = W - b0 - 0.04
-    t.rect(b0 + 0.02, 0.62, bw - 0.02, 1.46, C_BOUND, None, lw=1.2, radius=0.18, dash=True,
+    oy = -0.42  # Control PC 를 뺀 만큼 위로 올림
+    t.rect(b0 + 0.02, 0.62 + oy, bw - 0.02, 1.46, C_BOUND, None, lw=1.2, radius=0.18, dash=True,
            name='boat_control_boundary')
-    t.label(b0 + bw - 1.62, 0.47, 1.60, 0.13, [T('Boat control hardware')], size=6.4, color=C_BOUND,
+    t.label(b0 + bw - 1.62, 0.64 + oy, 1.56, 0.13, [T('Boat control hardware')], size=6.4, color=C_BOUND,
             bold=True, align='right')
-    # Control PC (노트북)
-    px_, py_, pw_, ph_ = t.picture(os.path.join(PH, 'control_pc_laptop.jpg'), b0 + 0.20, 0.04, h=0.50,
-                                   name='control_pc')
-    t.label(px_ + pw_ + 0.06, 0.08, 1.0, 0.34, [T(('Control PC', 'b')), T('ROS 2')], size=6.6, align='left')
     # PLC
-    lx_, ly_, lw2, lh2 = pic(_media('image15.jpeg'), 'plc.jpg', b0 + 0.14, 0.88, w=0.52, name='plc')
+    lx_, ly_, lw2, lh2 = pic(_media('image15.jpeg'), 'plc.jpg', b0 + 0.14, 0.98 + oy, w=0.52, name='plc')
     t.rect(lx_, ly_, lw2, lh2, C_BOUND, None, lw=1.0, radius=0.01)
-    t.label(lx_ - 0.10, ly_ + lh2 + 0.02, lw2 + 0.20, 0.13, [T(('LS XGB PLC', 'b'))], size=6.4)
-    xl = px_ + pw_ / 2
-    t.arrow((xl, py_ + ph_), (xl, ly_), color=C_LINK, lw=1.3, head=False)
-    t.label(xl + 0.04, 0.66, 0.6, 0.13, [T('Ethernet')], size=6.0, color=C_PROTO, align='left')
+    t.label(lx_ - 0.02, ly_ + lh2 + 0.02, lw2 + 0.12, 0.13, [T(('LS XGB PLC', 'b'))], size=6.4)
+    # (a) 사진 속 Control PC (노트북 파란 상자의 오른쪽 변) 에서 PLC 로 Ethernet
+    sa = wa / 1400.0  # 축소본 1400 폭 기준 좌표를 그림 좌표로
+    lap_x = 0.04 + 1258 * sa          # 노트북 파란 상자의 오른쪽 변
+    y_lap = 0.04 + 470 * sa           # 그 변의 위쪽 부분
+    y_eth = ly_ + lh2 / 2
+    x_elb = b0 + 0.08                 # 점선 영역 안쪽에서 꺾음
+    t.poly([(lap_x, y_lap), (x_elb, y_lap), (x_elb, y_eth), (lx_, y_eth)], color=C_LINK, lw=1.3)
+    t.node(lap_x + 0.03, y_lap + 0.03, 0.42, 0.13, [T('Ethernet')], C_LINK, size=6.0, color=C_PROTO, lw=0.5)
     # 버스
     xbus = b0 + 1.02
     t.arrow((lx_ + lw2, ly_ + lh2 / 2), (xbus, ly_ + lh2 / 2), color=C_LINK, lw=1.3, head=False)
     # CAN 컨버터
-    cx_, cy_, cw_, ch_ = pic(_green_bbox(_media('image16.png')), 'can.jpg', b0 + 1.20, 0.72, w=0.46,
+    cx_, cy_, cw_, ch_ = pic(_green_bbox(_media('image16.png')), 'can.jpg', b0 + 1.20, 0.72 + oy, w=0.46,
                              name='can_converter')
     t.label(cx_ - 0.15, cy_ + ch_ + 0.02, cw_ + 0.30, 0.13, [T(('CAN converter', 'b'))], size=6.4)
     yc = cy_ + ch_ / 2
     # 서보 실린더
     srv = _crop_frac(_media('image17.jpeg'), 0.0645, 0.1363, 0.1306, 0.1351)
-    sx_, sy_, sw_, sh_ = pic(srv, 'servo.jpg', b0 + 1.20, 1.42, w=0.80, name='servo_cylinder')
+    sx_, sy_, sw_, sh_ = pic(srv, 'servo.jpg', b0 + 1.20, 1.42 + oy, w=0.80, name='servo_cylinder')
     t.label(sx_ - 0.1, sy_ + sh_ + 0.02, sw_ + 0.2, 0.13, [T(('Servo cylinders', 'b'))], size=6.4)
     ys = sy_ + sh_ / 2
     t.arrow((xbus, yc), (xbus, ys), color=C_LINK, lw=1.3, head=False)
@@ -569,23 +601,24 @@ def make_fig2():
     t.arrow((xbus, ys), (sx_, ys), color=C_LINK, lw=1.3)
     t.label(xbus - 0.33, yc - 0.15, 0.32, 0.13, [T('RS232C')], size=6.0, color=C_PROTO, align='right')
     t.label(xbus - 0.55, ys + 0.02, 0.52, 0.13, [T('EtherCAT')], size=6.0, color=C_PROTO, align='right')
-    # 엔진과 선미 드라이브
-    eng = _crop_frac(_media('image14.jpg'), 0.19817, 0.17253, 0.13359, 0.46496)
-    ex_, ey_, ew_, eh_ = pic(eng, 'engine.jpg', b0 + bw - 0.98, 0.90, w=0.88, name='engine_sterndrive')
-    xe1 = ex_ + ew_ * 0.35
+    # 추진기 (실제 선미 드라이브 사진, 그늘 보정본)
+    sdi = Image.open(os.path.join(PH, 'sterndrive_lifted.jpg'))
+    sdi = sdi.crop((0, int(0.12 * sdi.height), int(0.95 * sdi.width), int(0.97 * sdi.height)))
+    ex_, ey_, ew_, eh_ = pic(sdi, 'thruster.jpg', b0 + bw - 1.08, 0.96 + oy, w=0.98, name='sterndrive_thruster')
+    xe1 = ex_ + ew_ * 0.62
     t.poly([(cx_ + cw_, yc), (xe1, yc), (xe1, ey_)], color=C_LINK, lw=1.3)
     t.label(cx_ + cw_ + 0.04, yc - 0.15, 0.4, 0.13, [T('CAN')], size=6.0, color=C_PROTO, align='left')
-    t.label(xe1 - 0.80, ey_ - 0.27, 0.77, 0.13, [T(('Engine speed', 'b'))], size=6.4, align='right')
-    xe2 = ex_ + ew_ * 0.80
+    t.label(xe1 - 0.80, yc - 0.17, 0.77, 0.13, [T(('Engine speed', 'b'))], size=6.4, align='right')
+    xe2 = ex_ + ew_ * 0.40
     t.poly([(sx_ + sw_, ys + 0.10), (xe2, ys + 0.10), (xe2, ey_ + eh_)], color=C_LINK, lw=1.3)
     t.label(sx_ + sw_ + 0.06, ys + 0.13, 1.2, 0.13, [T(('Shift and steering', 'b'))], size=6.4, align='left')
 
-    ylab = max(ya_bottom, 2.08) + 0.04
-    for xx, s in [(0.04 + wa / 2, '(a)'), (b0 + bw / 2, '(b)')]:
-        t.label(xx - 0.2, ylab, 0.4, 0.14, [T(s)], size=7.5)
+    ylab = max(ya_bottom, 2.08 + oy) + 0.04
+    for xx, s_ in [(0.04 + wa / 2, '(a)'), (b0 + bw / 2, '(b)')]:
+        t.label(xx - 0.2, ylab, 0.4, 0.14, [T(s_)], size=7.5)
 
     out = os.path.join(OUTDIR, 'fig2_vessel.pptx')
-    prs.save(out)
+    _save(prs, out)
     return out
 
 
@@ -677,10 +710,10 @@ def make_fig3():
 
     # ---------- (b) 선미 드라이브 사진 ----------
     xb, wb = 1.86, 1.60
-    im = Image.open(os.path.join(PH, 'sterndrive.jpg'))
+    im = Image.open(os.path.join(PH, 'sterndrive_lifted.jpg'))
     hb = wb * im.height / im.width
     yb = 0.06 + (1.62 - hb) / 2
-    t.picture(os.path.join(PH, 'sterndrive.jpg'), xb, yb, w=wb, name='photo_sterndrive')
+    t.picture(os.path.join(PH, 'sterndrive_lifted.jpg'), xb, yb, w=wb, name='photo_sterndrive')
 
     def bp(ix, iy):
         return xb + ix / im.width * wb, yb + iy / im.height * hb
@@ -696,7 +729,7 @@ def make_fig3():
         t.label(xx - 0.2, 1.75, 0.4, 0.14, [T(s)], size=7.5)
 
     out = os.path.join(OUTDIR, 'fig3_frames.pptx')
-    prs.save(out)
+    _save(prs, out)
     return out
 
 

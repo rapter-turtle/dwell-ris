@@ -31,4 +31,22 @@ save(ap.crop((int(1100 * s), int(420 * s), int(1252 * s), int(592 * s))), 'contr
 # 선미 드라이브 (축소본 1050 폭 기준 좌표를 원본으로 환산)
 sd = load('KakaoTalk_20261014_105036447_01.jpg')
 k = sd.width / 1050.0
-save(sd.crop((int(130 * k), int(470 * k), int(960 * k), int(1050 * k))), 'sterndrive.jpg', 1400)
+sd_crop = sd.crop((int(130 * k), int(470 * k), int(960 * k), int(1050 * k)))
+save(sd_crop, 'sterndrive.jpg', 1400)
+
+
+def lift_shadows(im, clip=3.0, gamma=0.75):
+    """그늘에 묻힌 어두운 부분을 밝힌다. 밝기 채널에 CLAHE 와 감마를 적용하고 색은 유지."""
+    import cv2
+    import numpy as np
+    bgr = cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR)
+    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    l = cv2.createCLAHE(clipLimit=clip, tileGridSize=(8, 8)).apply(l)
+    lut = np.array([((i / 255.0) ** gamma) * 255 for i in range(256)], dtype=np.uint8)
+    l = cv2.LUT(l, lut)
+    out = cv2.cvtColor(cv2.merge((l, a, b)), cv2.COLOR_LAB2BGR)
+    return Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB))
+
+
+save(lift_shadows(sd_crop), 'sterndrive_lifted.jpg', 1400)
