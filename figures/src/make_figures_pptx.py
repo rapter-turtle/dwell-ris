@@ -545,6 +545,30 @@ def _green_bbox(im, pad=4):
     return im.crop((max(0, min(xs) - pad), max(0, min(ys) - pad), min(w, max(xs) + pad), min(h, max(ys) + pad)))
 
 
+def _remove_blue_label(im, color=(42, 42, 46)):
+    """사진의 파란 로고 스티커 영역을 하우징과 같은 짙은 회색으로 덮는다."""
+    import cv2
+    import numpy as np
+    a = np.asarray(im).astype(np.int16)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mask = ((b > 110) & (b > r + 40) & (b > g + 15)).astype(np.uint8)
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if n <= 1:
+        return im
+    k = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    x, y, w, h = stats[k, :4]
+    x0, y0 = max(0, x - 2), max(0, y - 2)
+    x1, y1 = min(a.shape[1], x + w + 2), min(a.shape[0], y + h + 2)
+    out = np.asarray(im).copy()
+    rng = np.random.default_rng(0)
+    patch = np.empty((y1 - y0, x1 - x0, 3), dtype=np.float32)
+    grad = np.linspace(-6, 6, y1 - y0)[:, None]
+    for c in range(3):
+        patch[..., c] = color[c] + grad + rng.normal(0, 3, (y1 - y0, x1 - x0))
+    out[y0:y1, x0:x1] = np.clip(patch, 0, 255).astype(np.uint8)
+    return Image.fromarray(out)
+
+
 def make_fig2():
     """(a) 실험선과 센서 (사용자 합성 사진), (b) 제어 하드웨어 구성 (원본 5번 슬라이드 형식)."""
     W, H = 7.16, 1.96
@@ -592,7 +616,7 @@ def make_fig2():
     t.label(cx_ - 0.15, cy_ + ch_ + 0.02, cw_ + 0.30, 0.13, [T(('CAN converter', 'b'))], size=6.4)
     yc = cy_ + ch_ / 2
     # 서보 실린더
-    srv = _crop_frac(_media('image17.jpeg'), 0.0645, 0.1363, 0.1306, 0.1351)
+    srv = _remove_blue_label(_crop_frac(_media('image17.jpeg'), 0.0645, 0.1363, 0.1306, 0.1351))
     sx_, sy_, sw_, sh_ = pic(srv, 'servo.jpg', b0 + 1.20, 1.42 + oy, w=0.80, name='servo_cylinder')
     t.label(sx_ - 0.1, sy_ + sh_ + 0.02, sw_ + 0.2, 0.13, [T(('Servo cylinders', 'b'))], size=6.4)
     ys = sy_ + sh_ / 2
@@ -697,13 +721,27 @@ def make_fig3():
     # 선미 드라이브 위치와 추력
     D = P(Ob, -0.27, 0, F, S)
     delta = 25.0
-    tdir = dirv(psi + delta)
-    Fs = (D[0] - 0.32 * tdir[0], D[1] - 0.32 * tdir[1])
-    t.arrow(D, P(D, -0.30, 0, F, S), color=C_GRAY, lw=0.6, head=False, dash=True)
-    t.arrow(Fs, D, color='C0392B', lw=1.3)
+    tdir = dirv(psi + delta)          # 드라이브가 향하는 방향 (추력 방향)
+    ndir = dirv(psi + delta + 90)     # 드라이브 축에 수직
+    t.arrow(D, P(D, -0.34, 0, F, S), color=C_GRAY, lw=0.6, head=False, dash=True)
+    # 선미 드라이브 다리 (조향각 δ 만큼 돌아간 상태)와 프로펠러
+    Ld, wd = 0.12, 0.036
+
+    def Q(o, a, b):  # o + a*tdir + b*ndir
+        return (o[0] + a * tdir[0] + b * ndir[0], o[1] + a * tdir[1] + b * ndir[1])
+
+    t.polygon([Q(D, 0.01, -wd / 2), Q(D, 0.01, wd / 2), Q(D, -Ld, wd * 0.35), Q(D, -Ld, -wd * 0.35)],
+              '1B3A5C', name='sterndrive_leg')
+    Pp = Q(D, -Ld, 0)
+    t.polygon([Q(Pp, 0.010, -0.075), Q(Pp, 0.010, 0.075), Q(Pp, -0.010, 0.075), Q(Pp, -0.010, -0.075)],
+              '3A3A3A', name='propeller_blades')
+    t.ellipse(Pp[0], Pp[1], 0.032, 0.032, '3A3A3A', 1.0)
+    # 추력 화살표 (프로펠러 뒤에서 드라이브 방향으로)
+    Fs = Q(Pp, -0.30, 0)
+    t.arrow(Fs, Q(Pp, -0.02, 0), color='C0392B', lw=1.3)
     t.label(Fs[0] - 0.05, Fs[1] + 0.03, 0.20, 0.14, [T(I('F'), ISUB('g'))], size=6.8, color='C0392B', align='left')
-    arc(D, 0.17, psi + 180, psi + delta + 180, n=8, color='C0392B')
-    dl = (D[0] + 0.25 * dirv(psi + 180 + delta / 2)[0], D[1] + 0.25 * dirv(psi + 180 + delta / 2)[1])
+    arc(D, 0.21, psi + 180, psi + delta + 180, n=8, color='C0392B')
+    dl = (D[0] + 0.29 * dirv(psi + 180 + delta / 2)[0], D[1] + 0.29 * dirv(psi + 180 + delta / 2)[1])
     t.label(dl[0] - 0.06, dl[1] - 0.07, 0.12, 0.14, [T(I('δ'))], size=6.8, color='C0392B')
     lm = P(Ob, -0.135, 0.17, F, S)
     t.label(lm[0] - 0.08, lm[1] - 0.07, 0.16, 0.14, [T(I('l'), ISUB('d'))], size=6.4)
