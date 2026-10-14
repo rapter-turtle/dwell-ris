@@ -293,6 +293,69 @@ class TC:
         for i in range(n):
             self.arrow((x, y + i * dy), (x + L, y + i * dy), color=color, lw=0.8)
 
+    def nn(self, x, y, w, h, color, layers=(3, 4, 3), frozen=False, name=None):
+        """작은 신경망 그림 (테두리, 노드, 연결선) 을 한 그룹으로 만든다."""
+        grp = self.s.shapes.add_group_shape()
+        shp = grp.shapes
+        node_c = C_GRAY if frozen else color
+        edge_c = 'C8C8C8' if frozen else 'E3B48A'
+        border = shp.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(w), Inches(h))
+        border.adjustments[0] = 0.15
+        border.fill.solid()
+        border.fill.fore_color.rgb = RGBColor.from_string(C_GRAY_BG if frozen else 'FFFFFF')
+        border.line.color.rgb = RGBColor.from_string(node_c)
+        border.line.width = Pt(0.7)
+        if frozen:
+            border.line.dash_style = 4
+        border.shadow.inherit = False
+        nmax = max(layers)
+        dd = min(0.055, (h - 0.06) / (nmax * 1.7))
+        xs = [x + 0.07 + i * (w - 0.14) / (len(layers) - 1) for i in range(len(layers))]
+        # 층마다 노드를 같은 간격으로 가운데 정렬
+        pts = []
+        for xi, n in zip(xs, layers):
+            span = (h - 0.10) * (n - 1) / max(nmax - 1, 1)
+            pts.append([(xi, y + h / 2 - span / 2 + (span / (n - 1) * j if n > 1 else 0)) for j in range(n)])
+        for a, b in zip(pts[:-1], pts[1:]):
+            for p in a:
+                for q in b:
+                    c = shp.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(p[0]), Inches(p[1]), Inches(q[0]), Inches(q[1]))
+                    c.line.color.rgb = RGBColor.from_string(edge_c)
+                    c.line.width = Pt(0.35)
+        for col in pts:
+            for (px_, py_) in col:
+                o = shp.add_shape(MSO_SHAPE.OVAL, Inches(px_ - dd / 2), Inches(py_ - dd / 2), Inches(dd), Inches(dd))
+                o.fill.solid()
+                o.fill.fore_color.rgb = RGBColor.from_string(node_c)
+                o.line.fill.background()
+                o.shadow.inherit = False
+        if name:
+            grp.name = name
+        return grp
+
+    def cylinder(self, x, y, w, h, lines, ec, fc, size=6.2, name=None):
+        sh = self.s.shapes.add_shape(MSO_SHAPE.CAN, Inches(x), Inches(y), Inches(w), Inches(h))
+        sh.fill.solid()
+        sh.fill.fore_color.rgb = RGBColor.from_string(fc)
+        sh.line.color.rgb = RGBColor.from_string(ec)
+        sh.line.width = Pt(0.7)
+        sh.shadow.inherit = False
+        fill_text(sh.text_frame, lines, size, spacing=1.0)
+        if name:
+            sh.name = name
+        return sh
+
+    def picture(self, path, x, y, w=None, h=None, name=None):
+        im = Image.open(path)
+        if w is not None and h is None:
+            h = w * im.height / im.width
+        elif h is not None and w is None:
+            w = h * im.width / im.height
+        p = self.s.shapes.add_picture(path, Inches(x), Inches(y), Inches(w), Inches(h))
+        if name:
+            p.name = name
+        return x, y, w, h
+
 
 def new_pres(W, H):
     prs = Presentation()
@@ -304,96 +367,114 @@ def new_pres(W, H):
 
 # ======================= Fig. 1 =======================
 def make_fig1():
-    """왼쪽 Offline 학습(시뮬레이션), 오른쪽 Online 배포(실선). 학습된 네트워크는 주황 테두리."""
+    """왼쪽 Offline (병렬 시뮬레이터, replay buffer, 신경망으로 표현한 적대적 RL), 오른쪽 Online (실제 선박 사진)."""
     W, H = 7.16, 2.45
     prs, slide = new_pres(W, H)
     t = TC(slide)
 
-    # ----- 두 영역 -----
-    OX, OY, OW, OH = 0.04, 0.04, 4.38, 2.37   # Offline
-    NX, NY, NW, NH = 4.86, 0.04, 2.26, 2.37   # Online
+    OX, OY, OW, OH = 0.04, 0.04, 4.50, 2.37
+    NX, NY, NW, NH = 4.94, 0.04, 2.18, 2.37
     t.rect(OX, OY, OW, OH, C_OFF, C_OFF_BG, lw=1.0, radius=0.08, name='region_offline')
     t.rect(NX, NY, NW, NH, C_ON, C_ON_BG, lw=1.0, radius=0.08, name='region_online')
-    t.label(OX + 0.10, OY + 0.05, 3.0, 0.22, [T(('Offline', 'b'), ' training in simulation')],
+    t.label(OX + 0.10, OY + 0.05, 3.0, 0.22, [T(('Offline', 'b'), ' RL training in simulation')],
             size=8.0, color=C_OFF, align='left')
-    t.label(NX + 0.10, NY + 0.05, 2.1, 0.22, [T(('Online', 'b'), ' deployment on the vessel')],
+    t.label(NX + 0.10, NY + 0.05, 2.0, 0.22, [T(('Online', 'b'), ' deployment on the vessel')],
             size=8.0, color=C_ON, align='left')
 
-    # ----- Offline 안쪽 -----
-    # 시뮬레이터
-    sx, sy, sw, sh = OX + 0.12, 0.40, 1.02, 1.88
-    t.rect(sx, sy, sw, sh, C_PLANT, 'FFFFFF', name='simulator')
-    t.label(sx, sy + 0.06, sw, 0.18, [T('Simulator')], size=7.2, bold=True, color=C_PLANT)
-    t.boat(sx + 0.20, sy + 0.74, 0.68, 0.25)
-    t.gusts(sx + 0.10, sy + 0.42, n=3, dy=0.06, L=0.15)
-    t.label(sx + 0.30, sy + 0.41, 0.6, 0.14, [T(I('d'), ' ∈ ', M('𝒲'))], size=6.5, color=C_GRAY, align='left')
-    t.label(sx, sy + 1.18, sw, 0.62, [T('gear ', I('g'), ' ∈ {R, N, F}'),
-                                      T('dwell ', I('D'), ISUB('g'), ' = 3 s'),
-                                      T('steering ', I('δ'))], size=6.5)
+    # ----- 병렬 시뮬레이터 -----
+    t.label(0.12, 0.36, 1.06, 0.16, [T(('Simulators ', 'b'), '×', I('N'))], size=7.0, color=C_PLANT)
+    for k, (dx, fc) in enumerate([(0.12, 'D5E2EF'), (0.06, 'E8EFF6'), (0.0, 'FFFFFF')]):
+        t.rect(0.14 + dx, 0.58 + dx, 0.86, 0.78, C_PLANT, fc, lw=0.7, radius=0.05, name=f'sim_card_{k}')
+    t.gusts(0.22, 0.70, n=3, dy=0.055, L=0.14)
+    t.label(0.40, 0.69, 0.5, 0.14, [T(I('d'), ' ∈ ', M('𝒲'))], size=6.4, color=C_GRAY, align='left')
+    t.boat(0.30, 0.90, 0.58, 0.20)
+    t.label(0.14, 1.17, 0.86, 0.14, [T('dwell ', I('D'), ISUB('g'), ' masked')], size=6.2, color=C_PLANT)
+    t.label(0.10, 1.56, 1.10, 0.52, [T('gear ', I('g'), ' ∈ {R, N, F}'), T('steering ', I('δ')),
+                                     T('wind and current ', I('d'))], size=6.4)
 
-    # Stage 1
-    s1x, s1y, s1w, s1h = 1.42, 0.40, 2.86, 0.98
+    # ----- Stage 1 -----
+    s1x, s1y, s1w, s1h = 1.36, 0.34, 3.08, 1.10
     t.rect(s1x, s1y, s1w, s1h, C_OFF, 'FFFFFF', name='stage1')
-    t.label(s1x + 0.08, s1y + 0.04, 2.6, 0.18, [T(('Stage 1', 'b'), '  dwell indexed safety value')],
+    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Stage 1', 'b'), '  dwell indexed RIS by adversarial RL')],
             size=7.0, color=C_OFF, align='left')
-    nh = 0.26
-    t.node(s1x + 0.12, s1y + 0.30, 0.46, nh, [T(I('π'), ISUB('h'))], C_OFF, size=7.5)
-    t.node(s1x + 0.12, s1y + 0.64, 0.46, nh, [T(I('μ'))], C_OFF, size=7.5)
-    t.node(s1x + 0.98, s1y + 0.40, 0.52, 0.40, [T(I('Q'), ISUB('h'))], C_OFF, size=7.5)
-    t.arrow((s1x + 0.58, s1y + 0.43), (s1x + 0.98, s1y + 0.53), color=C_OFF)
-    t.arrow((s1x + 0.58, s1y + 0.77), (s1x + 0.98, s1y + 0.67), color=C_OFF)
-    t.label(s1x + 0.60, s1y + 0.27, 0.36, 0.14, [T('max')], size=6.2, color=C_GRAY)
-    t.label(s1x + 0.60, s1y + 0.80, 0.36, 0.14, [T('min')], size=6.2, color=C_GRAY)
+    t.cylinder(s1x + 0.10, s1y + 0.32, 0.44, 0.52, [T('replay'), T('buffer')], C_OFF, C_OFF_BG, size=6.0,
+               name='replay_buffer')
+    # twin critics
+    t.nn(s1x + 0.78, s1y + 0.30, 0.56, 0.42, C_OFF, name='critic_2')
+    t.nn(s1x + 0.72, s1y + 0.36, 0.56, 0.42, C_OFF, name='critic_1')
+    t.label(s1x + 0.62, s1y + 0.79, 0.80, 0.14, [T(I('Q'), ISUB('h,1'), ', ', I('Q'), ISUB('h,2'))], size=6.5)
+    t.arrow((s1x + 0.54, s1y + 0.58), (s1x + 0.72, s1y + 0.58), color=C_OFF)
+    # protagonist, adversary
+    t.nn(s1x + 1.62, s1y + 0.26, 0.44, 0.30, C_OFF, layers=(3, 3, 2), name='protagonist')
+    t.nn(s1x + 1.62, s1y + 0.64, 0.44, 0.30, C_OFF, layers=(3, 3, 2), name='adversary')
+    t.label(s1x + 2.08, s1y + 0.25, 0.42, 0.32, [T(I('π'), ISUB('h')), T(('max', ''))], size=6.5, align='left')
+    t.label(s1x + 2.08, s1y + 0.63, 0.42, 0.32, [T(I('μ')), T('min')], size=6.5, align='left')
+    t.arrow((s1x + 1.34, s1y + 0.52), (s1x + 1.62, s1y + 0.41), color=C_OFF, dash=True)
+    t.arrow((s1x + 1.34, s1y + 0.64), (s1x + 1.62, s1y + 0.79), color=C_OFF, dash=True)
     # 안전집합 족
-    ex, ey = s1x + 2.20, s1y + 0.56
-    for a, b, al in [(0.86, 0.48, 0.16), (0.58, 0.32, 0.30), (0.30, 0.17, 0.55)]:
+    ex, ey = s1x + 2.70, s1y + 0.60
+    for a, b, al in [(0.62, 0.40, 0.16), (0.42, 0.27, 0.30), (0.22, 0.14, 0.55)]:
         t.ellipse(ex, ey, a, b, C_OFF, al)
-    t.label(ex - 0.43, s1y + 0.13, 0.86, 0.14, [T(M('𝒮'), '(', I('g'), ', ', I('τ'), ISUB('g'), ')')],
+    for dx, lab, col in [(0.26, '0', C_OFF), (0.16, '3', C_OFF), (0.0, '5', 'FFFFFF')]:
+        t.label(ex + dx - 0.05, ey - 0.07, 0.10, 0.14, [T(lab)], size=5.8, color=col)
+    t.label(ex - 0.40, s1y + 0.24, 0.80, 0.14, [T(M('𝒮'), '(', I('g'), ', ', I('τ'), ISUB('g'), ')')],
             size=6.5, color=C_OFF)
-    for dx, lab, col in [(0.36, '0', C_OFF), (0.22, '3', C_OFF), (0.0, '5', 'FFFFFF')]:
-        t.label(ex + dx - 0.05, ey - 0.07, 0.10, 0.14, [T(lab)], size=6.0, color=col)
-    t.arrow((s1x + 1.50, s1y + 0.60), (ex - 0.45, ey + 0.04), color=C_OFF)
+    # 1-step 목표
+    t.label(s1x + 0.10, s1y + 0.93, 2.9, 0.15,
+            [T('one step target  ', I('y'), ' = (1 − ', I('γ'), ISUB('h'), ') ', I('h'), ' + ', I('γ'), ISUB('h'),
+               ' min{', I('h'), ', ', I('Q̄'), ISUB('h'), '(', I('ξ'), '′)}')], size=6.4, color=C_OFF)
 
-    # Stage 2
-    s2x, s2y, s2w, s2h = 1.42, 1.48, 2.86, 0.80
+    # ----- Stage 2 -----
+    s2x, s2y, s2w, s2h = 1.36, 1.52, 3.08, 0.80
     t.rect(s2x, s2y, s2w, s2h, C_OFF, 'FFFFFF', name='stage2')
-    t.label(s2x + 0.08, s2y + 0.04, 2.6, 0.18, [T(('Stage 2', 'b'), '  task policy')],
+    t.label(s2x + 0.08, s2y + 0.03, 2.0, 0.18, [T(('Stage 2', 'b'), '  task policy by SAC')],
             size=7.0, color=C_OFF, align='left')
-    t.node(s2x + 0.12, s2y + 0.34, 0.86, 0.32, [T(I('Q'), ISUB('h'), ' frozen')], C_GRAY, C_GRAY_BG, size=7.0)
-    t.node(s2x + 1.40, s2y + 0.34, 0.56, 0.32, [T(I('π'), ISUB('t'))], C_OFF, size=7.5)
-    t.arrow((s2x + 0.98, s2y + 0.50), (s2x + 1.40, s2y + 0.50), color=C_OFF)
-    t.label(s2x + 2.02, s2y + 0.30, 0.80, 0.40, [T('reward'), T('s.t. ', I('q'), ' ≥ ', I('τ'))], size=6.5)
-    # Stage 1 에서 Stage 2 로
-    t.arrow((s1x + 0.40, s1y + s1h), (s2x + 0.40, s2y + 0.34), color=C_OFF)
+    t.label(s2x + 0.10, s2y + 0.30, 1.0, 0.36, [T('maximize reward'), T('s.t. ', I('q'), ' ≥ ', I('τ'))], size=6.5)
+    t.nn(s2x + 1.32, s2y + 0.28, 0.50, 0.36, C_OFF, name='task_policy')
+    t.label(s2x + 1.22, s2y + 0.65, 0.70, 0.14, [T(I('π'), ISUB('t'))], size=6.8)
+    t.nn(s2x + 2.36, s2y + 0.28, 0.50, 0.36, C_OFF, frozen=True, name='critic_frozen')
+    t.label(s2x + 2.21, s2y + 0.65, 0.80, 0.14, [T(I('Q'), ISUB('h'), ' frozen')], size=6.5, color=C_GRAY)
+    t.arrow((s2x + 2.36, s2y + 0.46), (s2x + 1.82, s2y + 0.46), color=C_OFF)
+    t.label(s2x + 1.82, s2y + 0.27, 0.54, 0.16, [T(I('λ'), ' ≥ ', I('λ'), SUB('min'))], size=6.2)
+    # Stage 1 에서 고정된 critic 으로
+    t.arrow((ex, s1y + s1h), (ex, s2y + 0.28), color=C_OFF)
+    t.label(ex + 0.04, s2y + 0.04, 0.5, 0.14, [T('freeze')], size=6.0, color=C_GRAY, align='left')
 
-    # 시뮬레이터 왕복 (rollout)
-    for yy in (s1y + s1h / 2, s2y + s2h / 2):
-        t.arrow((sx + sw, yy), (s1x, yy), color=C_PLANT, both=True)
+    # 시뮬레이터 왕복
+    for yy, top, bot in [(s1y + 0.58, 'c, d', 'ξ′, h'), (s2y + 0.40, 'a', 'ξ′, r')]:
+        t.arrow((1.12, yy), (s1x, yy), color=C_PLANT, both=True)
+        t.label(1.10, yy - 0.17, 0.28, 0.14, [T(I(top))], size=6.0, color=C_PLANT)
+        t.label(1.10, yy + 0.02, 0.28, 0.14, [T(I(bot))], size=6.0, color=C_PLANT)
 
     # ----- Offline 에서 Online 으로 -----
     ym = 1.24
     t.arrow((OX + OW, ym), (NX, ym), color='000000', lw=1.4)
-    t.label(OX + OW - 0.02, ym - 0.24, 0.48, 0.16, [T('deploy')], size=6.5)
-    t.label(OX + OW - 0.02, ym + 0.06, 0.48, 0.16, [T('frozen')], size=6.5, color=C_GRAY)
+    t.label(OX + OW - 0.02, ym - 0.24, 0.44, 0.16, [T('deploy')], size=6.5)
+    t.label(OX + OW - 0.02, ym + 0.06, 0.44, 0.16, [T('frozen')], size=6.5, color=C_GRAY)
 
-    # ----- Online 안쪽 (폐루프) -----
-    t.node(NX + 0.14, 0.40, 0.56, 0.32, [T('EKF')], C_ON, size=7.0)
-    t.node(NX + 0.86, 0.40, 0.50, 0.32, [T(I('π'), ISUB('t'))], C_OFF, size=7.5)
-    t.node(NX + 1.50, 0.40, 0.64, 0.46, [T('Shield'), T(I('q'), ' ≥ ', I('τ')), T('else ', I('π'), ISUB('h'))], C_OFF, size=6.8)
-    t.arrow((NX + 0.70, 0.56), (NX + 0.86, 0.56), color=C_ON)
-    t.arrow((NX + 1.36, 0.56), (NX + 1.50, 0.56), color=C_ON)
-    # 선박
-    vx, vy, vw, vh = NX + 0.30, 1.46, 1.62, 0.82
-    t.rect(vx, vy, vw, vh, C_PLANT, 'FFFFFF', name='vessel')
-    t.boat(vx + 0.42, vy + 0.16, 0.86, 0.30)
-    t.gusts(vx + 0.10, vy + 0.08, n=3, dy=0.07, L=0.18)
-    t.label(vx, vy + 0.52, vw, 0.24, [T('Vessel, PLC, servo cylinders')], size=6.5)
+    # ----- Online 안쪽 -----
+    t.node(NX + 0.12, 0.42, 0.50, 0.30, [T('EKF')], C_ON, size=7.0)
+    t.nn(NX + 0.80, 0.40, 0.46, 0.32, C_OFF, name='task_policy_onboard')
+    t.label(NX + 0.80, 0.73, 0.46, 0.13, [T(I('π'), ISUB('t'))], size=6.6)
+    t.node(NX + 1.42, 0.36, 0.66, 0.50, [T('Shield'), T(I('q'), ' ≥ ', I('τ')), T('else ', I('π'), ISUB('h'))],
+           C_OFF, size=6.6)
+    t.arrow((NX + 0.62, 0.57), (NX + 0.80, 0.57), color=C_ON)
+    t.arrow((NX + 1.26, 0.57), (NX + 1.42, 0.57), color=C_ON)
+    # 실제 선박 사진
+    im = Image.open(os.path.join(PH, 'vessel_side.jpg')).crop((60, 300, 1260, 1040))
+    pth = os.path.join(PH, 'crops', 'fig1_vessel.jpg')
+    os.makedirs(os.path.dirname(pth), exist_ok=True)
+    im.save(pth, quality=92)
+    px, py, pw, ph = t.picture(pth, NX + 0.11, 1.12, w=1.96, name='photo_vessel')
+    t.gusts(px + 0.08, py + 0.10, n=3, dy=0.06, L=0.18, color='FFFFFF')
+    t.label(px + 0.30, py + 0.10, 0.3, 0.14, [T(I('d'))], size=6.8, color='FFFFFF', align='left')
     # 명령과 측정
-    t.poly([(NX + 1.82, 0.86), (NX + 1.82, vy)], color=C_ON)
-    t.label(NX + 1.86, 1.12, 0.40, 0.24, [T(I('g'), ', ', I('δ'))], size=6.8, align='left')
-    t.poly([(NX + 0.42, vy), (NX + 0.42, 0.72)], color=C_ON)
-    t.label(NX + 0.02, 1.00, 0.38, 0.34, [T('GNSS'), T('IMU')], size=6.3, color=C_GRAY, align='right')
-    t.label(NX + 0.62, 1.10, 1.10, 0.16, [T('every 0.5 s')], size=6.3, color=C_ON)
+    xs_ = NX + 1.75
+    t.arrow((xs_, 0.86), (xs_, py), color=C_ON)
+    t.label(xs_ + 0.04, 0.92, 0.36, 0.14, [T(I('g'), ', ', I('δ'))], size=6.6, align='left')
+    xm_ = NX + 0.37
+    t.arrow((xm_, py), (xm_, 0.72), color=C_ON)
+    t.label(xm_ + 0.04, 0.92, 0.80, 0.14, [T('GNSS, IMU')], size=6.0, color=C_GRAY, align='left')
 
     out = os.path.join(OUTDIR, 'fig1_framework.pptx')
     prs.save(out)
@@ -434,6 +515,7 @@ def _green_bbox(im, pad=4):
 
 
 def make_fig2():
+    """(a) 선박 사진, (b) 제어 하드웨어 구성 (원본 5번 슬라이드 형식, Pixhawk 제외)."""
     W, H = 7.16, 2.45
     prs, slide = new_pres(W, H)
     t = TC(slide)
@@ -443,103 +525,59 @@ def make_fig2():
     def pic(im, fname, x, y, w=None, h=None, name=None):
         path = os.path.join(tmp, fname)
         im.save(path, quality=92)
-        if w is not None and h is None:
-            h = w * im.height / im.width
-        elif h is not None and w is None:
-            w = h * im.width / im.height
-        p = slide.shapes.add_picture(path, Inches(x), Inches(y), Inches(w), Inches(h))
-        if name:
-            p.name = name
-        return x, y, w, h
+        return t.picture(path, x, y, w=w, h=h, name=name)
 
     # ---------- (a) 선박 ----------
     im = Image.open(os.path.join(PH, 'vessel_side.jpg')).crop((140, 300, 1340, 1040))
-    wa = 2.20
+    wa = 2.95
     ha = wa * im.height / im.width
-    pic(im, 'a.jpg', 0.02, 0.05 + (2.05 - ha) / 2, w=wa, name='photo_a_vessel')
+    pic(im, 'a.jpg', 0.04, 0.05 + (2.05 - ha) / 2, w=wa, name='photo_a_vessel')
 
-    # ---------- (b) 선미 기관실 ----------
-    x0, y0, x1, y1 = 300, 360, 760, 960
-    imb = Image.open(os.path.join(PH, 'stern_bay.jpg')).crop((x0, y0, x1, y1))
-    wb = 1.40
-    hb = wb * imb.height / imb.width
-    xb, yb = 2.32, 0.05 + (2.05 - hb) / 2
-    pic(imb, 'b.jpg', xb, yb, w=wb, name='photo_b_stern_bay')
-
-    def bp(ix, iy):
-        return xb + ix / imb.width * wb, yb + iy / imb.height * hb
-
-    targets = {'shift': (638, 691), 'steer': (413, 539), 'pivot': (485, 858)}
-    labels = [('steer', ['Steering servo', 'cylinder'], (120, 40)),
-              ('shift', ['Shift servo', 'cylinder'], (345, 150)),
-              ('pivot', ['Drive steering', 'pivot'], (150, 560))]
-    lw_, lh_ = 0.66, 0.22
-    for key, lines, (lx, ly) in labels:
-        tx, ty = targets[key]
-        pt = bp(tx - x0, ty - y0)
-        pl = bp(lx, ly)
-        start = (pl[0], pl[1] + lh_ / 2) if pt[1] > pl[1] else (pl[0], pl[1] - lh_ / 2)
-        t.arrow(start, pt, color=C_YEL, lw=1.0)
-        t.node(pl[0] - lw_ / 2, pl[1] - lh_ / 2, lw_, lh_, [T(s) for s in lines], C_PLANT, size=6.0, lw=0.6)
-
-    # ---------- (c) 제어 하드웨어 구성 (원본 5번 슬라이드 형식, Pixhawk 제외) ----------
-    cx0 = 3.84
-    # 선박 제어부 점선
-    t.rect(cx0 + 0.02, 0.58, 3.26, 1.50, C_BOUND, None, lw=1.2, radius=0.18, dash=True, name='boat_control_boundary')
-    t.label(cx0 + 1.70, 0.43, 1.58, 0.13, [T('Boat control hardware')], size=6.4, color=C_BOUND,
+    # ---------- (b) 제어 하드웨어 ----------
+    b0 = 3.16
+    t.rect(b0 + 0.02, 0.58, 3.90, 1.50, C_BOUND, None, lw=1.2, radius=0.18, dash=True, name='boat_control_boundary')
+    t.label(b0 + 2.25, 0.43, 1.67, 0.13, [T('Boat control hardware')], size=6.4, color=C_BOUND,
             bold=True, align='right')
-
     # Control PC
-    pc = _media('image12.jpg')
-    px_, py_, pw_, ph_ = pic(pc, 'pc.jpg', cx0 + 0.10, 0.06, w=0.62, name='control_pc')
-    t.label(cx0 + 0.78, 0.08, 0.9, 0.34, [T(('Control PC', 'b')), T('ROS 2')], size=6.6, align='left')
-
-    # PLC (빨간 테두리)
-    plc = _media('image15.jpeg')
-    lx_, ly_, lw2, lh2 = pic(plc, 'plc.jpg', cx0 + 0.14, 0.86, w=0.58, name='plc')
+    px_, py_, pw_, ph_ = pic(_media('image12.jpg'), 'pc.jpg', b0 + 0.12, 0.06, w=0.66, name='control_pc')
+    t.label(b0 + 0.84, 0.08, 0.9, 0.34, [T(('Control PC', 'b')), T('ROS 2')], size=6.6, align='left')
+    # PLC
+    lx_, ly_, lw2, lh2 = pic(_media('image15.jpeg'), 'plc.jpg', b0 + 0.16, 0.86, w=0.60, name='plc')
     t.rect(lx_, ly_, lw2, lh2, C_BOUND, None, lw=1.0, radius=0.01)
     t.label(lx_ - 0.10, ly_ + lh2 + 0.02, lw2 + 0.20, 0.13, [T(('LS XGB PLC', 'b'))], size=6.4)
-
-    # Control PC → PLC
     xl = px_ + pw_ / 2
     t.arrow((xl, py_ + ph_), (xl, ly_), color=C_LINK, lw=1.3, head=False)
     t.label(xl + 0.04, 0.43, 0.6, 0.13, [T('Ethernet')], size=6.0, color=C_PROTO, align='left')
-
     # 버스
-    xbus = cx0 + 1.02
+    xbus = b0 + 1.10
     t.arrow((lx_ + lw2, ly_ + lh2 / 2), (xbus, ly_ + lh2 / 2), color=C_LINK, lw=1.3, head=False)
-
     # CAN 컨버터
-    can = _green_bbox(_media('image16.png'))
-    cx_, cy_, cw_, ch_ = pic(can, 'can.jpg', cx0 + 1.18, 0.66, w=0.50, name='can_converter')
+    cx_, cy_, cw_, ch_ = pic(_green_bbox(_media('image16.png')), 'can.jpg', b0 + 1.32, 0.66, w=0.52,
+                             name='can_converter')
     t.label(cx_ - 0.1, cy_ + ch_ + 0.02, cw_ + 0.2, 0.13, [T(('CAN converter', 'b'))], size=6.4)
     yc = cy_ + ch_ / 2
     # 서보 실린더
     srv = _crop_frac(_media('image17.jpeg'), 0.0645, 0.1363, 0.1306, 0.1351)
-    sx_, sy_, sw_, sh_ = pic(srv, 'servo.jpg', cx0 + 1.18, 1.42, w=0.84, name='servo_cylinder')
+    sx_, sy_, sw_, sh_ = pic(srv, 'servo.jpg', b0 + 1.32, 1.42, w=0.92, name='servo_cylinder')
     t.label(sx_ - 0.1, sy_ + sh_ + 0.02, sw_ + 0.2, 0.13, [T(('Servo cylinders', 'b'))], size=6.4)
     ys = sy_ + sh_ / 2
     t.arrow((xbus, yc), (xbus, ys), color=C_LINK, lw=1.3, head=False)
     t.arrow((xbus, yc), (cx_, yc), color=C_LINK, lw=1.3)
     t.arrow((xbus, ys), (sx_, ys), color=C_LINK, lw=1.3)
-    t.label(xbus - 0.31, yc - 0.15, 0.30, 0.13, [T('RS232C')], size=6.0, color=C_PROTO, align='right')
-    t.label(xbus - 0.53, ys + 0.02, 0.50, 0.13, [T('EtherCAT')], size=6.0, color=C_PROTO, align='right')
-
+    t.label(xbus - 0.33, yc - 0.15, 0.32, 0.13, [T('RS232C')], size=6.0, color=C_PROTO, align='right')
+    t.label(xbus - 0.55, ys + 0.02, 0.52, 0.13, [T('EtherCAT')], size=6.0, color=C_PROTO, align='right')
     # 엔진과 선미 드라이브
     eng = _crop_frac(_media('image14.jpg'), 0.19817, 0.17253, 0.13359, 0.46496)
-    ex_, ey_, ew_, eh_ = pic(eng, 'engine.jpg', cx0 + 2.32, 0.88, w=0.90, name='engine_sterndrive')
-    # CAN 컨버터 → 엔진 회전수
+    ex_, ey_, ew_, eh_ = pic(eng, 'engine.jpg', b0 + 2.88, 0.86, w=0.98, name='engine_sterndrive')
     xe1 = ex_ + ew_ * 0.35
     t.poly([(cx_ + cw_, yc), (xe1, yc), (xe1, ey_)], color=C_LINK, lw=1.3)
-    t.label(cx_ + cw_ + 0.03, yc - 0.15, 0.4, 0.13, [T('CAN')], size=6.0, color=C_PROTO, align='left')
-    t.label(xe1 - 0.75, ey_ - 0.27, 0.72, 0.13, [T(('Engine speed', 'b'))], size=6.4, align='right')
-    # 서보 실린더 → 시프트와 조향
+    t.label(cx_ + cw_ + 0.04, yc - 0.15, 0.4, 0.13, [T('CAN')], size=6.0, color=C_PROTO, align='left')
+    t.label(xe1 - 0.80, ey_ - 0.27, 0.77, 0.13, [T(('Engine speed', 'b'))], size=6.4, align='right')
     xe2 = ex_ + ew_ * 0.80
     t.poly([(sx_ + sw_, ys + 0.10), (xe2, ys + 0.10), (xe2, ey_ + eh_)], color=C_LINK, lw=1.3)
-    t.label(sx_ + sw_ + 0.05, ys + 0.13, 1.25, 0.13, [T(('Shift and steering', 'b'))], size=6.4, align='left')
+    t.label(sx_ + sw_ + 0.06, ys + 0.13, 1.3, 0.13, [T(('Shift and steering', 'b'))], size=6.4, align='left')
 
-    # 패널 이름
-    for xx, s in [(0.02 + wa / 2, '(a)'), (xb + wb / 2, '(b)'), (cx0 + 1.65, '(c)')]:
+    for xx, s in [(0.04 + wa / 2, '(a)'), (b0 + 1.97, '(b)')]:
         t.label(xx - 0.2, 2.28, 0.4, 0.14, [T(s)], size=7.5)
 
     out = os.path.join(OUTDIR, 'fig2_vessel.pptx')

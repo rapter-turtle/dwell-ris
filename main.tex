@@ -33,6 +33,11 @@
 \newtheorem{remark}{Remark}
 \renewcommand{\qedsymbol}{$\blacksquare$}
 
+% Author biography with photo, \biography{file in figures/}{name}{text}
+\newcommand{\biography}[3]{\IfFileExists{figures/#1}%
+{\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{figures/#1}}]{#2}#3\end{IEEEbiography}}%
+{\begin{IEEEbiographynophoto}{#2}#3\end{IEEEbiographynophoto}}}
+
 \newcommand{\calA}{\mathcal{A}}
 \newcommand{\calW}{\mathcal{W}}
 \newcommand{\calS}{\mathcal{S}}
@@ -66,25 +71,25 @@ Autonomous surface vessels, dwell time, robust invariant sets, safe reinforcemen
 
 \IEEEPARstart{S}{mall} autonomous surface vessels (ASVs) are increasingly deployed for hydrographic survey, water quality sampling, harbor inspection, and passenger transport in confined waters \cite{liu2016,shi2017,lee2024canal}. Many of these missions contain phases in which the vessel must hold a position rather than follow a path. A survey boat waits at a station until a sensor cast is complete, a canal boat waits in front of a lock or a berth until it is cleared to proceed, and a rendezvous requires the vessel to loiter around a point until a partner arrives. For a small vessel with a single engine and a sterndrive this station keeping is most naturally performed by weathervaning. The position is held inside a region around the setpoint while the heading is left free, so that the bow aligns with the resultant wind and current load and the vessel holds station with the actuation it has, as in the weather optimal positioning of Fossen and Strand \cite{fossen2001wopc} and the underactuated positioning of Pettersen and Fossen \cite{pettersen2000underactuated}.
 
-The sterndrive that makes such a vessel inexpensive also makes the task difficult, and the difficulty is mechatronic rather than hydrodynamic. The engine drives the propeller through a gearbox with reverse, neutral, and forward positions. A shift between positions is executed by a servo cylinder that moves the shift cable through neutral at low engine speed, and to protect the clutch cones the shift must then hold its new position for a minimum dwell time, about three seconds on the vessel of this study. During that time the controller cannot change the sign of the thrust. Moreover, a sterndrive steers by vectoring the propeller thrust, so the lateral force is proportional to the thrust itself. While the shift is locked in neutral the vessel has neither thrust nor steering authority, and while it is locked in forward or reverse it cannot reverse its thrust direction. Wind and current do not wait for the lock to expire.
+The sterndrive that makes such a vessel inexpensive also makes the task difficult, and the difficulty is mechatronic rather than hydrodynamic. The engine drives the propeller through a gearbox with reverse, neutral, and forward positions, and for the mechanical reasons explained in Section~\ref{sec_dwell} the shift must hold each position for a minimum dwell of about three seconds. During that time the controller cannot change the sign of the thrust, and since a sterndrive steers by vectoring the propeller thrust, a lock in neutral leaves the vessel with neither thrust nor steering authority. Wind and current do not wait for the lock to expire.
 
 Station keeping controllers for marine craft range from proportional integral derivative (PID) and line of sight designs \cite{yu2022los} to nonlinear model predictive control (NMPC) with identified vessel models \cite{lee2024canal}. When a discrete actuator must respect a minimum dwell, the model predictive literature on switched systems offers mixed integer and dwell constrained formulations \cite{zhang2016,vicente2019,lavaei2021,zhuang2023,chenlazar2022}. However, these results are either nominal or linear. The switched tube constructions of \cite{zhang2016,vicente2019,lavaei2021} tighten constraints against additive disturbances for linear dynamics only, the persistent dwell results of \cite{zhuang2023} are stated for linear switched systems, and the nonlinear scheme of \cite{chenlazar2022} establishes recursive feasibility through an $\ell$ step control invariant terminal set without a tightening mechanism for disturbances. In addition, all of these works treat the dwell as a design output that guarantees stability or feasibility, whereas on a sterndrive the dwell is a hardware constant and the question is where the vessel may operate so that it survives the locks the hardware will impose.
 
 Safety against bounded disturbances is naturally posed as a two player zero sum reachability game \cite{bansal2017}, and recent learning based methods compute its value for nonlinear systems that are beyond grid based solvers. The discounted safety backup of Fisac et al. \cite{fisac2019}, reachability constrained reinforcement learning \cite{yu2022}, its adversarial extension by Li et al. \cite{li2023cdc,li2309dual}, decomposition based safety filters \cite{li2311decomp}, and DeepReach \cite{bansal2021deepreach} all deliver a value function whose zero superlevel set is a robust invariant set (RIS). However, every one of them assumes that the full control set is available at every step, so none models an actuator that locks. The exact computation of disturbance invariant sets under a dwell time restriction by Dehghan and Ong \cite{dehghan2012} is the closest predecessor of the present work, but it is confined to linear polytopic dynamics, quantifies universally over disturbance sequences, and returns a binary membership verdict that no shield can threshold.
 
-In this article, the dwell is reinterpreted not as a scheduling restriction but as an asymmetry of the safety game. The dwell binds only the maximizing player, and the disturbance remains free at every step. As a consequence the safe set is not one set but a family indexed by the elapsed dwell. A state that is safe immediately after a shift may be unsafe two seconds into the lock, because the margin that the disturbance can erode during the remaining lock must be reserved in advance. A value function learned on the physical state alone cannot represent this, since two identical physical states with different timers have different admissible actions. The gear state and its timer are therefore promoted to the state, and the dwell indexed value is learned by a one step adversarial backup in which legality is enforced both in the plant and in the backup. The learned value drives a task policy and a safety shield, and the complete controller is validated in simulation against a dwell unaware certificate and in full scale field experiments against PID and NMPC baselines. To the best of our knowledge, this study represents the first field demonstration of a learned robust safety certificate on a full scale vessel subject to a physical actuator dwell. The main contributions of this article are summarized as follows.
+In this article, the dwell is reinterpreted not as a scheduling restriction but as an asymmetry of the safety game. The dwell binds only the maximizing player, and the disturbance remains free at every step. As a consequence the safe set is not one set but a family indexed by the elapsed dwell. The gear state and its timer are therefore promoted to the state, and the dwell indexed value is learned by a one step adversarial backup in which legality is enforced both in the plant and in the backup. The learned value drives a task policy and a safety shield, and the complete controller is validated in simulation against a dwell unaware certificate and in full scale field experiments against PID and NMPC baselines. To the best of our knowledge, this study represents the first field demonstration of a learned robust safety certificate on a full scale vessel subject to a physical actuator dwell. The main contributions of this article are summarized as follows.
 \begin{enumerate}
 \item A dwell indexed robust invariant set is formulated for weathervaning station keeping, in which the gear state and its elapsed dwell are promoted to state variables and the safe set becomes a family indexed by the elapsed dwell, in contrast to the single sets of \cite{dehghan2012,zhang2016,vicente2019} and to the dwell free certificates of \cite{fisac2019,li2023cdc}.
-\item A one step adversarial learning scheme with legality masking is developed for the dwell indexed value on the identified nonlinear vessel model, together with a task policy and a value threshold shield, which yields a scalar margin usable at run time rather than the binary verdict of exact set recursion.
+\item A one step adversarial learning scheme with legality masking is developed for the dwell indexed value on the identified nonlinear vessel model, together with a task policy and a value threshold shield that use the learned value as a scalar margin at run time.
 \item Full scale field experiments on an eight meter sterndrive vessel are conducted against PID and NMPC baselines, and a simulation study exposes the false certification produced when the dwell is ignored.
 \end{enumerate}
 
-The remainder of this article is organized as follows. Section~\ref{sec_system} describes the vessel, the physical origin of the shift dwell, the maneuvering model, and the disturbance model. Section~\ref{sec_problem} formulates the augmented safety game and establishes that the augmentation preserves its structure. Section~\ref{sec_method} develops the dwell indexed safe controller, its learning scheme, the task policy, the shield, and the onboard implementation. Sections~\ref{sec_sim} and \ref{sec_exp} present the simulation and field results, respectively. Section~\ref{sec_conclusion} concludes this article, and the proof of the lemma is given in the Appendix. Fig.~\ref{fig_framework} shows the overall framework.
+The remainder of this article is organized as follows. Section~\ref{sec_system} describes the vessel, the physical origin of the shift dwell, the maneuvering model, and the disturbance model. Section~\ref{sec_problem} formulates the augmented safety game and establishes that the augmentation preserves its structure. Section~\ref{sec_method} develops the dwell indexed safe controller, its learning scheme, the task policy, and the shield. Section~\ref{sec_sim} presents the simulation results, and Section~\ref{sec_exp} presents the onboard implementation and the field results. Section~\ref{sec_conclusion} concludes this article, and the proof of the lemma is given in the Appendix. Fig.~\ref{fig_framework} shows the overall framework.
 
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell indexed safe station keeping. Offline, the dwell indexed safety value $Q_h$ is learned in simulation through a one step adversarial game between the safety policy $\pi_h$ and the adversary $\mu$ (Stage~1), and the task policy $\pi_t$ is trained under the frozen safety critic (Stage~2). Online, the frozen networks run on the vessel every 0.5~s, and the shield replaces the task action by $\pi_h$ whenever the certified value falls below the margin $\tau$.}
+\caption{Overall framework of the proposed dwell indexed safe station keeping. Offline, parallel simulators that enforce the gear dwell fill a replay buffer, from which the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by a one step adversarial game between the safety policy $\pi_h$ and the adversary $\mu$ (Stage~1), and the task policy $\pi_t$ is trained by soft actor critic under the frozen safety critic (Stage~2). Online, the frozen networks run on the vessel at each control period, and the shield replaces the task action by $\pi_h$ whenever the certified value falls below the margin $\tau$.}
 \label{fig_framework}
 \end{figure*}
 
@@ -94,18 +99,18 @@ This section describes the vessel and its actuation, explains where the gear shi
 
 \subsection{Vessel and Actuation System}\label{sec_vessel}
 
-The experimental platform is a Neo AURA 240 EXP, an open top experimental version of the AURA 240 leisure motorboat with a deep V planing hull, shown in Fig.~\ref{fig_vessel}. The vessel has a length overall of 8.29~m, a length between perpendiculars of 6.96~m, a breadth of 2.62~m, a depth of 0.66~m, and a draft of 0.34~m, and it is rated for twelve persons. Propulsion is provided by a single inboard diesel engine \pending{engine model to be confirmed, the vendor deck lists two models} driving a MerCruiser Bravo~1 sterndrive. The principal specifications are listed in Table~\ref{tab_vessel}.
+The experimental platform is a Neo AURA 240 EXP, an open top experimental version of the AURA 240 leisure motorboat with a deep V planing hull, shown in Fig.~\ref{fig_vessel}. Propulsion is provided by a single inboard diesel engine \pending{engine model to be confirmed, the vendor deck lists two models} driving a MerCruiser Bravo~1 sterndrive, and the principal dimensions and actuation specifications are listed in Table~\ref{tab_vessel}.
 
 \begin{figure*}[!t]
 \centering
-\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel photograph, stern machinery bay with labeled cylinders, and control hardware.}{5cm}}
-\caption{Experimental vessel and its actuation hardware. (a) The vessel. (b) Stern machinery bay with the shift servo cylinder, the steering servo cylinder, and the drive steering pivot. (c) Control hardware from the control PC through the PLC to the engine and the servo cylinders, with the communication interface of each link. The bow thruster is installed but is not used in this study.}
+\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel photograph and control hardware.}{5cm}}
+\caption{Experimental vessel and its actuation hardware. (a) The vessel. (b) Control hardware and the communication interface of each link.}
 \label{fig_vessel}
 \end{figure*}
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
-\caption{Vessel and Sensor Specifications}
+\caption{Vessel and Actuation Specifications}
 \label{tab_vessel}
 \centering
 \footnotesize
@@ -130,39 +135,59 @@ Throttle per gear & \pending{TBD} \\
 Shift actuation & electric linear servo cylinder via PLC \\
 Steering actuation & servo cylinder on drive pivot via PLC \\
 Engine speed command & CAN \\
-Navigation & Pixhawk Cube IMU, Here3 GNSS \\
-Positioning accuracy & \pending{TBD} m \\
-State estimation & extended Kalman filter at 10 Hz \\
-Control computer & control PC running ROS 2 \\
-Control period & 0.5 s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Three actuation channels are exposed to the controller. The engine speed is commanded over a CAN interface. The gear shift among reverse, neutral, and forward is executed by an electric linear servo cylinder acting on the shift cable, and the steering angle of the drive is set by a servo cylinder mounted on the drive pivot. Both cylinders are driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so that the results concern a single engine sterndrive configuration. Navigation relies on a Pixhawk Cube flight controller with its inertial measurement unit and a Here3 GNSS receiver, and a control PC running ROS~2 fuses the measurements in an extended Kalman filter at 10~Hz and runs the controller at a period of 0.5~s.
+Three actuation channels are exposed to the controller through the chain shown in Fig.~\ref{fig_vessel}(b). The engine speed is commanded over a CAN interface, while the gear shift among reverse, neutral, and forward and the steering angle of the drive are executed by two electric linear servo cylinders, one acting on the shift cable and one mounted on the drive pivot, both driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so that the results concern a single engine sterndrive configuration.
 
 \subsection{Gear Shift Dwell}\label{sec_dwell}
 
-The minimum dwell has a mechanical origin that the controller cannot shorten. A shift between forward and reverse passes through neutral, and the cone clutch of the sterndrive gearbox must engage at low engine speed to avoid shock loading of the gear set. The shift cylinder therefore first brings the engine to idle, moves its stroke to the new detent, and only then releases the engine speed command \pending{confirm this shift sequence against the PLC logic of the vessel}. The elapsed time of this sequence, together with a protection interval that prevents an immediate reversal of the stroke, sets the minimum interval between consecutive shift commands. On the vessel of this study this interval is 3~s \pending{measured basis, cylinder stroke time and protection interval to be stated}. With the control period of 0.5~s the dwell corresponds to $D_g = 6$ control steps.
-
-Two consequences follow for control. First, a request issued during the dwell is not delayed but discarded by the plant, so the controller must reason about when it is allowed to act. Second, because the steering force of a sterndrive is produced by vectoring the propeller thrust, a lock in neutral removes the lateral force as well as the thrust, and the vessel drifts under the environmental load with no authority at all. The dwell is thus not a mild rate limit but a loss of controllability whose timing is set by the controller's own past decisions.
+The minimum dwell has a mechanical origin that the controller cannot shorten. A shift between forward and reverse passes through neutral, and the cone clutch of the sterndrive gearbox must engage at low engine speed to avoid shock loading of the gear set. The shift cylinder therefore first brings the engine to idle, moves its stroke to the new detent, and only then releases the engine speed command \pending{confirm this shift sequence against the PLC logic of the vessel}. The elapsed time of this sequence, together with a protection interval that prevents an immediate reversal of the stroke, sets the minimum interval between consecutive shift commands. On the vessel of this study this interval is 3~s \pending{measured basis, cylinder stroke time and protection interval to be stated}. With the control period of 0.5~s the dwell corresponds to $D_g = 6$ control steps. A shift request issued during the dwell is not delayed but discarded by the plant, so the controller must reason about when it is allowed to act.
 
 \subsection{Maneuvering Model and System Identification}\label{sec_model}
 
-The vessel is described by the three degree of freedom maneuvering model of \cite{fossen2011} in the body fixed and inertial frames of Fig.~\ref{fig_frames}. With $(x, y, \psi)$ the position and heading in the inertial frame and $(u, v, r)$ the surge, sway, and yaw rates in the body frame, the mass normalized model used for training is given by
+The vessel is described by the three degree of freedom horizontal plane model of \cite{fossen2011} in the body fixed and inertial frames of Fig.~\ref{fig_frames}, written in the form used in \cite{lee2024canal} as
+\begin{subequations}\label{eq_model}
 \begin{align}
-\dot{x} &= u\cos\psi - v\sin\psi, \qquad \dot{y} = u\sin\psi + v\cos\psi, \qquad \dot{\psi} = r, \nonumber\\
-\dot{u} &= -X_u u - X_{|u|u}|u|u + b_u T_g\cos\delta + d_u, \nonumber\\
-\dot{v} &= -Y_v v - Y_r r - Y_{|v|v}|v|v + b_v T_g\sin\delta + d_v, \nonumber\\
-\dot{r} &= -N_v v - N_r r - b_r T_g\sin\delta + d_r,
-\label{eq_model}
+M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= \bm{f}_c + M d, \\
+\dot{\eta} &= R(\psi)\nu, \\
+R(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
-where $T_g$ is the thrust of gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $T_{\gN} = 0$ and $T_{\gR} < 0 < T_{\gF}$, $\delta$ is the steering angle of the drive, $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear damping coefficients, $X_{|u|u}$ and $Y_{|v|v}$ are the quadratic damping coefficients, $b_u$, $b_v$, and $b_r$ are the mass normalized thrust gains in surge, sway, and yaw, respectively, and $d = (d_u, d_v, d_r)$ is the disturbance acceleration described in Section~\ref{sec_disturbance}. The thrust terms encode the sterndrive geometry. The propeller race is vectored by $\delta$, so the lateral force $b_v T_g\sin\delta$ and the yaw moment $b_r T_g\sin\delta$ vanish with the thrust, which is the physical basis of the simultaneous loss of thrust and steering in neutral. The steering angle moves toward its command $\delta_c$ at no more than the slew rate of the servo cylinder, which over an integration substep of length $\Delta t_s$ reads
+\end{subequations}
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, $M$ is the inertia matrix, $C(\nu)$ is the Coriolis and centripetal matrix, $D(\nu)$ is the damping matrix, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $d = [d_u, d_v, d_r]^\top$ is the disturbance acceleration described in Section~\ref{sec_disturbance}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. The control vector is denoted $\bm{f}_c$ rather than $\tau_c$ because $\tau$ is reserved for the shield margin and $\tau_g$ for the dwell timer in this article. Assuming that the vessel is symmetric in the $x$ and $y$ directions, $M$, $C(\nu)$, and $D(\nu)$ can be expressed as
+\begin{equation}
+M = \operatorname{diag}(m_{11}, m_{22}, m_{33}),
+\label{eq_mass}
+\end{equation}
+\begin{equation}
+C(\nu) = \begin{bmatrix} 0 & 0 & -m_{22} v \\ 0 & 0 & m_{11} u \\ m_{22} v & -m_{11} u & 0 \end{bmatrix},
+\label{eq_coriolis}
+\end{equation}
+\begin{equation}
+D(\nu) = -\begin{bmatrix} X_u & 0 & 0 \\ 0 & Y_v & Y_r \\ 0 & N_v & N_r \end{bmatrix}
+- \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & Y_{r|r|}|r| \\ 0 & N_{v|v|}|v| & N_{r|r|}|r| \end{bmatrix},
+\label{eq_damping}
+\end{equation}
+where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia, $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, $Y_{r|r|}$, $N_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively.
+
+The control force and moment are produced by the propeller thrust vectored through the steering angle of the drive,
+\begin{equation}
+\bm{f}_c = \begin{bmatrix} f_X \\ f_Y \\ f_N \end{bmatrix}
+= \begin{bmatrix} F_g\cos\delta \\ F_g\sin\delta \\ -l_d F_g\sin\delta \end{bmatrix},
+\label{eq_force}
+\end{equation}
+where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$, $\delta$ is the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive. In \cite{lee2024canal} the outboard thrust is commanded continuously through the throttle as $F = c\,n_T^2$, whereas here the thrust takes only the three values selected by the gear, and the gear is the channel that carries the dwell. Since the lateral force $f_Y$ and the yaw moment $f_N$ are proportional to $F_g$, both vanish together with the thrust in neutral. The steering angle moves toward its command $\delta_c$ at no more than the slew rate of the servo cylinder, which over an integration substep of length $\Delta t_s$ reads
 \begin{equation}
 \delta^{+} = \delta + \operatorname{sat}_{\dot{\delta}_{\max}\Delta t_s}\!\bigl(\delta_c - \delta\bigr), \qquad |\delta_c| \le \delta_{\max},
 \label{eq_steer}
 \end{equation}
-with the angle limit $\delta_{\max}$ and the rate limit $\dot{\delta}_{\max}$ matched to the servo cylinder \pending{values}. The model is integrated by a fourth order Runge Kutta scheme with ten substeps per control period of 0.5~s.
+with the angle limit $\delta_{\max}$ and the rate limit $\dot{\delta}_{\max}$ matched to the servo cylinder \pending{values}. Combining \eqref{eq_model} to \eqref{eq_force} without the disturbance, the complete model is written as
+\begin{equation}
+\dot{\bm{x}} = f(\bm{x}, \bm{u}, P),
+\label{eq_complete}
+\end{equation}
+where $\bm{x} = [x, y, \psi, u, v, r]^\top$ and $\bm{u} = [g, \delta_c]^\top$ are the state and control input vectors, respectively, and $P = [m_{11}, m_{22}, m_{33}, X_u, Y_v, Y_r, N_v, N_r, X_{u|u|}, Y_{v|v|}, Y_{r|r|}, N_{v|v|}, N_{r|r|}, F_{\gF}, F_{\gR}, l_d]$ is the vector of unknown parameters. \pending{confirm that the training simulator integrates \eqref{eq_model} including $C(\nu)$, since the earlier simulator code omitted the Coriolis term}
 
 \begin{figure}[!t]
 \centering
@@ -172,7 +197,15 @@ with the angle limit $\delta_{\max}$ and the rate limit $\dot{\delta}_{\max}$ ma
 \label{fig_frames}
 \end{figure}
 
-The coefficients of \eqref{eq_model} were identified from maneuvering data recorded on the vessel, following the procedure of \cite{lee2024canal}. Acceleration and deceleration runs at fixed gear and throttle settings excite the surge equation, and zigzag runs excite the sway and yaw equations. The surge coefficients are identified first, and the sway and yaw coefficients are then identified with the surge model fixed, by minimizing the weighted squared error between the measured and simulated states over each run. Fig.~\ref{fig_si} compares the identified model with a validation run not used in the fit, and Table~\ref{tab_si} lists the identified coefficients.
+The unknown parameters of \eqref{eq_complete} were identified from maneuvering data recorded on the vessel by posing the nonlinear programming problem of \cite{lee2024canal},
+\begin{subequations}\label{eq_si}
+\begin{align}
+P^{\ast} &= \arg\min_{P} \sum_{i=0}^{N} (\bm{x}_i - \bar{\bm{x}}_i)^\top W (\bm{x}_i - \bar{\bm{x}}_i) \\
+\text{s.t.}\quad \bm{x}_{i+1} &= f_d(\bm{x}_i, \bar{\bm{u}}_i, P), \\
+\bm{x}_0 &= \bm{x}_{\mathrm{init}},
+\end{align}
+\end{subequations}
+where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. Acceleration and deceleration runs at fixed gear and throttle settings excite the surge equation, and zigzag runs excite the sway and yaw equations. To simplify the problem with many unknown parameters, the surge model and the sway and yaw model are decoupled and identified sequentially. The surge parameters are identified first from the acceleration and deceleration data, and the sway and yaw parameters are then identified from the zigzag data with the surge parameters fixed \pending{weight matrices $W$ of the two stages, initial guesses, and the solver used}. Fig.~\ref{fig_si} compares the identified model with a validation run not used in the fit, and Table~\ref{tab_si} lists the estimated value of every entry of $P$.
 
 \begin{figure}[!t]
 \centering
@@ -184,37 +217,34 @@ The coefficients of \eqref{eq_model} were identified from maneuvering data recor
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
-\caption{Identified Model Coefficients}
+\caption{System Identification Results}
 \label{tab_si}
 \centering
 \footnotesize
-\begin{tabular}{lcc}
+\begin{tabular}{lclc}
 \toprule
-Coefficient & Value & Unit \\
+Item & Estimated value & Item & Estimated value \\
 \midrule
-$X_u$ & \pending{TBD} & 1/s \\
-$X_{|u|u}$ & \pending{TBD} & 1/m \\
-$Y_v$ & \pending{TBD} & 1/s \\
-$Y_r$ & \pending{TBD} & m/s \\
-$Y_{|v|v}$ & \pending{TBD} & 1/m \\
-$N_v$ & \pending{TBD} & 1/(m s) \\
-$N_r$ & \pending{TBD} & 1/s \\
-$b_u T_{\gF}$, $b_u T_{\gR}$ & \pending{TBD} & m/s$^2$ \\
-$b_v T_{\gF}$, $b_v T_{\gR}$ & \pending{TBD} & m/s$^2$ \\
-$b_r T_{\gF}$, $b_r T_{\gR}$ & \pending{TBD} & rad/s$^2$ \\
-$\delta_{\max}$, $\dot{\delta}_{\max}$, $k_\delta$ & \pending{TBD} & \pending{TBD} \\
+$m_{11}$ & \pending{TBD} & $X_{u|u|}$ & \pending{TBD} \\
+$m_{22}$ & \pending{TBD} & $Y_{v|v|}$ & \pending{TBD} \\
+$m_{33}$ & \pending{TBD} & $Y_{r|r|}$ & \pending{TBD} \\
+$X_u$ & \pending{TBD} & $N_{v|v|}$ & \pending{TBD} \\
+$Y_v$ & \pending{TBD} & $N_{r|r|}$ & \pending{TBD} \\
+$Y_r$ & \pending{TBD} & $F_{\gF}$ & \pending{TBD} \\
+$N_v$ & \pending{TBD} & $F_{\gR}$ & \pending{TBD} \\
+$N_r$ & \pending{TBD} & $l_d$ & \pending{TBD} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Disturbance Model}\label{sec_disturbance}
 
-The environmental load is represented by a body frame acceleration $d = (d_u, d_v, d_r)$ that enters \eqref{eq_model} additively and is bounded by the box
+The environmental load is represented by a body frame acceleration $d = [d_u, d_v, d_r]^\top$ that enters \eqref{eq_model} through the term $Md$ and is bounded by the box
 \begin{equation}
 \calW = [-\bar{d}_u, \bar{d}_u] \times [-\bar{d}_v, \bar{d}_v] \times [-\bar{d}_r, \bar{d}_r].
 \label{eq_wbox}
 \end{equation}
-The bounds are chosen from drift data recorded on the vessel with the engine at idle and the gear in neutral, in which the measured accelerations reflect the wind and current load alone. The bounds are set to cover the recorded drift with a margin \pending{bounds $\bar d_u$, $\bar d_v$, $\bar d_r$ and the recording conditions}. No assumption is made on the time behavior of $d$ within $\calW$. In the safety game of Section~\ref{sec_problem} the disturbance is chosen by an adversary at every step, which is a stronger model than any particular wind spectrum, and the field discussion of Section~\ref{sec_exp} returns to the relation between this bound and the disturbance actually encountered.
+The bounds are chosen from drift data recorded on the vessel with the engine at idle and the gear in neutral, in which the measured accelerations reflect the wind and current load alone. The bounds are set to cover the recorded drift with a margin \pending{bounds $\bar d_u$, $\bar d_v$, $\bar d_r$ and the recording conditions}. No assumption is made on the time behavior of $d$ within $\calW$. In the safety game of Section~\ref{sec_problem} the disturbance is chosen by an adversary at every step, which is a stronger model than any particular wind spectrum.
 
 \section{Problem Formulation}\label{sec_problem}
 
@@ -273,12 +303,12 @@ Let the augmented dynamics follow \eqref{eq_xi} and \eqref{eq_legal}, let $h$ be
 The proof is given in the Appendix. In plain terms, the lemma says that the dwell does not damage the mathematical machinery, because the contraction argument uses only the fact that the admissible action set is nonempty and compact at every state. All difficulty introduced by the dwell is therefore concentrated not in the operator but in the shape of its fixed point, which the next section examines.
 
 \begin{remark}[Several Dwell Channels]\label{rem_channels}
-The formulation extends to $N$ independent switching channels, each with its own levels, dwell constant, and timer, by taking $C(\xi)$ as the product of the per channel legal sets, and Lemma~\ref{lem_aug} holds verbatim since no step of its proof counts the channels. The bow thruster of the vessel would enter in this way. Only the gear channel is treated in this article.
+The formulation extends to $N$ independent switching channels, each with its own levels, dwell constant, and timer, by taking $C(\xi)$ as the product of the per channel legal sets, and Lemma~\ref{lem_aug} holds verbatim since no step of its proof counts the channels. Only the gear channel is treated in this article.
 \end{remark}
 
 \section{Dwell Indexed Safe Controller}\label{sec_method}
 
-This section contains the conceptual core of the article. We first show that the safe set under the dwell is a family indexed by the elapsed dwell and locate its physical origin in the asymmetry between control and disturbance on a sterndrive. We then describe the one step learning of the dwell indexed value, the task policy and shield built on it, and the onboard implementation.
+This section contains the conceptual core of the article. We first show that the safe set under the dwell is a family indexed by the elapsed dwell and locate its physical origin in the asymmetry between control and disturbance on a sterndrive. We then describe the one step learning of the dwell indexed value and the task policy and shield built on it.
 
 \subsection{The Safe Set Is a Family Indexed by Elapsed Dwell}\label{sec_family}
 
@@ -289,17 +319,15 @@ Fix the discrete coordinates of the augmented state and consider the slice of th
 \end{equation}
 Each choice of gear and timer produces a different slice, so the safe set is a family indexed by the elapsed dwell. The dependence is monotone in the natural direction. When $\tau_g = 0$ the gear can react immediately and the slice is large. When $\tau_g = D_g - 1$ the vessel must survive the entire lock without gear authority, so the margin that the disturbance can erode during the lock must be reserved in advance and the slice is small. Fig.~\ref{fig_family} illustrates the slices.
 
-The physical origin of the family is an asymmetry in the game \eqref{eq_value}. The dwell binds only the maximizing player. On a sterndrive the asymmetry is particularly severe, because steering vectors the thrust. During a lock in neutral the propeller produces no thrust and, by \eqref{eq_model}, no lateral force and no yaw moment either, so the control authority is exactly zero for up to three seconds. During a lock in forward or reverse the vessel can steer but cannot reverse its thrust, so a vessel that has just engaged forward to climb back toward the setpoint cannot brake if the wind pushes it across. Throughout those seconds the disturbance acts freely at every step. In a zero sum game, tying one player's hands lowers the value, and the amount by which the value drops is exactly the amount by which the safe set shrinks. The adversary of \eqref{eq_value} does not need a larger disturbance to exploit this. It needs the right timing, namely the moments at which the gear has just been locked in the wrong level. The dwell indexed value function anticipates this timing because the timer is part of its argument, whereas a dwell unaware value cannot.
+The physical origin of the family is an asymmetry in the game \eqref{eq_value}. The dwell binds only the maximizing player. On a sterndrive the asymmetry is particularly severe, because steering vectors the thrust. During a lock in neutral the propeller produces no thrust and, by \eqref{eq_force}, no lateral force and no yaw moment either, so the control authority is exactly zero for up to three seconds. During a lock in forward or reverse the vessel can steer but cannot reverse its thrust, so a vessel that has just engaged forward to climb back toward the setpoint cannot brake if the wind pushes it across. Throughout those seconds the disturbance acts freely at every step. In a zero sum game, tying one player's hands lowers the value, and the amount by which the value drops is exactly the amount by which the safe set shrinks. The adversary of \eqref{eq_value} does not need a larger disturbance to exploit this. It needs the right timing, namely the moments at which the gear has just been locked in the wrong level. The dwell indexed value function anticipates this timing because the timer is part of its argument, whereas a dwell unaware value cannot.
 
 \begin{figure}[!t]
 \centering
 %\includegraphics[width=\linewidth]{figures/fig_family.pdf}
 \figph{Fig. 5 placeholder. Slices of the certified set in the position error plane for each gear level (rows R, N, F) and selected timer values (columns, timer 0, 2, 5), at a representative heading and velocity. Keep in circle of radius R drawn on each panel. The slice shrinks with the timer, most strongly for the neutral gear.}{5.5cm}
-\caption{The safe set is a family indexed by the gear level and the elapsed dwell. Slices of the certified set over the position error for fixed heading and velocity. A larger remaining lock reserves more margin and yields a smaller slice, and the neutral lock, which removes thrust and steering together, produces the smallest slices. \pending{Generated from the trained value, to be inserted.}}
+\caption{The safe set is a family indexed by the gear level and the elapsed dwell. Slices of the certified set over the position error for fixed heading and velocity. A larger remaining lock reserves more margin and yields a smaller slice, and the neutral lock produces the smallest slices. \pending{Generated from the trained value, to be inserted.}}
 \label{fig_family}
 \end{figure}
-
-We state the relation to prior work carefully. The exact set recursion of Dehghan and Ong \cite{dehghan2012} is the computation predecessor of this idea for constrained switched linear systems, and we do not claim to be the first to compute safe sets under a dwell restriction. The claim of this article is the reformulation of dwell constrained robust safety as a value function problem on the augmented state, which supports the nonlinear vessel model, the nonanticipative adversary, a model free implementation, and a scalar margin that a shield can threshold.
 
 \subsection{One Step Learning of the Dwell Indexed Value}\label{sec_learning}
 
@@ -386,11 +414,7 @@ At run time the two policies are combined by a value threshold filter. At each c
 c = \begin{cases} c^{t}, & q(\xi, c^{t}) \ge \tau, \\ \pi_h(\xi), & \text{otherwise}, \end{cases}
 \label{eq_shield}
 \end{equation}
-so that the safety policy takes over only when the task action would leave the deployed set under the worst disturbance. The filter uses the same networks and the same margin as the certificate, and its intervention rate is recorded as a metric in Sections~\ref{sec_sim} and \ref{sec_exp}. \pending{Exact onboard switching rule to be confirmed against the deployed code, including whether the filter evaluates the task action alone or also the hold action.}
-
-\subsection{Onboard Implementation}\label{sec_onboard}
-
-The controller runs as a ROS~2 node on the control PC. The extended Kalman filter publishes the position, heading, and body rates at 10~Hz from the Pixhawk inertial unit and the Here3 GNSS receiver. At each control period of 0.5~s the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request. The PLC executes the steering command on the drive pivot cylinder and the gear request on the shift cylinder, discards any shift request that arrives during a lock, and the engine speed setpoint for each gear direction is sent over CAN. Inference of the three networks takes \pending{TBD} ms per step on the onboard computer, against the control period of 500~ms, so the computation budget is not a constraint. The same node structure runs the PID and NMPC baselines of Section~\ref{sec_baselines}, which differ only in the policy evaluation block.
+so that the safety policy takes over only when the task action would leave the deployed set under the worst disturbance. The filter uses the same networks and the same margin as the certificate. \pending{Exact onboard switching rule to be confirmed against the deployed code, including whether the filter evaluates the task action alone or also the hold action.}
 
 \section{Simulation Results}\label{sec_sim}
 
@@ -398,7 +422,7 @@ This section audits the learned certificate, contrasts it with a dwell unaware c
 
 \subsection{Setup and Baselines}\label{sec_baselines}
 
-Training and simulation use the model of Section~\ref{sec_model} with the identified coefficients, the control period $\Delta t = 0.5$~s, ten Runge Kutta substeps per period, the dwell $D_g = 6$, and the disturbance box \eqref{eq_wbox}. Table~\ref{tab_params} lists the parameters.
+Training and simulation use the model of Section~\ref{sec_model} with the identified parameters, the disturbance box \eqref{eq_wbox}, and the settings listed in Table~\ref{tab_params}.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
@@ -412,7 +436,6 @@ Parameter & Value \\
 \midrule
 Control period $\Delta t$ & 0.5 s \\
 Integration & RK4, 10 substeps per period \\
-Shift dwell $D_g$ & 6 steps (3 s) \\
 Keep in radius $R$ & \pending{TBD} m \\
 Value floor $h_{\mathrm{floor}}$ & \pending{TBD} m \\
 Disturbance bounds $(\bar d_u, \bar d_v, \bar d_r)$ & \pending{TBD} \\
@@ -483,7 +506,7 @@ This section reports the full scale field validation of the proposed controller 
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
-The experiments were conducted on the vessel of Section~\ref{sec_vessel} at \pending{site} on \pending{dates}, in the area shown in Fig.~\ref{fig_site}. The wind during the trials was \pending{speed and direction, measurement source}, and the current was \pending{TBD}. A setpoint was fixed in the inertial frame, the keep in radius was set to $R = \pending{TBD}$~m, and each run lasted \pending{TBD} s after the vessel had been brought inside the disk by the operator. The proposed controller, B1, and C1 were run back to back on the same setpoint so that they faced comparable conditions \pending{confirm sequencing and the number of runs per controller}. All three controllers used the same state estimate, the same control period, the same gear and steering interfaces, and the same dwell enforced by the PLC, and the proposed controller ran with the deployment margin $\tau$ and the networks trained in simulation without any field retraining. A video of the trials is available at \pending{link}.
+The experiments were conducted on the vessel of Section~\ref{sec_vessel} at \pending{site} on \pending{dates}, in the area shown in Fig.~\ref{fig_site}. The wind during the trials was \pending{speed and direction, measurement source}, and the current was \pending{TBD}. A setpoint was fixed in the inertial frame, the keep in radius was set to $R = \pending{TBD}$~m, and each run lasted \pending{TBD} s after the vessel had been brought inside the disk by the operator. The proposed controller, B1, and C1 were run back to back on the same setpoint so that they faced comparable conditions \pending{confirm sequencing and the number of runs per controller}. The proposed controller ran with the deployment margin $\tau$ and the networks trained in simulation without any field retraining. A video of the trials is available at \pending{link}.
 
 \begin{figure}[!t]
 \centering
@@ -492,6 +515,10 @@ The experiments were conducted on the vessel of Section~\ref{sec_vessel} at \pen
 \caption{Experimental site and setpoint. \pending{Site, date, and wind conditions to be stated.}}
 \label{fig_site}
 \end{figure}
+
+\subsection{Onboard Implementation}\label{sec_onboard}
+
+The controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}(b). The position, heading, and body rates are estimated by an extended Kalman filter at 10~Hz on the onboard navigation sensors \pending{sensor description to be added by the authors}. At each control period of 0.5~s the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request to the PLC. Inference of the three networks takes \pending{TBD} ms per step on the onboard computer, well within this period. The PID and NMPC baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, so that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
 
 \subsection{Comparison With Baselines}\label{sec_exp_comp}
 
@@ -537,7 +564,7 @@ Realized disturbance to bound & \pending{TBD} & \pending{TBD} & \textbf{\pending
 \end{tabular}
 \end{table}
 
-The comparison is again read from the weakest to the proposed controller. The PID controller B1 held station with a mean distance of \pending{TBD}~m and left the disk \pending{TBD} times, and it shifted the gear \pending{TBD} times per minute, each shift opening a lock during which the distance grew by up to \pending{TBD}~m. The NMPC controller C1 held station with a mean distance of \pending{TBD}~m and \pending{TBD} excursions, with \pending{TBD} shifts per minute and a solve time of \pending{TBD}~ms per step. The proposed controller held station with a mean distance of \pending{TBD}~m, remained inside the disk for \pending{TBD} of the run, shifted \pending{TBD} times per minute, and triggered the shield in \pending{TBD} of the steps, with an inference time of \pending{TBD}~ms. These results would demonstrate that the certified controller transfers to the vessel without retraining and holds the disk against the real environmental load with fewer gear shifts than the baselines, \pending{to be stated once the designated runs are analyzed}.
+The comparison is again read from the weakest to the proposed controller. The PID controller B1 held station with a mean distance of \pending{TBD}~m and left the disk \pending{TBD} times, and it shifted the gear \pending{TBD} times per minute, each shift opening a lock during which the distance grew by up to \pending{TBD}~m. The NMPC controller C1 held station with a mean distance of \pending{TBD}~m and \pending{TBD} excursions, with \pending{TBD} shifts per minute and a solve time of \pending{TBD}~ms per step. The proposed controller held station with a mean distance of \pending{TBD}~m, remained inside the disk for \pending{TBD} of the run, shifted \pending{TBD} times per minute, and triggered the shield in \pending{TBD} of the steps. These results would demonstrate that the certified controller transfers to the vessel without retraining and holds the disk against the real environmental load with fewer gear shifts than the baselines, \pending{to be stated once the designated runs are analyzed}.
 
 \subsection{Discussion}\label{sec_exp_disc}
 
@@ -545,11 +572,11 @@ Three observations deserve comment. First, the behavior during locked intervals 
 
 Second, the shield interventions mark the moments at which the task policy proposed an action whose certified value fell below the margin. Because the task policy is trained under the floored Lagrangian penalty of \eqref{eq_lagrange}, interventions are expected to be rare and to occur near the boundary of the disk, typically when the task policy would request a shift that opens a lock while the vessel is being pushed outward. \pending{Intervention count and locations to be described.}
 
-Third, the real disturbance encountered in the field is not a worst case adversary, and this is a strength of the deployment rather than a limitation of the validation. The disturbance bound \eqref{eq_wbox} was set from drift recordings with a margin, and the realized disturbance during the trials, estimated from the drift during neutral locks and from the residual of the state estimate, amounted to \pending{TBD} of the bound. The certified margin that the controller reserved for the worst case was therefore only partly consumed, and the unconsumed part acted as a reserve against unmodeled effects such as wave induced motion, estimation error, and actuator timing jitter. A controller certified against the worst case therefore does not merely survive the field, it survives with a quantified reserve, which is the property one wants from a safety layer on a vessel that will meet stronger winds than those of the trial days.
+Third, the real disturbance encountered in the field is not a worst case adversary, and this is a strength of the deployment rather than a limitation of the validation. The realized disturbance during the trials, estimated from the drift during neutral locks and from the residual of the state estimate, amounted to \pending{TBD} of the bound \eqref{eq_wbox}. The certified margin that the controller reserved for the worst case was therefore only partly consumed, and the unconsumed part acted as a reserve against unmodeled effects such as wave induced motion, estimation error, and actuator timing jitter. A controller certified against the worst case therefore does not merely survive the field, it survives with a quantified reserve, which is the property one wants from a safety layer on a vessel that will meet stronger winds than those of the trial days.
 
 \section{Conclusion}\label{sec_conclusion}
 
-This article reinterpreted the gear shift dwell of a sterndrive vessel as an asymmetry of the zero sum safety game. Because the dwell binds only the control player while the disturbance acts at every instant, and because a sterndrive loses thrust and steering together when locked in neutral, the safe set for weathervaning station keeping is a family indexed by the elapsed dwell rather than a single set. The gear and its timer were promoted to state variables, the augmented game was shown to retain the contraction structure of the discounted safety backup, and the dwell indexed value was learned by a one step adversarial backup with legality masking on the identified vessel model. A task policy trained under the certified value and a value threshold shield completed the controller, which was validated in simulation against a dwell unaware certificate and in full scale field experiments against PID and NMPC baselines.
+This article treated the gear shift dwell of a sterndrive vessel as a constraint on one player of the safety game rather than as a scheduling restriction, so that the safe set for weathervaning station keeping became a family indexed by the elapsed dwell, with the neutral lock as its most severe member. Promoting the gear and its timer to the state preserved the contraction of the discounted backup and allowed the dwell indexed value to be learned by a one step adversarial scheme with legality masking. Simulation showed that a certificate which ignores the dwell reports safety that does not exist, and the field trials showed the certified margin acting as a reserve against the real environmental load.
 
 Two limitations bound these claims. First, the guarantees hold at the operator level, and no approximation bound is claimed for the neural representation. The deployed certificate is a margin shifted level set verified by adversarial Monte Carlo audit, which is evidence rather than proof. Second, the field validation covers a single dwell channel. The formulation extends to several channels at the price of notation only, and the bow thruster of the vessel is the natural next channel, but its verification burden grows with the number of channels and has not been exercised in the field. Addressing these limitations, together with the integration of wind measurements into the task policy, is the subject of future work.
 
@@ -568,12 +595,8 @@ Monotonicity is inherited term by term, since each of the operations above prese
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 
-\begin{IEEEbiographynophoto}{Kiyong Park}
-\pending{Biography to be supplied. Degrees, current position at the Department of Mechanical Engineering, KAIST, and research interests in safe control, reinforcement learning, and autonomous surface vessels.}
-\end{IEEEbiographynophoto}
+\biography{kiyong_park.png}{Kiyong Park}{received the B.S. degree in mechanical engineering from the Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea, in 2022. He is currently pursuing the integrated M.S. and Ph.D. degree in mechanical engineering with KAIST, Daejeon, South Korea. His research interests include model predictive control, disturbance observers, and control of autonomous surface vessels.}
 
-\begin{IEEEbiographynophoto}{Jinwhan Kim}
-\pending{Biography to be supplied. Degrees in naval architecture and ocean engineering from Seoul National University and in aeronautics and astronautics from Stanford University, current position as Professor with the Department of Mechanical Engineering, KAIST, and research interests in robotics and the guidance, control, and estimation of vehicles and dynamical systems.}
-\end{IEEEbiographynophoto}
+\biography{jinwhan_kim.png}{Jinwhan Kim}{received his B.S. and M.S. degrees in Naval Architecture and Ocean Engineering from Seoul National University and the Ph.D. degree in Aeronautics and Astronautics from Stanford University. He is currently a professor of Mechanical Engineering at Korea Advanced Institute of Science and Technology (KAIST), Daejeon, South Korea.}
 
 \end{document}
