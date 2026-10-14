@@ -624,9 +624,9 @@ def make_fig2():
 
 # ======================= Fig. 3 =======================
 def make_fig3():
-    """(a) 좌표계와 선미 드라이브 추력 도식, (b) 선미 드라이브 사진. 단일 단 폭."""
+    """좌표계와 선미 드라이브 추력 도식 (단일 그림, 본문에서 0.6 단 폭)."""
     import math
-    W, H = 3.50, 1.92
+    W, H = 1.86, 1.82
     prs, slide = new_pres(W, H)
     t = TC(slide)
     C_SET = C_ON
@@ -707,26 +707,6 @@ def make_fig3():
     t.label(dl[0] - 0.06, dl[1] - 0.07, 0.12, 0.14, [T(I('δ'))], size=6.8, color='C0392B')
     lm = P(Ob, -0.135, 0.17, F, S)
     t.label(lm[0] - 0.08, lm[1] - 0.07, 0.16, 0.14, [T(I('l'), ISUB('d'))], size=6.4)
-
-    # ---------- (b) 선미 드라이브 사진 ----------
-    xb, wb = 1.86, 1.60
-    im = Image.open(os.path.join(PH, 'sterndrive_lifted.jpg'))
-    hb = wb * im.height / im.width
-    yb = 0.06 + (1.62 - hb) / 2
-    t.picture(os.path.join(PH, 'sterndrive_lifted.jpg'), xb, yb, w=wb, name='photo_sterndrive')
-
-    def bp(ix, iy):
-        return xb + ix / im.width * wb, yb + iy / im.height * hb
-
-    for text, (lx, ly), (tx, ty) in [('Propeller', (230, 90), (150, 470)),
-                                     ('Sterndrive', (1060, 90), (800, 330))]:
-        pl_ = bp(lx, ly)
-        pt_ = bp(tx, ty)
-        t.arrow((pl_[0], pl_[1] + 0.07), pt_, color=C_YEL, lw=1.0)
-        t.node(pl_[0] - 0.27, pl_[1] - 0.07, 0.54, 0.14, [T(text)], C_PLANT, size=6.0, lw=0.6)
-
-    for xx, s in [(0.90, '(a)'), (xb + wb / 2, '(b)')]:
-        t.label(xx - 0.2, 1.75, 0.4, 0.14, [T(s)], size=7.5)
 
     out = os.path.join(OUTDIR, 'fig3_frames.pptx')
     _save(prs, out)

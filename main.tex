@@ -95,7 +95,7 @@ The remainder of this article is organized as follows. Section~\ref{sec_system} 
 
 \section{System Description and Modeling}\label{sec_system}
 
-This section describes the vessel and its actuation, explains where the gear shift dwell comes from, presents the maneuvering model used for training together with the formulation of its identification, and specifies the disturbance model. The presentation follows the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011}.
+This section describes the vessel and its actuation, explains where the gear shift dwell comes from, and presents the vehicle dynamics model used for training together with the disturbance model. The presentation follows the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011}.
 
 \subsection{Vessel and Actuation System}\label{sec_vessel}
 
@@ -112,7 +112,7 @@ The experimental platform is a Neo AURA 240 EXP with a deep V planing hull, prop
 
 The minimum dwell has a mechanical origin that the controller cannot shorten. A shift between forward and reverse passes through neutral, and the cone clutch of the sterndrive gearbox must engage at low engine speed to avoid shock loading of the gear set. The shift cylinder therefore first brings the engine to idle, moves its stroke to the new detent, and only then releases the engine speed command \pending{confirm this shift sequence against the PLC logic of the vessel}. The elapsed time of this sequence, together with a protection interval that prevents an immediate reversal of the stroke, sets the minimum interval between consecutive shift commands. On the vessel of this study this interval is 3~s \pending{measured basis, cylinder stroke time and protection interval to be stated}. With the control period of 0.5~s the dwell corresponds to $D_g = 6$ control steps. A shift request issued during the dwell is not delayed but discarded by the plant, so the controller must reason about when it is allowed to act.
 
-\subsection{Maneuvering Model and System Identification}\label{sec_model}
+\subsection{Vehicle Dynamics Modeling}\label{sec_model}
 
 The vessel is described by the three degree of freedom horizontal plane model of \cite{fossen2011} in the body fixed and inertial frames of Fig.~\ref{fig_frames}, written in the form used in \cite{lee2024canal} as
 \begin{subequations}\label{eq_model}
@@ -122,7 +122,7 @@ M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= \bm{f}_c + M d, \\
 R(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
 \end{subequations}
-where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, $M$ is the inertia matrix, $C(\nu)$ is the Coriolis and centripetal matrix, $D(\nu)$ is the damping matrix, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $d = [d_u, d_v, d_r]^\top$ is the disturbance acceleration described in Section~\ref{sec_disturbance}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. The control vector is denoted $\bm{f}_c$ rather than $\tau_c$ because $\tau$ is reserved for the shield margin and $\tau_g$ for the dwell timer in this article. Assuming that the vessel is symmetric in the $x$ and $y$ directions, $M$, $C(\nu)$, and $D(\nu)$ can be expressed as
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, $M$ is the inertia matrix, $C(\nu)$ is the Coriolis and centripetal matrix, $D(\nu)$ is the damping matrix, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $d = [d_u, d_v, d_r]^\top$ is the disturbance acceleration bounded in \eqref{eq_wbox}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. The control vector is denoted $\bm{f}_c$ rather than $\tau_c$ because $\tau$ is reserved for the shield margin and $\tau_g$ for the dwell timer in this article. Assuming that the vessel is symmetric in the $x$ and $y$ directions, $M$, $C(\nu)$, and $D(\nu)$ can be expressed as
 \begin{equation}
 M = \operatorname{diag}(m_{11}, m_{22}, m_{33}),
 \label{eq_mass}
@@ -158,22 +158,10 @@ where $\bm{x} = [x, y, \psi, u, v, r]^\top$ and $\bm{u} = [g, \delta_c]^\top$ ar
 
 \begin{figure}[!t]
 \centering
-\IfFileExists{figures/fig_frames.pdf}{\includegraphics[width=\linewidth]{figures/fig_frames.pdf}}{\figph{Fig. 3 placeholder. Coordinate frames and sterndrive photograph.}{4cm}}
-\caption{Coordinate frames and sterndrive geometry. (a) Inertial and body fixed frames, the keep in disk of radius $R$ around the setpoint, and the thrust $F_g$ vectored by the steering angle $\delta$ at the distance $l_d$ behind the origin. (b) The MerCruiser Bravo~1 sterndrive of the vessel.}
+\IfFileExists{figures/fig_frames.pdf}{\includegraphics[width=0.6\linewidth]{figures/fig_frames.pdf}}{\figph{Fig. 3 placeholder. Coordinate frames and sterndrive geometry.}{4cm}}
+\caption{Coordinate frames and sterndrive geometry. Inertial and body fixed frames, the keep in disk of radius $R$ around the setpoint, and the thrust $F_g$ vectored by the steering angle $\delta$ at the distance $l_d$ behind the origin.}
 \label{fig_frames}
 \end{figure}
-
-The unknown parameters of \eqref{eq_complete} are identified from maneuvering data recorded on the vessel by posing the nonlinear programming problem of \cite{lee2024canal},
-\begin{subequations}\label{eq_si}
-\begin{align}
-P^{\ast} &= \arg\min_{P} \sum_{i=0}^{N} (\bm{x}_i - \bar{\bm{x}}_i)^\top W (\bm{x}_i - \bar{\bm{x}}_i) \\
-\text{s.t.}\quad \bm{x}_{i+1} &= f_d(\bm{x}_i, \bar{\bm{u}}_i, P), \\
-\bm{x}_0 &= \bm{x}_{\mathrm{init}},
-\end{align}
-\end{subequations}
-where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. The identification data, the sequential procedure, and the resulting parameter values are reported in Section~\ref{sec_si_results}.
-
-\subsection{Disturbance Model}\label{sec_disturbance}
 
 The environmental load is represented by a body frame acceleration $d = [d_u, d_v, d_r]^\top$ that enters \eqref{eq_model} through the term $Md$ and is bounded by the box
 \begin{equation}
@@ -386,7 +374,18 @@ AHRS & \pending{model and resolution} \\
 \end{tabular}
 \end{table}
 
-To identify the system, data were gathered in an open water area \pending{site}. Acceleration and deceleration runs and zigzag runs were performed. In the acceleration and deceleration runs the gear was engaged in forward or reverse at the throttle setting of this study and each setting was held until the vessel reached a steady state \pending{gear and throttle sequence of the runs}. The zigzag runs were performed with \pending{heading angle, steering command, and termination criterion}. To simplify the problem with many unknown parameters, the surge model and the sway and yaw model were decoupled, and the optimization of \eqref{eq_si} was performed sequentially using the two datasets. The surge model was identified first from the acceleration and deceleration data with the weight matrix $W = \pending{surge stage weights}$ \pending{initial guesses}. The sway and yaw model was then identified from the zigzag data with the surge parameters fixed and with $W = \pending{sway and yaw stage weights}$ \pending{initial guesses and solver}. Validation was performed on operational data of the vessel that were not used in the fit. The results are shown in Fig.~\ref{fig_si}, in which the measured data and the response of the identified model are compared, and the estimated values of the unknown parameters in $P$ are provided in Table~\ref{tab_si}.
+% ---- Identification NLP removed from Section II (2026-10-14), kept here for later use ----
+% The unknown parameters of \eqref{eq_complete} are identified from maneuvering data recorded on the vessel by posing the nonlinear programming problem of \cite{lee2024canal},
+% \begin{subequations}\label{eq_si}
+% \begin{align}
+% P^{\ast} &= \arg\min_{P} \sum_{i=0}^{N} (\bm{x}_i - \bar{\bm{x}}_i)^\top W (\bm{x}_i - \bar{\bm{x}}_i) \\
+% \text{s.t.}\quad \bm{x}_{i+1} &= f_d(\bm{x}_i, \bar{\bm{u}}_i, P), \\
+% \bm{x}_0 &= \bm{x}_{\mathrm{init}},
+% \end{align}
+% \end{subequations}
+% where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. The identification data, the sequential procedure, and the resulting parameter values are reported in Section~\ref{sec_si_results}.
+% ---- end of kept block ----
+To identify the system, data were gathered in an open water area \pending{site}. Acceleration and deceleration runs and zigzag runs were performed. In the acceleration and deceleration runs the gear was engaged in forward or reverse at the throttle setting of this study and each setting was held until the vessel reached a steady state \pending{gear and throttle sequence of the runs}. The zigzag runs were performed with \pending{heading angle, steering command, and termination criterion}. To simplify the problem with many unknown parameters, the surge model and the sway and yaw model were decoupled, and the identification was performed sequentially using the two datasets. The surge model was identified first from the acceleration and deceleration data with the weight matrix $W = \pending{surge stage weights}$ \pending{initial guesses}. The sway and yaw model was then identified from the zigzag data with the surge parameters fixed and with $W = \pending{sway and yaw stage weights}$ \pending{initial guesses and solver}. Validation was performed on operational data of the vessel that were not used in the fit. The results are shown in Fig.~\ref{fig_si}, in which the measured data and the response of the identified model are compared, and the estimated values of the unknown parameters in $P$ are provided in Table~\ref{tab_si}.
 
 \begin{figure}[!t]
 \centering
