@@ -725,7 +725,7 @@ def make_fig3():
     ndir = dirv(psi + delta + 90)     # 드라이브 축에 수직
     t.arrow(D, P(D, -0.34, 0, F, S), color=C_GRAY, lw=0.6, head=False, dash=True)
     # 선미 드라이브 다리 (조향각 δ 만큼 돌아간 상태)와 프로펠러
-    Ld, wd = 0.12, 0.036
+    Ld, wd = 0.06, 0.036
 
     def Q(o, a, b):  # o + a*tdir + b*ndir
         return (o[0] + a * tdir[0] + b * ndir[0], o[1] + a * tdir[1] + b * ndir[1])
@@ -733,7 +733,7 @@ def make_fig3():
     t.polygon([Q(D, 0.01, -wd / 2), Q(D, 0.01, wd / 2), Q(D, -Ld, wd * 0.35), Q(D, -Ld, -wd * 0.35)],
               '1B3A5C', name='sterndrive_leg')
     Pp = Q(D, -Ld, 0)
-    t.polygon([Q(Pp, 0.010, -0.075), Q(Pp, 0.010, 0.075), Q(Pp, -0.010, 0.075), Q(Pp, -0.010, -0.075)],
+    t.polygon([Q(Pp, 0.009, -0.062), Q(Pp, 0.009, 0.062), Q(Pp, -0.009, 0.062), Q(Pp, -0.009, -0.062)],
               '3A3A3A', name='propeller_blades')
     t.ellipse(Pp[0], Pp[1], 0.032, 0.032, '3A3A3A', 1.0)
     # 추력 화살표 (프로펠러 뒤에서 드라이브 방향으로)
