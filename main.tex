@@ -87,12 +87,12 @@ Model predictive control (MPC) with discrete actuators is well developed \cite{b
 
 Safety against bounded disturbances is computed by Hamilton Jacobi (HJ) reachability, which poses the problem as a zero sum game \cite{mitchell2005time,bansal2017}, and learning based methods have been extensively studied to scale it to nonlinear systems \cite{fisac2019,yu2022,li2023cdc,li2309dual,li2311decomp,bansal2021deepreach}. These methods deliver a value function whose zero superlevel set is a robust invariant set (RIS). However, all of them assume that the full control set is available at every step. If the dwell is ignored, the value is computed with control actions that are physically infeasible on the ASV, such as reversing the thrust during a lock, so the certificate is optimistic and declares states safe that cannot be held. The disturbance invariant sets under a dwell time restriction of Dehghan and Ong \cite{dehghan2012} are the closest predecessor of the present work, but they are confined to linear dynamics. In addition, they provide only a binary set membership, which cannot serve as a continuous safety margin for a shield. As a result, a safety certificate that explicitly accounts for a physical actuator dwell under disturbances and nonlinear dynamics has not been developed.
 
-In this study, we develop a dwell constrained RIS framework for the safe weathervaning control of an ASV by explicitly accounting for the gear shift dwell of the sterndrive. Unlike the single sets of \cite{dehghan2012,zhang2016,vicente2019} and the dwell free certificates of \cite{fisac2019,li2023cdc}, the safety problem is formulated by HJ reachability on a state augmented with the gear and its remaining lock time, which determine the legal gear commands. Since the disturbance keeps acting while the gear cannot change, the safe set becomes a family of sets that depends on the gear and its remaining lock time and shrinks as the lock lasts longer. The dwell constrained safety value is learned by a one step adversarial backup with legality masking, in which illegal shifts are excluded both in the plant and in the backup. Based on the learned value, a task policy and a value threshold shield are constructed, enabling the task policy to operate inside the certified set, and the overall framework is illustrated in Fig.~\ref{fig_framework}.
+In this study, we develop a dwell constrained RIS framework for the safe weathervaning control of an ASV by explicitly accounting for the gear shift dwell of the sterndrive. Unlike the single sets of \cite{dehghan2012,zhang2016,vicente2019} and the dwell free certificates of \cite{fisac2019,li2023cdc}, the safety problem is formulated by HJ reachability on a state augmented with the gear and its remaining lock time, which determine the legal gear commands. Since the disturbance keeps acting while the gear cannot change, the safe set becomes a family of sets that depends on the gear and its remaining lock time and shrinks as the lock lasts longer. The dwell constrained safety value is learned by adversarial reinforcement learning with legality masking, in which illegal shifts are excluded both in the plant and in the backup. Based on the learned value, a task policy and a value threshold shield are constructed, enabling the task policy to operate inside the certified set, and the overall framework is illustrated in Fig.~\ref{fig_framework}.
 
 The proposed framework was implemented on an 8 m sterndrive ASV and validated in simulation against a dwell unaware certificate and in full scale field experiments against a \pid controller and a CIA based MPC, denoted \ciampc. To the best of our knowledge, this study represents the first field demonstration of a learned robust safety certificate on a full scale ASV subject to a physical actuator dwell. The main contributions of this article are summarized as follows.
 \begin{enumerate}
 \item A dwell constrained RIS is formulated by HJ reachability for weathervaning control, in which the gear and its remaining lock time are augmented to the state.
-\item A one step adversarial learning scheme with legality masking is developed for the dwell constrained safety value, together with a task policy and a value threshold shield.
+\item An adversarial learning scheme with legality masking is developed for the dwell constrained safety value, together with a task policy and a value threshold shield.
 \item The proposed framework is validated through simulations against a dwell unaware certificate and through full scale field experiments on an 8 m sterndrive ASV against \pid and \ciampc baselines.
 \end{enumerate}
 
@@ -101,7 +101,7 @@ The remainder of this article is organized as follows. Section~\ref{sec_system} 
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell fill a replay buffer, from which the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by a one step adversarial game between the safety policy $\pi_h$ and the adversary $\mu$ (Stage~1), and the task policy $\pi_t$ is trained by soft actor critic under the frozen safety critic (Stage~2). In the online stage, the frozen networks run on the ASV at each control period, and the shield replaces the task action by $\pi_h$ whenever the certified value falls below the margin $\tau$.}
+\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell fill a replay buffer, from which the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the safety policy $\pi_h$ and the adversary $\mu$ (Stage~1), and the task policy $\pi_t$ is trained by soft actor critic under the frozen safety critic (Stage~2). In the online stage, the frozen networks run on the ASV at each control period, and the shield replaces the task action by $\pi_h$ whenever the certified value falls below the margin $\tau$.}
 \label{fig_framework}
 \end{figure*}
 
@@ -255,7 +255,7 @@ The formulation extends to $N$ independent switching channels, each with its own
 
 \section{Dwell Constrained Safe Controller}\label{sec_method}
 
-This section presents the proposed dwell constrained safe controller. We first show that the safe set under the dwell is a family of sets that depends on the gear state $(g, \tau_g)$ and locate its physical origin in the asymmetry between the control and the disturbance on a sterndrive. We then describe the one step learning of the dwell constrained safety value and the task policy and shield built on it.
+This section presents the proposed dwell constrained safe controller. We first show that the safe set under the dwell is a family of sets that depends on the gear state $(g, \tau_g)$ and locate its physical origin in the asymmetry between the control and the disturbance on a sterndrive. We then describe the learning of the dwell constrained safety value and the task policy and shield built on it.
 
 \subsection{Safe Set Family Under Remaining Lock Time}\label{sec_family}
 
@@ -278,9 +278,9 @@ Restricting the admissible actions of the control player reduces the value of th
 \label{fig_family}
 \end{figure}
 
-\subsection{One Step Learning of the Dwell Constrained Safety Value}\label{sec_learning}
+\subsection{Adversarial Learning of the Dwell Constrained Safety Value}\label{sec_learning}
 
-An actor critic scheme with a one step adversarial backup learns the fixed point of \eqref{eq_backup}, as summarized in Algorithm~\ref{alg_ris}. The scheme follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc} and is adapted to the legality structure. As the network input, the augmented state is encoded as
+An adversarial actor critic scheme learns the fixed point of \eqref{eq_backup}, as summarized in Algorithm~\ref{alg_ris}. The scheme follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc} and is adapted to the legality structure. As the network input, the augmented state is encoded as
 \begin{equation}
 \bigl(\tilde{x}/R,\ \tilde{y}/R,\ \sin\tilde{\psi},\ \cos\tilde{\psi},\ u,\ v,\ r,\ \delta/\delta_{\max},\ \operatorname{onehot}(g),\ \tau_g/D_g\bigr),
 \label{eq_input}
@@ -310,7 +310,7 @@ The adversary $\mu(\xi)$ is a deterministic policy whose output is scaled by $\t
 Two curricula are employed to stabilize the adversarial training and to extend the horizon of the certificate. In the first curriculum, the adversary scale is ramped from zero to one, so the protagonist first learns to hold station in calm water and then faces a progressively stronger opponent. In the second curriculum, the discount $\gamma_h$ is ramped from 0.95 to 0.995, allowing the horizon of the certificate to grow as the value estimate improves. Every episode reset randomizes the full augmented state, including the gear level and the timer, ensuring that states entered in the middle of a lock are covered by data even though they cannot be chosen by the protagonist.
 
 \begin{algorithm}[!t]
-\caption{One Step Learning of the Dwell Constrained Safety Value}
+\caption{Adversarial Learning of the Dwell Constrained Safety Value}
 \label{alg_ris}
 \begin{algorithmic}[1]
 \STATE Initialize critics $Q_{h,1}, Q_{h,2}$, targets $\bar{Q}_{h,1}, \bar{Q}_{h,2}$, protagonist $\pi_h$, adversary $\mu$, replay buffer $\mathcal{B}$, adversary scale $\kappa \gets 0$, discount $\gamma_h \gets 0.95$
@@ -595,7 +595,7 @@ As shown in Fig.~\ref{fig_field_compare}(e), the safety value $V_h$ explains the
 
 \section{Conclusion}\label{sec_conclusion}
 
-This article presented a dwell constrained RIS framework for the safe weathervaning control of an ASV driven by a single diesel engine and a sterndrive. Since the dwell restricts only the control player of the safety game while the disturbance acts at every step, the safe set becomes a family of sets that shrinks with the remaining lock time. The gear state and its remaining lock time were augmented to the state, and the dwell constrained safety value was learned by a one step adversarial scheme with legality masking. A task policy and a value threshold shield were built on the learned value. The proposed framework was validated through simulations, \pending{simulation headline to be stated once the simulation numbers are final}, and through full scale field experiments with an 8~m ASV. In the field, the proposed controller kept the ASV closer to the setpoint than the \pid and \ciampc baselines with short excursions that returned inside the disk, at a shift frequency comparable to the baselines. The current approach provides no bound on the approximation error of the neural representation, and the field validation covers a single dwell channel. Future work will address these limitations by quantifying the approximation error and by extending the validation to several dwell channels.
+This article presented a dwell constrained RIS framework for the safe weathervaning control of an ASV driven by a single diesel engine and a sterndrive. Since the dwell restricts only the control player of the safety game while the disturbance acts at every step, the safe set becomes a family of sets that shrinks with the remaining lock time. The gear state and its remaining lock time were augmented to the state, and the dwell constrained safety value was learned by adversarial reinforcement learning with legality masking. A task policy and a value threshold shield were built on the learned value. The proposed framework was validated through simulations, \pending{simulation headline to be stated once the simulation numbers are final}, and through full scale field experiments with an 8~m ASV. In the field, the proposed controller kept the ASV closer to the setpoint than the \pid and \ciampc baselines with short excursions that returned inside the disk, at a shift frequency comparable to the baselines. The current approach provides no bound on the approximation error of the neural representation, and the field validation covers a single dwell channel. Future work will address these limitations by quantifying the approximation error and by extending the validation to several dwell channels.
 
 \appendix[Proof of Lemma 1]
 
