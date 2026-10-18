@@ -397,7 +397,7 @@ def new_pres(W, H):
 
 # ======================= Fig. 1 =======================
 def make_fig1():
-    """왼쪽 Offline (병렬 시뮬레이터, replay buffer, 신경망으로 표현한 적대적 RL), 오른쪽 Online (실제 선박 사진)."""
+    """왼쪽 Offline (병렬 시뮬레이터, SMDP 옵션 언롤, 신경망으로 표현한 적대적 RL), 오른쪽 Online (실제 선박 사진)."""
     W, H = 7.16, 2.45
     prs, slide = new_pres(W, H)
     t = TC(slide)
@@ -422,59 +422,68 @@ def make_fig1():
     t.label(0.10, 1.56, 1.10, 0.52, [T('gear ', I('g'), ' ∈ {R, N, F}'), T('steering ', I('δ')),
                                      T('wind and current ', I('d'))], size=6.4)
 
-    # ----- Stage 1 -----
-    s1x, s1y, s1w, s1h = 1.36, 0.34, 3.08, 1.10
-    t.rect(s1x, s1y, s1w, s1h, C_OFF, 'FFFFFF', name='stage1')
-    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Stage 1', 'b'), '  dwell constrained RIS by adversarial RL')],
+    # ----- 적대적 RL (SMDP) -----
+    s1x, s1y, s1w, s1h = 1.36, 0.34, 3.08, 1.98
+    t.rect(s1x, s1y, s1w, s1h, C_OFF, 'FFFFFF', name='rl_smdp')
+    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Dwell constrained RIS', 'b'), '  by adversarial RL on the SMDP')],
             size=7.0, color=C_OFF, align='left')
-    t.cylinder(s1x + 0.10, s1y + 0.32, 0.44, 0.52, [T('replay'), T('buffer')], C_OFF, C_OFF_BG, size=6.0,
-               name='replay_buffer')
     # twin critics
-    t.nn(s1x + 0.78, s1y + 0.30, 0.56, 0.42, C_OFF, name='critic_2')
-    t.nn(s1x + 0.72, s1y + 0.36, 0.56, 0.42, C_OFF, name='critic_1')
-    t.label(s1x + 0.62, s1y + 0.79, 0.80, 0.14, [T(I('Q'), ISUB('h,1'), ', ', I('Q'), ISUB('h,2'))], size=6.5)
-    t.arrow((s1x + 0.54, s1y + 0.58), (s1x + 0.72, s1y + 0.58), color=C_OFF)
+    t.nn(s1x + 0.26, s1y + 0.30, 0.56, 0.42, C_OFF, name='critic_2')
+    t.nn(s1x + 0.20, s1y + 0.36, 0.56, 0.42, C_OFF, name='critic_1')
+    t.label(s1x + 0.10, s1y + 0.79, 0.80, 0.14, [T(I('Q'), ISUB('h,1'), ', ', I('Q'), ISUB('h,2'))], size=6.5)
     # protagonist, adversary
-    t.nn(s1x + 1.62, s1y + 0.26, 0.44, 0.30, C_OFF, layers=(3, 3, 2), name='protagonist')
-    t.nn(s1x + 1.62, s1y + 0.64, 0.44, 0.30, C_OFF, layers=(3, 3, 2), name='adversary')
-    t.label(s1x + 2.08, s1y + 0.25, 0.42, 0.32, [T(I('π'), ISUB('h')), T(('max', ''))], size=6.5, align='left')
-    t.label(s1x + 2.08, s1y + 0.63, 0.42, 0.32, [T(I('μ')), T('min')], size=6.5, align='left')
-    t.arrow((s1x + 1.34, s1y + 0.52), (s1x + 1.62, s1y + 0.41), color=C_OFF, dash=True)
-    t.arrow((s1x + 1.34, s1y + 0.64), (s1x + 1.62, s1y + 0.79), color=C_OFF, dash=True)
+    t.nn(s1x + 1.14, s1y + 0.26, 0.44, 0.30, C_OFF, layers=(3, 3, 2), name='protagonist')
+    t.nn(s1x + 1.14, s1y + 0.64, 0.44, 0.30, C_OFF, layers=(3, 3, 2), name='adversary')
+    t.label(s1x + 1.60, s1y + 0.25, 0.42, 0.32, [T(I('π'), ISUB('h')), T(('max', ''))], size=6.5, align='left')
+    t.label(s1x + 1.60, s1y + 0.63, 0.42, 0.32, [T(I('μ')), T('min')], size=6.5, align='left')
+    t.arrow((s1x + 0.82, s1y + 0.52), (s1x + 1.14, s1y + 0.41), color=C_OFF, dash=True)
+    t.arrow((s1x + 0.82, s1y + 0.64), (s1x + 1.14, s1y + 0.79), color=C_OFF, dash=True)
     # 안전집합 족
-    ex, ey = s1x + 2.70, s1y + 0.60
+    ex, ey = s1x + 2.55, s1y + 0.60
     for a, b, al in [(0.62, 0.40, 0.16), (0.42, 0.27, 0.30), (0.22, 0.14, 0.55)]:
         t.ellipse(ex, ey, a, b, C_OFF, al)
     for dx, lab, col in [(0.26, '0', C_OFF), (0.16, '3', C_OFF), (0.0, '5', 'FFFFFF')]:
         t.label(ex + dx - 0.05, ey - 0.07, 0.10, 0.14, [T(lab)], size=5.8, color=col)
     t.label(ex - 0.40, s1y + 0.24, 0.80, 0.14, [T(M('𝒮'), '(', I('g'), ', ', I('τ'), ISUB('g'), ')')],
             size=6.5, color=C_OFF)
-    # 1-step 목표
-    t.label(s1x + 0.10, s1y + 0.93, 2.9, 0.15,
-            [T('one step target  ', I('y'), ' = (1 − ', I('γ'), ISUB('h'), ') ', I('h'), ' + ', I('γ'), ISUB('h'),
-               ' min{', I('h'), ', ', I('Q̄'), ISUB('h'), '(', I('ξ'), '′)}')], size=6.4, color=C_OFF)
 
-    # ----- Stage 2 -----
-    s2x, s2y, s2w, s2h = 1.36, 1.52, 3.08, 0.80
-    t.rect(s2x, s2y, s2w, s2h, C_OFF, 'FFFFFF', name='stage2')
-    t.label(s2x + 0.08, s2y + 0.03, 2.0, 0.18, [T(('Stage 2', 'b'), '  task policy by SAC')],
-            size=7.0, color=C_OFF, align='left')
-    t.label(s2x + 0.10, s2y + 0.30, 1.0, 0.36, [T('maximize reward'), T('s.t. ', I('q'), ' ≥ ', I('τ'))], size=6.5)
-    t.nn(s2x + 1.32, s2y + 0.28, 0.50, 0.36, C_OFF, name='task_policy')
-    t.label(s2x + 1.22, s2y + 0.65, 0.70, 0.14, [T(I('π'), ISUB('t'))], size=6.8)
-    t.nn(s2x + 2.36, s2y + 0.28, 0.50, 0.36, C_OFF, frozen=True, name='critic_frozen')
-    t.label(s2x + 2.21, s2y + 0.65, 0.80, 0.14, [T(I('Q'), ISUB('h'), ' frozen')], size=6.5, color=C_GRAY)
-    t.arrow((s2x + 2.36, s2y + 0.46), (s2x + 1.82, s2y + 0.46), color=C_OFF)
-    t.label(s2x + 1.82, s2y + 0.27, 0.54, 0.16, [T(I('λ'), ' ≥ ', I('λ'), SUB('min'))], size=6.2)
-    # Stage 1 에서 고정된 critic 으로
-    t.arrow((ex, s1y + s1h), (ex, s2y + 0.28), color=C_OFF)
-    t.label(ex + 0.04, s2y + 0.04, 0.5, 0.14, [T('freeze')], size=6.0, color=C_GRAY, align='left')
+    # 옵션 언롤: 결정한 기어를 D_g 스텝 유지한 뒤 끝에서 부트스트랩
+    oy = s1y + 1.22
+    t.label(s1x + 0.24, oy - 0.20, 2.8, 0.15,
+            [T('one gear decision = option, gear held for ', I('D'), ISUB('g'), ' steps')],
+            size=6.3, color=C_OFF, align='left')
+    bx0, bw, gap = s1x + 0.24, 0.22, 0.05
+    for k in range(6):
+        t.node(bx0 + k * (bw + gap), oy, bw, 0.20, [T(I('ĝ'))], C_OFF, fc=C_OFF_BG, size=6.4,
+               name=f'option_step_{k}')
+    for k in range(5):
+        x0 = bx0 + k * (bw + gap) + bw
+        t.arrow((x0, oy + 0.10), (x0 + gap, oy + 0.10), color=C_OFF, lw=0.6)
+    vx = bx0 + 6 * (bw + gap) + 0.10
+    t.arrow((vx - 0.10 - gap + 0.05, oy + 0.10), (vx, oy + 0.10), color=C_OFF, lw=0.6)
+    t.node(vx, oy - 0.01, 0.30, 0.22, [T(I('V'))], C_OFF, size=6.6, name='bootstrap')
+    t.arrow((vx + 0.125, oy + 0.045), (vx + 0.195, oy + 0.045), color='000000', lw=0.6, head=False)
+    t.label(vx + 0.32, oy + 0.02, 0.60, 0.16, [T('bootstrap')], size=5.8, color=C_GRAY, align='left')
+    # 매 스텝 조향과 외란
+    t.label(bx0, oy + 0.21, 6 * (bw + gap), 0.15, [T(I('δ'), ' = ', I('π'), ISUB('h'), ',  ', I('d'), ' = ', I('μ'),
+                                                  '  at every step')], size=5.9, color=C_GRAY)
+    # backward fold
+    fy = oy + 0.42
+    t.arrow((vx + 0.15, fy), (bx0, fy), color=C_OFF, lw=0.8)
+    t.label(bx0 + 0.60, fy - 0.01, 1.4, 0.14, [T('backward fold')], size=5.9, color=C_OFF)
+    t.label(s1x + 0.08, fy + 0.10, 2.95, 0.15,
+            [T(I('g'), ISUB('j'), ' = (1 − ', I('γ'), ISUB('h'), ') ', I('h'), ISUB('j'), ' + ', I('γ'), ISUB('h'),
+               ' min{', I('h'), ISUB('j'), ', ', I('g'), ISUB('j+1'), '},   ', I('y'), ' = ', I('g'), ISUB('0'))],
+            size=6.3, color=C_OFF)
+    # 타깃이 critic 으로
+    t.arrow((s1x + 0.14, oy), (s1x + 0.14, s1y + 0.78), color=C_OFF)
+    t.label(s1x + 0.16, s1y + 0.92, 0.40, 0.14, [T(I('y'))], size=6.3, color=C_OFF, align='left')
 
-    # 시뮬레이터 왕복
-    for yy, top, bot in [(s1y + 0.58, 'c, d', 'ξ′, h'), (s2y + 0.40, 'a', 'ξ′, r')]:
-        t.arrow((1.12, yy), (s1x, yy), color=C_PLANT, both=True)
-        t.label(1.10, yy - 0.17, 0.28, 0.14, [T(I(top))], size=6.0, color=C_PLANT)
-        t.label(1.10, yy + 0.02, 0.28, 0.14, [T(I(bot))], size=6.0, color=C_PLANT)
+    # 시뮬레이터 왕복 (언롤)
+    yy = oy + 0.10
+    t.arrow((1.12, yy), (s1x, yy), color=C_PLANT, both=True)
+    t.label(1.06, yy - 0.17, 0.32, 0.14, [T(I('ĝ'), ', ', I('δ'), ', ', I('d'))], size=6.0, color=C_PLANT)
+    t.label(1.06, yy + 0.02, 0.32, 0.14, [T(I('ξ'), ISUB('j'), ', ', I('h'), ISUB('j'))], size=6.0, color=C_PLANT)
 
     # ----- Offline 에서 Online 으로 -----
     ym = 1.24
@@ -484,10 +493,10 @@ def make_fig1():
 
     # ----- Online 안쪽 -----
     t.node(NX + 0.12, 0.42, 0.50, 0.30, [T('EKF')], C_ON, size=7.0)
-    t.nn(NX + 0.80, 0.40, 0.46, 0.32, C_OFF, name='task_policy_onboard')
-    t.label(NX + 0.80, 0.73, 0.46, 0.13, [T(I('π'), ISUB('t'))], size=6.6)
-    t.node(NX + 1.42, 0.36, 0.66, 0.50, [T('Shield'), T(I('q'), ' ≥ ', I('τ')), T('else ', I('π'), ISUB('h'))],
-           C_OFF, size=6.6)
+    t.nn(NX + 0.80, 0.40, 0.46, 0.32, C_OFF, name='safety_policy_onboard')
+    t.label(NX + 0.72, 0.73, 0.62, 0.13, [T(I('π'), ISUB('h'), ', ', I('Q'), ISUB('h'))], size=6.6)
+    t.node(NX + 1.42, 0.36, 0.66, 0.50, [T('legal gear'), T(I('g'), '* = argmax ', I('q'))],
+           C_OFF, size=6.4)
     t.arrow((NX + 0.62, 0.57), (NX + 0.80, 0.57), color=C_ON)
     t.arrow((NX + 1.26, 0.57), (NX + 1.42, 0.57), color=C_ON)
     # 실제 선박 사진

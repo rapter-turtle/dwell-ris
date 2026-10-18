@@ -66,7 +66,7 @@
 \maketitle
 
 \begin{abstract}
-This article presents a dwell constrained robust invariant set (RIS) framework for the safe weathervaning control of an autonomous surface vessel (ASV) propelled by a diesel engine through a sterndrive. Since ASVs are commonly underactuated systems, such as those driven by a single sterndrive, weathervaning control is adopted to keep the ASV inside the keep in region around the setpoint while its heading turns freely against the environmental load. However, the diesel engine cannot reverse its rotation, so the thrust is reversed by a gearbox through neutral and each gear position must be held for a minimum dwell time. In neutral the thrust vectoring sterndrive gives neither thrust nor steering, while wind and current keep acting. Moreover, keeping the ASV inside the region under both a dwell time and disturbances has not been guaranteed by existing methods for nonlinear dynamics. To guarantee that the ASV stays inside the region under these restrictions, the proposed framework applies Hamilton Jacobi (HJ) reachability to a state augmented with the gear and its remaining lock time. The dwell constrained safety value is learned by adversarial reinforcement learning with legality masking, and a task policy and a safety shield are built on it. The proposed framework is validated through numerical simulations and full scale field experiments on an 8 m ASV, where the proposed controller kept the ASV closer to the setpoint with shorter excursions than the baseline controllers.
+This article presents a dwell constrained robust invariant set (RIS) framework for the safe weathervaning control of an autonomous surface vessel (ASV) propelled by a diesel engine through a sterndrive. Since ASVs are commonly underactuated systems, such as those driven by a single sterndrive, weathervaning control is adopted to keep the ASV inside the keep in region around the setpoint while its heading turns freely against the environmental load. However, the diesel engine cannot reverse its rotation, so the thrust is reversed by a gearbox through neutral and each gear position must be held for a minimum dwell time. In neutral the thrust vectoring sterndrive gives neither thrust nor steering, while wind and current keep acting. Moreover, keeping the ASV inside the region under both a dwell time and disturbances has not been guaranteed by existing methods for nonlinear dynamics. To guarantee that the ASV stays inside the region under these restrictions, the proposed framework applies Hamilton Jacobi (HJ) reachability to a state augmented with the gear and its remaining lock time. The dwell constrained safety value is learned by adversarial reinforcement learning with legality masking on a semi Markov decision process in which each gear decision is held over the dwell, and the learned safety policy controls the ASV. The proposed framework is validated through numerical simulations and full scale field experiments on an 8 m ASV, where the proposed controller kept the ASV closer to the setpoint with shorter excursions than the baseline controllers.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -85,12 +85,12 @@ Dwell time constraints have been addressed within model predictive control (MPC)
 
 Safety of nonlinear systems under disturbances can be guaranteed by Hamilton Jacobi (HJ) reachability, which poses the problem as a zero sum game between the control and the disturbance \cite{mitchell2005time,bansal2017}. The conventional computation solves the HJ partial differential equation by dynamic programming on a state space grid, whose cost grows exponentially with the state dimension \cite{bansal2017}. This curse of dimensionality makes the computation intractable for high dimensional systems. To overcome this limitation, learning based methods approximate the value function with a neural network \cite{bansal2021deepreach} or learn it by reinforcement learning \cite{fisac2019,yu2022,li2023cdc,li2309dual,li2311decomp}. These methods deliver a value function whose zero superlevel set is a robust invariant set (RIS). However, all of them assume that the full control set is available at every step. When the dwell is ignored, the value is computed with physically infeasible actions, such as reversing the thrust during a lock. Therefore, the certificate is optimistic and declares states safe that cannot be held under the dwell.
 
-In this study, we develop a dwell constrained RIS framework for weathervaning control of an ASV driven by an internal combustion engine through a single sterndrive. The ASV must stay inside a specified region around the setpoint under wind and current disturbances, with its heading left free and its gear subject to the dwell. Control is exercised through a continuous steering command and a discrete gear command among reverse, neutral, and forward. The safety problem is formulated by HJ reachability on the state augmented with the current gear and its remaining lock time, which determine the legal gear commands. Since the disturbance keeps acting while the gear cannot change, the safe set becomes a family of sets that depends on the gear and its remaining lock time and shrinks as the lock lasts longer. The dwell constrained safety value is learned by adversarial reinforcement learning with legality masking, which excludes illegal shifts in both the simulated plant and the value update. A task policy and a value threshold shield are built on the learned value so that the task policy operates inside the certified set, as illustrated in Fig.~\ref{fig_framework}. Beyond the simulated plant, the learned certificate is deployed as an onboard shield on the real full scale ASV and validated in sea trials under the physical gear shift dwell.
+In this study, we develop a dwell constrained RIS framework for weathervaning control of an ASV driven by an internal combustion engine through a single sterndrive. The ASV must stay inside a specified region around the setpoint under wind and current disturbances, with its heading left free and its gear subject to the dwell. Control is exercised through a continuous steering command and a discrete gear command among reverse, neutral, and forward. The safety problem is formulated by HJ reachability on the state augmented with the current gear and its remaining lock time, which determine the legal gear commands. Since the disturbance keeps acting while the gear cannot change, the safe set becomes a family of sets that depends on the gear and its remaining lock time and shrinks as the lock lasts longer. The dwell constrained safety value is learned by adversarial reinforcement learning with legality masking on a semi Markov decision process (SMDP), in which each gear decision is held over the dwell. The legality masking excludes illegal shifts in both the simulated plant and the value update. The learned safety policy, which selects the legal gear and the steering command that maximize the certified value, controls the ASV, as illustrated in Fig.~\ref{fig_framework}. Beyond the simulated plant, the learned safety policy runs onboard the real full scale ASV and is validated in sea trials under the physical gear shift dwell.
 
 To the best of our knowledge, this study represents the first field demonstration of a learned robust safety certificate on a full scale ASV subject to a physical actuator dwell. The main contributions of this article are summarized as follows.
 \begin{enumerate}
 \item A dwell constrained RIS is formulated by HJ reachability for weathervaning control, in which the gear and its remaining lock time are augmented to the state.
-\item An adversarial learning scheme with legality masking is developed for the dwell constrained safety value, together with a task policy and a value threshold shield.
+\item An adversarial learning scheme on an SMDP with legality masking is developed for the dwell constrained safety value, and the resulting safety policy controls the ASV without a separate task policy.
 \item The proposed framework is validated through simulations and full scale field experiments on an 8 m sterndrive ASV.
 \end{enumerate}
 
@@ -99,32 +99,19 @@ The remainder of this article is organized as follows. Section~\ref{sec_system} 
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell fill a replay buffer, from which the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the safety policy $\pi_h$ and the adversary $\mu$ (Stage~1), and the task policy $\pi_t$ is trained by soft actor critic under the frozen safety critic (Stage~2). In the online stage, the frozen networks run on the ASV at each control period, and the shield replaces the task action by $\pi_h$ whenever the certified value falls below the margin $\tau$.}
+\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell are unrolled over each gear decision held for the dwell, and the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the steering protagonist $\pi_h$ and the adversary $\mu$ on the resulting SMDP. In the online stage, the frozen networks run on the ASV at each control period, and the gear that maximizes the certified value among the legal gears is applied together with the steering command of $\pi_h$.}
 \label{fig_framework}
 \end{figure*}
 
 \section{System Description and Modeling}\label{sec_system}
 
-This section describes the ASV and its actuation system, the origin of the gear shift dwell, and the vehicle dynamics model used for training together with the disturbance model. In the following, the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011} are adopted.
-
-\subsection{Vessel and Actuation System}\label{sec_vessel}
-
-The experimental platform is a Neo AURA 240 EXP with a deep V planing hull, propelled by a single inboard diesel engine \pending{model} through a MerCruiser Bravo~1 sterndrive, as shown in Fig.~\ref{fig_vessel}(a). On the ASV, the GPS antenna is mounted on the T top, while the attitude and heading reference system (AHRS) and the control PC, a laptop computer running ROS~2, are located at the console. Table~\ref{tab_boat} lists the specifications of the platform and its sensors.
-
-The controller accesses three actuation channels through the chain shown in Fig.~\ref{fig_vessel}(b). Among them, the engine speed is commanded over a CAN interface, while two electric linear servo cylinders execute the gear shift among reverse, neutral, and forward and the steering angle of the drive. The two cylinders act on the shift cable and the drive pivot, respectively, and both are driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so the results concern a single engine sterndrive configuration.
-
-\begin{figure*}[!t]
-\centering
-\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
-\caption{Experimental ASV and its hardware. (a) The ASV with the GPS antenna, the AHRS, and the control PC. (b) Control hardware connected to the control PC of (a) by Ethernet, from the PLC to the engine and the sterndrive, with the communication interface of each link.}
-\label{fig_vessel}
-\end{figure*}
+This section describes the origin of the gear shift dwell and the vehicle dynamics model used for training together with the disturbance model. In the following, the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011} are adopted.
 
 \subsection{Gear Shift Dwell}\label{sec_dwell}
 
-A shift between forward and reverse passes through neutral, and the clutch of the sterndrive gearbox must engage at low engine speed to avoid shock loading of the gear set. Therefore, each shift requires a finite mechanical time of \pending{mechanical shift time}, and an immediate reversal of a shift that has just been completed stresses the drivetrain. To protect the drivetrain, the minimum interval between consecutive shift commands was set to 3~s on the ASV of this study by adding a safety margin to the mechanical shift time. The PLC explicitly enforces this interval, ensuring that the drivetrain is protected regardless of the controller. Consequently, the dwell is given by the actuation system and cannot be shortened by the controller.
+A shift between forward and reverse passes through neutral, and the clutch of the sterndrive gearbox must engage at low engine speed to avoid shock loading of the gear set. Therefore, each shift requires a finite mechanical time, and an immediate reversal of a shift that has just been completed stresses the drivetrain. To protect the drivetrain, the actuation system enforces a minimum interval between consecutive shift commands, which is set by adding a safety margin to the mechanical shift time. This interval is the dwell, and it is given by the actuation system and cannot be shortened by the controller.
 
-With the control period of 0.5~s, the dwell corresponds to $D_g = 6$ control steps. A shift request issued during the dwell is discarded by the PLC, and the current gear is maintained. Therefore, the controller must account for the time at which a shift becomes available.
+With the control period $\Delta t$, the dwell corresponds to $D_g$ control steps. A shift request issued during the dwell is discarded by the actuation system, and the current gear is held. Therefore, the controller must account for the time at which a shift becomes available.
 
 \subsection{Vehicle Dynamics Modeling}\label{sec_model}
 
@@ -136,7 +123,7 @@ M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= \bm{f}_c + M d, \\
 R(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
 \end{subequations}
-where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $d = [d_u, d_v, d_r]^\top$ is the disturbance acceleration bounded in \eqref{eq_wbox}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $\bm{f}_c$ denotes the control vector because $\tau$ is reserved for the shield margin and $\tau_g$ for the remaining lock time.
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $d = [d_u, d_v, d_r]^\top$ is the disturbance acceleration bounded in \eqref{eq_wbox}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $\bm{f}_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
 
 Assuming that the ASV is symmetric in the $x$ and $y$ directions, $M$, $C(\nu)$, and $D(\nu)$ can be expressed as
 \begin{equation}
@@ -160,7 +147,7 @@ By vectoring the propeller thrust through the steering angle of the drive, the c
 = \begin{bmatrix} F_g\cos\delta \\ F_g\sin\delta \\ -l_d F_g\sin\delta \end{bmatrix},
 \label{eq_force}
 \end{equation}
-where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
+where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive. Once a gear is engaged the engine runs at least at idle, so the magnitude of the thrust in forward or reverse cannot be reduced below the idle thrust. Therefore, thrust magnitudes between zero and this minimum are unavailable, which forms a deadzone around zero thrust.
 
 In \cite{lee2024canal} the outboard thrust is commanded continuously through the throttle as $F = c\,n_T^2$, whereas the thrust in this study takes only the three values selected by the gear, and the gear is the channel that carries the dwell. Since the lateral force $f_Y$ and the yaw moment $f_N$ are proportional to $F_g$, both vanish together with the thrust in neutral.
 
@@ -187,11 +174,11 @@ Based on drift data recorded on the ASV with the engine at idle and the gear in 
 
 \section{Problem Formulation}\label{sec_problem}
 
-This section augments the gear state and its remaining lock time to the state, defines the legal action set induced by the dwell, and shows that the augmented game retains the structure required by the discounted safety backup.
+This section augments the gear state and its remaining lock time to the state, defines the legal action set induced by the dwell, and formulates the safety game on an SMDP in which each gear decision is held over the dwell.
 
 \subsection{Markov Property Under Gear Shift Dwell}
 
-Under the dwell, two identical physical states can admit different gear commands. If the gear was shifted three seconds ago, any gear command is admissible, whereas if it was shifted half a second ago, no gear command is admissible for the next two and a half seconds. Since the admissible gear command depends on the time elapsed since the last shift, the process is not Markov in the physical state alone. A value function learned on the physical state therefore conflates the two situations. To restore the Markov property, the gear state and its remaining lock time are augmented to the state.
+Under the dwell, two identical physical states can admit different gear commands. Once the dwell has elapsed, any gear command is admissible, whereas immediately after a shift no gear command is admissible until the dwell expires. Since the admissible gear command depends on the time elapsed since the last shift, the process is not Markov in the physical state alone. A value function learned on the physical state therefore conflates the two situations. To restore the Markov property, the gear state and its remaining lock time are augmented to the state.
 
 \subsection{Augmented State and Legal Action Set}
 
@@ -214,10 +201,10 @@ where the steering channel has no dwell constraint, while the gear channel is lo
 A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is dwell constrained admissible if $\pi(\xi) \in C(\xi)$ for every $\xi \in \Xi$. The set of all such policies is denoted by $\Pi_C$.
 \end{definition}
 
-Here, the dwell is a given constraint of the actuation system of Section~\ref{sec_dwell} and is not a design variable of the controller, and the object computed in this article is the safe set under that given dwell. Both the PLC, which discards a shift request issued during a lock, and the legal action set $C(\xi)$ effectively enforce the dwell, so every admissible trajectory satisfies it by construction.
+Here, the dwell is a given constraint of the actuation system of Section~\ref{sec_dwell} and is not a design variable of the controller, and the object computed in this article is the safe set under that given dwell. Both the actuation system, which discards a shift request issued during a lock, and the legal action set $C(\xi)$ effectively enforce the dwell, so every admissible trajectory satisfies it by construction.
 
 \begin{remark}\label{rem_masking}
-The legality structure \eqref{eq_legal} must be enforced both in the plant and in the backup of Section~\ref{sec_game}. In the plant, a shift request issued during a lock is ignored and the current gear is held, as the PLC does on the ASV, while in the backup the maximization ranges over $C(\xi)$ instead of the full action set. If the legality is enforced only in the plant, the neural network must learn the restriction from data. In this case, the approximation error can lead the learned value to assume that a locked gear can be shifted immediately, resulting in an optimistic certificate that declares unsafe states safe, and this failure is examined in Section~\ref{sec_sim_a1}.
+The legality structure \eqref{eq_legal} must be enforced both in the plant and in the backup of Section~\ref{sec_game}. In the plant, a shift request issued during a lock is ignored and the current gear is held, as the actuation system does on the ASV, while in the backup the maximization ranges over $C(\xi)$ instead of the full action set. If the legality is enforced only in the plant, the neural network must learn the restriction from data. In this case, the approximation error can lead the learned value to assume that a locked gear can be shifted immediately, resulting in an optimistic certificate that declares unsafe states safe, and this failure is examined in Section~\ref{sec_sim_a1}.
 \end{remark}
 
 \subsection{Augmented Safety Game}\label{sec_game}
@@ -234,26 +221,31 @@ V_h^{*}(\xi) = \max_{\pi \in \Pi_C} \min_{\mu} \min_{k \ge 0} h(\xi_k),
 \end{equation}
 where $\mu$ ranges over nonanticipative disturbance strategies with values in $\calW$ \cite{bansal2017}. This value is the best worst case margin achievable from $\xi$ under the legally restricted control, and $\{\xi \mid V_h^{*}(\xi) \ge 0\}$ is the largest set on which the ASV can remain inside the disk forever against every admissible disturbance.
 
-However, the undiscounted self consistency condition of \eqref{eq_value} is not a contraction. Fisac et al. \cite{fisac2019} introduced a discount $\gamma_h \in (0,1)$ that restores the contraction, and this device was extended to the disturbed game by Li et al. \cite{li2023cdc}. On the augmented state, the resulting backup is given by
+However, the undiscounted self consistency condition of \eqref{eq_value} is not a contraction, and a discount $\gamma_h \in (0,1)$ restores the contraction \cite{fisac2019}, which was extended to the disturbed game in \cite{li2023cdc}. Under the dwell, the gear decision is not revised until the lock expires, so the process is semi Markov at the level of the gear decisions. Therefore, each gear decision is treated as an option that holds the selected gear for $D_g$ control steps, while the steering command and the disturbance act at every step. For a fixed gear $\hat g$, the locked one step operator is defined as
 \begin{equation}
-(\calT_h V)(\xi) = (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi),\ \max_{c \in C(\xi)} \min_{d \in \calW} V\bigl(F(\xi, c, d)\bigr) \Bigr\},
+(\calT_{\hat g} W)(\xi) = (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi),\ \max_{\delta_c \in \calA_\delta} \min_{d \in \calW} W\bigl(F(\xi, (\delta_c, \hat g), d)\bigr) \Bigr\},
+\label{eq_locked}
+\end{equation}
+and the SMDP backup is given by
+\begin{equation}
+(\calT_h V)(\xi) = \max_{\hat g \in C_g(g, \tau_g)} \bigl(\calT_{\hat g}^{D_g} V\bigr)(\xi),
 \label{eq_backup}
 \end{equation}
-which differs from the operator of \cite{li2023cdc} only in that the maximization ranges over the state dependent legal set. The following lemma shows that the augmented backup preserves the contraction property of \cite{li2023cdc}.
+where $\calT_{\hat g}^{D_g}$ denotes $D_g$ successive applications of $\calT_{\hat g}$. The backup maximizes over the legal gears only at the decision, folds the margin over the locked interval, and bootstraps the value at the end of the option. Since holding the selected gear is legal at every step, every policy generated by the backup is dwell constrained admissible. Let $\Pi_C^{o} \subset \Pi_C$ denote such option policies, which change the gear command only at decisions separated by at least $D_g$ steps, and let $V_h^{o}$ be \eqref{eq_value} with $\pi$ restricted to $\Pi_C^{o}$, so that $V_h^{o} \le V_h^{*}$.
 
 \begin{lemma}\label{lem_aug}
-Let the augmented dynamics follow \eqref{eq_xi} and \eqref{eq_legal}, let $h$ be bounded, and let $\calT_h$ be defined by \eqref{eq_backup}. Then $\calT_h$ is a monotone $\gamma_h$ contraction in the supremum norm, it admits a unique bounded fixed point $V_h$, and the set $\calS = \{\xi \mid V_h(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies.
+Let $h$ be bounded and let $\calT_h$ be defined by \eqref{eq_backup}. Then $\calT_h$ is a monotone $\gamma_h^{D_g}$ contraction in the supremum norm and admits a unique bounded fixed point $V_h$ with $V_h \le h$. Moreover, $V_h^{o}$ satisfies the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$, and $\calS^{o} = \{\xi \mid V_h^{o}(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies with $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$.
 \end{lemma}
 
-The proof is given in the Appendix. Lemma~\ref{lem_aug} indicates that the state dependent legal action set does not affect the contraction property, since the proof requires only that the admissible action set is nonempty and compact at every state. As a result, the effect of the dwell appears in the shape of the fixed point of the backup, and this shape is examined in Section~\ref{sec_method}.
+The proof is given in the Appendix. The legal set enters \eqref{eq_backup} only through the maximization over a nonempty finite set at each decision, so the dwell does not affect the contraction and appears in the shape of the fixed point, which is examined in Section~\ref{sec_method}. As $\gamma_h$ approaches one, the discounted fixed point approaches the undiscounted value $V_h^{o}$ by the same argument as in \cite{li2023cdc}. Since the options also hold an unchanged gear for $D_g$ steps, $\calS^{o}$ is contained in the maximal set $\{\xi \mid V_h^{*}(\xi) \ge 0\}$.
 
 \begin{remark}\label{rem_channels}
-The formulation extends to $N$ independent switching channels, each with its own levels, dwell, and timer, by taking $C(\xi)$ as the product of the per channel legal sets. Lemma~\ref{lem_aug} holds without modification since no step of its proof counts the channels, and only the gear channel is treated in this article.
+The formulation extends to $N$ independent switching channels, each with its own levels, dwell, and timer, by taking $C(\xi)$ as the product of the per channel legal sets and by ending each option when any channel becomes free. Only the gear channel is treated in this article.
 \end{remark}
 
 \section{Dwell Constrained Safe Controller}\label{sec_method}
 
-This section presents the proposed dwell constrained safe controller. We first show that the safe set under the dwell is a family of sets that depends on the gear state $(g, \tau_g)$ and locate its physical origin in the asymmetry between the control and the disturbance on a sterndrive. We then describe the learning of the dwell constrained safety value and the task policy and shield built on it.
+This section presents the proposed dwell constrained safe controller. We first show that the safe set under the dwell is a family of sets that depends on the gear state $(g, \tau_g)$ and locate its physical origin in the asymmetry between the control and the disturbance on a sterndrive. We then describe the learning of the dwell constrained safety value on the SMDP and the resulting safety policy that runs onboard.
 
 \subsection{Safe Set Family Under Remaining Lock Time}\label{sec_family}
 
@@ -264,7 +256,7 @@ For fixed discrete coordinates of the augmented state, the slice of the RIS over
 \end{equation}
 Each choice of gear and timer produces a different slice, so the safe set is a family of sets that depends on the gear state $(g, \tau_g)$. When $\tau_g = 0$ the gear can react immediately and the slice is large. In contrast, when $\tau_g = D_g - 1$ the ASV must survive the entire lock without gear authority, so the margin that the disturbance can erode during the lock must be reserved in advance and the slice is small. As illustrated in Fig.~\ref{fig_family}, the slice decreases as the remaining lock time increases, or equivalently grows with the elapsed dwell $D_g - 1 - \tau_g$.
 
-The physical origin of the family is an asymmetry in the game \eqref{eq_value}, in which the dwell binds only the maximizing player. On a sterndrive this asymmetry is particularly severe because the steering vectors the thrust. During a lock in neutral the propeller produces no thrust, and by \eqref{eq_force} no lateral force and no yaw moment either, so the control authority vanishes for up to three seconds. During a lock in forward or reverse the ASV can steer but cannot reverse its thrust. In this case, an ASV that has just engaged forward to return toward the setpoint cannot brake if the wind pushes it across the setpoint. Throughout the lock the disturbance acts freely at every step.
+The physical origin of the family is an asymmetry in the game \eqref{eq_value}, in which the dwell binds only the maximizing player. On a sterndrive this asymmetry is particularly severe because the steering vectors the thrust. During a lock in neutral the propeller produces no thrust, and by \eqref{eq_force} no lateral force and no yaw moment either, so the control authority vanishes for the whole dwell. During a lock in forward or reverse the ASV can steer but cannot reverse its thrust. In this case, an ASV that has just engaged forward to return toward the setpoint cannot brake if the wind pushes it across the setpoint. Throughout the lock the disturbance acts freely at every step.
 
 Restricting the admissible actions of the control player reduces the value of the zero sum game, resulting in a smaller safe set. Consequently, the adversary of \eqref{eq_value} does not require a larger disturbance, and the most critical disturbance acts immediately after the gear is locked at an unfavorable level. Since the remaining lock time is part of its argument, the dwell constrained safety value accurately anticipates this timing, whereas a dwell unaware value cannot.
 
@@ -278,7 +270,7 @@ Restricting the admissible actions of the control player reduces the value of th
 
 \subsection{Adversarial Learning of the Dwell Constrained Safety Value}\label{sec_learning}
 
-An adversarial actor critic scheme learns the fixed point of \eqref{eq_backup}, as summarized in Algorithm~\ref{alg_ris}. The scheme follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc} and is adapted to the legality structure. As the network input, the augmented state is encoded as
+An adversarial actor critic scheme learns the fixed point of \eqref{eq_backup} on the SMDP, as summarized in Algorithm~\ref{alg_ris}. The scheme follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc} and is adapted to the legality structure and to the option that holds each gear decision over the dwell. As the network input, the augmented state is encoded as
 \begin{equation}
 \bigl(\tilde{x}/R,\ \tilde{y}/R,\ \sin\tilde{\psi},\ \cos\tilde{\psi},\ u,\ v,\ r,\ \delta/\delta_{\max},\ \operatorname{onehot}(g),\ \tau_g/D_g\bigr),
 \label{eq_input}
@@ -286,118 +278,72 @@ An adversarial actor critic scheme learns the fixed point of \eqref{eq_backup}, 
 enabling every network to observe the gear and the timer.
 
 \subsubsection{Safety Critics}
-Two safety critics $Q_{h,1}(\xi, c, d)$ and $Q_{h,2}(\xi, c, d)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and the minimum of the two is used wherever a critic value is needed. For a transition $(\xi, c, d, \xi')$ drawn from the replay buffer, the regression target is formulated as
+Two safety critics $Q_{h,1}(\xi, c, d)$ and $Q_{h,2}(\xi, c, d)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and the minimum of the two is used wherever a critic value is needed. The regression target is formed by unrolling the simulator over one option. From a sampled augmented state $\xi_0$ with a committed legal gear, the simulator is unrolled for $n \ge D_g$ steps. The committed gear is held for the first $D_g$ steps and the gear is chosen greedily over the legal set afterwards, while the steering command of the protagonist $\pi_h$ and the disturbance of the adversary $\mu$ act at every step. With the target value $\bar V(\xi) = \max_{g' \in C_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as the backward fold
 \begin{equation}
-y = (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi),\ \min_{i} \bar{Q}_{h,i}\bigl(\xi', \pi_h(\xi'), \mu(\xi')\bigr) \Bigr\},
+g_n = \bar V(\xi_n), \quad g_j = (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \}, \quad y = g_0,
 \label{eq_target}
 \end{equation}
-where $\pi_h$ and $\mu$ are the protagonist and the adversary described below, respectively. Since $h$ is bounded above by $R$, the bootstrap term is clipped to the physical value range $[-h_{\mathrm{floor}}, R]$, and $h$ itself is floored at $-h_{\mathrm{floor}}$ outside the disk, ensuring that the value remains bounded as required by Lemma~\ref{lem_aug}. A squared loss regresses the critics onto $y$, and the target copies follow the critics by a soft update.
+for $j = n-1, \ldots, 0$, where $\xi_j$ is the state at step $j$ of the unroll. Since $h$ is bounded above by $R$, the bootstrap term is clipped to the physical value range $[-h_{\mathrm{floor}}, R]$, and $h$ itself is floored at $-h_{\mathrm{floor}}$ outside the disk, ensuring that the value remains bounded as required by Lemma~\ref{lem_aug}. A squared loss regresses the critics onto $y$ at the sampled state and the committed action, and the target copies follow the critics by a soft update.
 
 \subsubsection{Protagonist}
-The protagonist $\pi_h$ outputs a Gaussian steering command squashed by $\tanh$ into $\calA_\delta$ and sampled by the reparameterization trick, together with a categorical distribution over the gear levels in which the illegal levels outside $C_g(g, \tau_g)$ are masked to zero probability. Let $q(\xi, c) = \min_i Q_{h,i}(\xi, c, \mu(\xi))$ denote the minimum critic at the disturbance of the adversary. The protagonist is trained to maximize the exact expectation of $q$ over the legal discrete actions, which is formulated as
+The protagonist $\pi_h$ is a deterministic steering policy whose output is scaled by $\tanh$ into $\calA_\delta$, and it is trained by deterministic policy gradient. Let $q(\xi, c) = \min_i Q_{h,i}(\xi, c, \mu(\xi))$ denote the minimum critic at the disturbance of the adversary. The gear is not produced by an actor. Instead, the greedy legal gear is selected by enumerating the at most three legal gears as
 \begin{equation}
-J_\pi = \mathbb{E}_{\xi}\Bigl[ \sum_{g' \in C_g(g,\tau_g)} p_\pi(g' \mid \xi)\ \mathbb{E}_{\delta' \sim \pi_h(\cdot \mid \xi)}\bigl[ q\bigl(\xi, (\delta', g')\bigr) \bigr] \Bigr],
+g^\star(\xi) = \arg\max_{g' \in C_g(g,\tau_g)} q\bigl(\xi, (\pi_h(\xi), g')\bigr),
+\label{eq_gear}
+\end{equation}
+which is the legality masking on the decision side. The protagonist is trained to maximize the minimum critic at the greedy legal gear, and the objective is given by
+\begin{equation}
+J_\pi = \mathbb{E}_{\xi}\Bigl[ q\bigl(\xi, (\pi_h(\xi), g^\star(\xi))\bigr) \Bigr].
 \label{eq_actor}
 \end{equation}
-where the at most three legal gear levels are enumerated rather than sampled, thereby removing the variance of a sampled discrete action.
 
 \subsubsection{Adversary}
-The adversary $\mu(\xi)$ is a deterministic policy whose output is scaled by $\tanh$ into the box $\calW$, and it is trained to minimize the minimum critic at the action of the protagonist. During data collection, exploration noise perturbs the adversary output so that the replay buffer contains disturbance realizations around the current worst case.
+The adversary $\mu(\xi)$ is a deterministic policy whose output is scaled by $\tanh$ into the box $\calW$, and it is trained by deterministic policy gradient to minimize $\min_i Q_{h,i}$ at the action $(\pi_h(\xi), g^\star(\xi))$. When the targets are formed, exploration noise perturbs the adversary output so that the unrolls contain disturbance realizations around the current worst case.
 
 \subsubsection{Curricula and Coverage}
-Two curricula are employed to stabilize the adversarial training and to extend the horizon of the certificate. In the first curriculum, the adversary scale is ramped from zero to one, so the protagonist first learns to hold station in calm water and then faces a progressively stronger opponent. In the second curriculum, the discount $\gamma_h$ is ramped from 0.95 to 0.995, allowing the horizon of the certificate to grow as the value estimate improves. Every episode reset randomizes the full augmented state, including the gear level and the timer, ensuring that states entered in the middle of a lock are covered by data even though they cannot be chosen by the protagonist.
+Two curricula are employed to stabilize the adversarial training and to extend the horizon of the certificate. In the first curriculum, the adversary scale is ramped from zero to one, so the protagonist first learns to hold station in calm water and then faces a progressively stronger opponent. In the second curriculum, the discount $\gamma_h$ is ramped toward its final value, allowing the horizon of the certificate to grow as the value estimate improves. Every update resets the $N$ parallel simulators to augmented states sampled over $\Xi$, including the gear level and the timer, ensuring that states entered in the middle of a lock are covered even though they cannot be chosen by the protagonist.
 
 \begin{algorithm}[!t]
 \caption{Adversarial Learning of the Dwell Constrained Safety Value}
 \label{alg_ris}
 \begin{algorithmic}[1]
-\STATE Initialize critics $Q_{h,1}, Q_{h,2}$, targets $\bar{Q}_{h,1}, \bar{Q}_{h,2}$, protagonist $\pi_h$, adversary $\mu$, replay buffer $\mathcal{B}$, adversary scale $\kappa \gets 0$, discount $\gamma_h \gets 0.95$
-\FOR{each episode}
-\STATE Sample $\xi_0$ uniformly over $\Xi$, including $g$ and $\tau_g$
-\FOR{each step $k$}
-\STATE $c_k \gets$ sample from $\pi_h(\cdot \mid \xi_k)$ with illegal gear levels masked
-\STATE $d_k \gets \kappa\,\mu(\xi_k) +$ exploration noise, projected onto $\calW$
-\STATE $\xi_{k+1} \gets F(\xi_k, c_k, d_k)$ with the plant ignoring illegal shift requests
-\STATE Store $(\xi_k, c_k, d_k, \xi_{k+1})$ in $\mathcal{B}$
-\STATE Sample a minibatch from $\mathcal{B}$ and form $y$ by \eqref{eq_target} with clipping
+\STATE Initialize critics $Q_{h,1}, Q_{h,2}$, targets $\bar{Q}_{h,1}, \bar{Q}_{h,2}$, protagonist $\pi_h$, adversary $\mu$, adversary scale $\kappa \gets 0$
+\FOR{each update}
+\STATE Sample a batch of augmented states over $\Xi$, including $g$ and $\tau_g$, in the $N$ parallel simulators
+\STATE At each sampled state, choose a random legal committed gear and perturb the steering command and the disturbance $\kappa\,\mu(\xi)$ by exploration noise
+\STATE Unroll each simulator for $n$ steps, holding the committed gear for $D_g$ steps and the greedy legal gear \eqref{eq_gear} afterwards
+\STATE Form $y$ by the backward fold \eqref{eq_target} with clipping
 \STATE Update $Q_{h,1}, Q_{h,2}$ by regression onto $y$
-\STATE Update $\pi_h$ by ascending \eqref{eq_actor} over the legal gear levels
-\STATE Update $\mu$ by descending $\min_i Q_{h,i}(\xi, \pi_h(\xi), \mu(\xi))$
+\STATE Update $\pi_h$ by ascending \eqref{eq_actor}
+\STATE Update $\mu$ by descending $\min_i Q_{h,i}(\xi, (\pi_h(\xi), g^\star(\xi)), \mu(\xi))$
 \STATE Soft update $\bar{Q}_{h,i} \gets (1-\rho)\bar{Q}_{h,i} + \rho Q_{h,i}$
-\ENDFOR
-\STATE Advance the curricula $\kappa \to 1$ and $\gamma_h \to 0.995$
+\STATE Advance the curricula on $\kappa$ and $\gamma_h$
 \ENDFOR
 \end{algorithmic}
 \end{algorithm}
 
-\subsubsection{Certified and Deployed Sets}
-After training, the certified set is defined as
+\subsubsection{Certified Set}
+After training, the certified value and the certified set are defined as
 \begin{equation}
-\hat{\calS} = \bigl\{ \xi \mid q\bigl(\xi, \pi_h(\xi)\bigr) \ge 0 \bigr\},
+\hat V_h(\xi) = \max_{g' \in C_g(g,\tau_g)} q\bigl(\xi, (\pi_h(\xi), g')\bigr), \qquad
+\hat{\calS} = \bigl\{ \xi \mid \hat V_h(\xi) \ge 0 \bigr\},
 \label{eq_certified}
 \end{equation}
-and the deployed set is the level set shifted by the margin, $\hat{\calS}_\tau = \{\xi \mid q(\xi, \pi_h(\xi)) \ge \tau\}$, where the margin $\tau > 0$ is calibrated by the adversarial Monte Carlo audit described in Section~\ref{sec_sim_audit}.
+and the audited level set is $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, where the margin $\tau > 0$ is calibrated by the adversarial Monte Carlo audit described in Section~\ref{sec_sim_audit}.
 
 \begin{remark}\label{rem_scope}
-Contraction, uniqueness, and invariance hold at the operator level. However, the value is represented by neural networks, and no bound on the approximation error is claimed here. Moreover, since $\gamma_h < 1$, the zero level set of the discounted fixed point is optimistic relative to the undiscounted value \eqref{eq_value}. For this reason, the deployed certificate is the shifted level set $\hat{\calS}_\tau$, whose margin $\tau$ effectively absorbs both the approximation error and the discount optimism, and every certified rate reported in this article refers to this audited level set.
+Contraction, uniqueness, and invariance hold at the operator level. However, the value is represented by neural networks, and no bound on the approximation error is claimed here. Moreover, since $\gamma_h < 1$, the zero level set of the discounted fixed point is optimistic relative to the undiscounted value \eqref{eq_value}. For this reason, the certified rates are reported on the audited level set $\hat{\calS}_\tau$, whose margin $\tau$ effectively absorbs both the approximation error and the discount optimism, and every certified rate reported in this article refers to this audited level set.
 \end{remark}
 
-\subsection{Task Policy and Safety Shield}\label{sec_shield}
+\subsection{Onboard Safety Controller}\label{sec_onboard_ctrl}
 
-With the safety critics, the protagonist, and the adversary frozen, soft actor critic \cite{haarnoja2018} trains a task policy $\pi_t$ in a second stage. The reward combines the distance to the setpoint, a term that favors keeping a gear engaged over idling in neutral, a steering effort term, and a penalty on each intervention of the shield, and is given by
-\begin{equation}
-r_t = -w_1 \sqrt{\tilde{x}^2 + \tilde{y}^2} - w_2\, \mathbf{1}[g = \gN] - w_3\, \delta_c^2 - w_4\, \mathbf{1}[\text{shield active}],
-\label{eq_reward}
-\end{equation}
-where $w_1$ to $w_4$ are the weights \pending{values}. The task actor has the same masked output structure as the protagonist, ensuring that it never requests an illegal shift.
-
-Safety enters the second stage as a Lagrangian penalty on the certified value. The objective is formulated as
-\begin{equation}
-\max_{\pi_t}\ \mathbb{E}\bigl[ Q_t(\xi, \pi_t(\xi)) \bigr] + \lambda\, \mathbb{E}\bigl[ \min\{0,\ q(\xi, \pi_t(\xi)) - \tau\} \bigr],
-\label{eq_lagrange}
-\end{equation}
-where $Q_t$ is the task critic, $q$ is the frozen minimum safety critic of Section~\ref{sec_learning}, and $\lambda$ is the multiplier adapted by dual ascent, respectively. To prevent the safety pressure from vanishing when the constraint is inactive, the multiplier is floored at a positive minimum $\lambda_{\min} > 0$, thereby keeping the task policy inside the deployed set during training.
-
-At run time the two policies are combined by a value threshold filter. At each control step the task action $c^{t} = \pi_t(\xi)$ is evaluated by the frozen critic, and the applied action is given by
-\begin{equation}
-c = \begin{cases} c^{t}, & q(\xi, c^{t}) \ge \tau, \\ \pi_h(\xi), & \text{otherwise}, \end{cases}
-\label{eq_shield}
-\end{equation}
-where the safety policy takes over only when the task action leaves the deployed set under the worst disturbance. The filter uses the same networks and the same margin as the certificate. \pending{Exact onboard switching rule to be confirmed against the deployed code, including whether the filter evaluates the task action alone or also the hold action.}
+The deployed controller is the learned safety policy without a separate task policy. At each control period the steering command is $\pi_h(\xi)$ and the gear command is $g^\star(\xi)$ of \eqref{eq_gear}, so a shift is requested only when it is legal and raises the certified value, and during a lock the current gear is held. Since the value is the worst case margin to the boundary of the disk, this policy keeps the ASV away from the boundary and toward the setpoint while the heading turns freely.
 
 \section{Simulation and Experimental Results}\label{sec_results}
 
 The proposed framework was validated through numerical simulations and full scale field experiments using the 8 m ASV of Fig.~\ref{fig_vessel}. The following subsections detail the system identification procedure that provides an accurate model for training and simulation, the simulation study that audits the certificate and compares the closed loop behavior with the baselines, and the field experiments including the onboard implementation.
 
 \subsection{System Identification Results}\label{sec_si_results}
-
-\begin{table}[!t]
-\renewcommand{\arraystretch}{1.3}
-\caption{Boat Specifications}
-\label{tab_boat}
-\centering
-\footnotesize
-\begin{tabular}{ll}
-\toprule
-\multicolumn{2}{l}{(a) Platform specification} \\
-\midrule
-Hull & Neo AURA 240 EXP, deep V planing hull \\
-Length overall & 8.29 m \\
-Length between perpendiculars & 6.96 m \\
-Breadth & 2.62 m \\
-Depth & 0.66 m \\
-Draft & 0.34 m \\
-Capacity & 12 persons \\
-Engine & single inboard diesel, \pending{model} \\
-Minimum shift dwell & 3 s, including a safety margin \\
-\midrule
-\multicolumn{2}{l}{(b) Sensor specification} \\
-\midrule
-RTK GPS & \makecell[l]{ZED F9P receiver\\0.01~m $+$ 1~ppm CEP accuracy} \\
-AHRS & \makecell[l]{MicroStrain 3DM GX5\\0.02~mg accelerometer resolution\\0.003$^\circ$/s gyroscope resolution} \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 % ---- Identification NLP removed from Section II (2026-10-14), kept here for later use ----
 % The unknown parameters of \eqref{eq_complete} are identified from maneuvering data recorded on the vessel by posing the nonlinear programming problem of \cite{lee2024canal},
@@ -469,11 +415,11 @@ Disturbance bounds $(\bar d_u, \bar d_v, \bar d_r)$ & \pending{TBD} \\
 Discount $\gamma_h$ curriculum & 0.95 to 0.995 \\
 Adversary scale curriculum & 0 to 1 \\
 Network sizes & \pending{TBD} \\
-Replay buffer, batch size & \pending{TBD} \\
+Gear dwell $D_g$ & 6 steps \\
+Parallel simulators, unroll horizon $n$ & \pending{TBD} \\
 Learning rates, soft update $\rho$ & \pending{TBD} \\
 Training steps, seeds & \pending{TBD} \\
-Deployment margin $\tau$ & \pending{TBD} \\
-Lagrangian floor $\lambda_{\min}$ & \pending{TBD} \\
+Audit margin $\tau$ & \pending{TBD} \\
 Monte Carlo audit & \pending{TBD} scenarios, \pending{TBD} s \\
 \bottomrule
 \end{tabular}
@@ -483,9 +429,9 @@ As baselines, a dwell unaware RIS, denoted \risnd, a proportional integral deriv
 
 \subsubsection{Certified Set and Monte Carlo Audit}\label{sec_sim_audit}
 
-To audit the learned certificate, Monte Carlo rollouts were conducted from initial augmented states sampled over the operating envelope. Each state was rolled out under the safety policy $\pi_h$ against the adversary $\mu$ and against random disturbance sequences for \pending{TBD} seconds, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. Four quantities summarize the audit over the sampled states. The certified fraction is the fraction of sampled states with $q \ge \tau$, and the hit rate is the fraction of certified states that remain inside the disk. The false safety rate is the fraction of certified states that are violated, and a safety method must drive this rate to zero. Finally, the correlation between the predicted value and the realized minimum margin measures whether the value ranks states correctly beyond the binary verdict. Based on the audit, the margin $\tau$ is set to the smallest value at which the false safety rate falls to \pending{target}.
+To audit the learned certificate, Monte Carlo rollouts were conducted from initial augmented states sampled over the operating envelope. Each state was rolled out under the safety policy $\pi_h$ against the adversary $\mu$ and against random disturbance sequences for \pending{TBD} seconds, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. Four quantities summarize the audit over the sampled states. The certified fraction is the fraction of sampled states with $\hat V_h \ge \tau$, and the hit rate is the fraction of certified states that remain inside the disk. The false safety rate is the fraction of certified states that are violated, and a safety method must drive this rate to zero. Finally, the correlation between the predicted value and the realized minimum margin measures whether the value ranks states correctly beyond the binary verdict. Based on the audit, the margin $\tau$ is set to the smallest value at which the false safety rate falls to \pending{target}.
 
-At $\tau = 0$ the certificate attained a hit rate of \pending{TBD} with a false safety rate of \pending{TBD} and a correlation of \pending{TBD}. At the deployment margin $\tau = \pending{TBD}$ the hit rate rose to \pending{TBD} with a false safety rate of \pending{TBD}, while the certified fraction of the operating envelope was \pending{TBD}. In Fig.~\ref{fig_family}, the family structure of Section~\ref{sec_family} appears directly in the slices, \pending{observed shape of the slices with respect to the gear level and the remaining lock time to be described from the trained value}. These results confirm that \pending{claim on the usability of the certificate and on the errors absorbed by the margin to be stated once the audit numbers are final}.
+At $\tau = 0$ the certificate attained a hit rate of \pending{TBD} with a false safety rate of \pending{TBD} and a correlation of \pending{TBD}. At the audit margin $\tau = \pending{TBD}$ the hit rate rose to \pending{TBD} with a false safety rate of \pending{TBD}, while the certified fraction of the operating envelope was \pending{TBD}. In Fig.~\ref{fig_family}, the family structure of Section~\ref{sec_family} appears directly in the slices, \pending{observed shape of the slices with respect to the gear level and the remaining lock time to be described from the trained value}. These results confirm that \pending{claim on the usability of the certificate and on the errors absorbed by the margin to be stated once the audit numbers are final}.
 
 \subsubsection{Dwell Aware Versus Dwell Unaware Certificates}\label{sec_sim_a1}
 
@@ -501,7 +447,7 @@ To test the claim of Remark~\ref{rem_masking}, \risnd is audited on the plant th
 
 \subsubsection{Closed Loop Comparison}\label{sec_sim_closed}
 
-To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed controller were simulated from the same set of initial states under the same disturbance realizations, including the adversarial disturbance and random sequences inside $\calW$. The metrics are the mean, root mean square, and maximum distance from the setpoint, the fraction of time inside the disk, and the number of gear switches per minute as a wear indicator. Moreover, the maximum excursion during locked intervals, the shield intervention rate, and the calculation time per step are reported, where the maximum excursion during locked intervals is the only direct evidence that the dwell is physically consequential.
+To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed controller were simulated from the same set of initial states under the same disturbance realizations, including the adversarial disturbance and random sequences inside $\calW$. The metrics are the mean, root mean square, and maximum distance from the setpoint, the fraction of time inside the disk, and the number of gear switches per minute as a wear indicator. Moreover, the maximum excursion during locked intervals and the calculation time per step are reported, where the maximum excursion during locked intervals is the only direct evidence that the dwell is physically consequential.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.35}
@@ -519,17 +465,61 @@ Max distance (m) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pend
 Time inside disk (\%) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
 Switches per minute & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
 Max excursion in lock (m) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
-Shield rate (\%) & \pending{TBD} & n/a & n/a & \textbf{\pending{TBD}} \\
 Calculation time (ms) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim}, the proposed controller \pending{qualitative headline of the closed loop comparison}. \risnd \pending{qualitative closed loop outcome of \risnd, including the excursions from the states that it certifies}, since its shield is triggered by a value that does not see the lock. \pid \pending{qualitative closed loop outcome of \pid, including the switching frequency}, where a quantized continuous command can chatter around the neutral threshold and each unnecessary shift opens a three second window of lost authority. \ciampc respects the dwell through the rounding step, but it uses the nominal model without disturbance tightening, and \pending{qualitative outcome of \ciampc and its calculation time}. In contrast, the proposed controller \pending{qualitative outcome of the proposed controller, including the switching frequency and the calculation time}, at the fixed cost of a network evaluation per step. These results confirm that \pending{qualitative claim on respecting the dwell inside the certificate}.
+As summarized in Table~\ref{tab_sim}, the proposed controller \pending{qualitative headline of the closed loop comparison}. \risnd \pending{qualitative closed loop outcome of \risnd, including the excursions from the states that it certifies}, since its gear decisions rely on a value that does not see the lock. \pid \pending{qualitative closed loop outcome of \pid, including the switching frequency}, where a quantized continuous command can chatter around the neutral threshold and each unnecessary shift opens a three second window of lost authority. \ciampc respects the dwell through the rounding step, but it uses the nominal model without disturbance tightening, and \pending{qualitative outcome of \ciampc and its calculation time}. In contrast, the proposed controller \pending{qualitative outcome of the proposed controller, including the switching frequency and the calculation time}, at the fixed cost of a network evaluation per step. These results confirm that \pending{qualitative claim on respecting the dwell inside the certificate}.
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
-The experiments were conducted on the ASV of Section~\ref{sec_vessel} off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and the proposed controller on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For the proposed controller the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} The proposed controller ran the task policy of Section~\ref{sec_shield} under the shield with the deployment margin $\tau = 0.5$ and the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
+\subsubsection{Vessel and Actuation System}\label{sec_vessel}
+
+The experimental platform is a Neo AURA 240 EXP with a deep V planing hull, propelled by a single inboard diesel engine \pending{model} through a MerCruiser Bravo~1 sterndrive, as shown in Fig.~\ref{fig_vessel}(a). On the ASV, the GPS antenna is mounted on the T top, while the attitude and heading reference system (AHRS) and the control PC, a laptop computer running ROS~2, are located at the console. Table~\ref{tab_boat} lists the specifications of the platform and its sensors.
+
+The controller accesses three actuation channels through the chain shown in Fig.~\ref{fig_vessel}(b). Among them, the engine speed is commanded over a CAN interface, while two electric linear servo cylinders execute the gear shift among reverse, neutral, and forward and the steering angle of the drive. The two cylinders act on the shift cable and the drive pivot, respectively, and both are driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so the results concern a single engine sterndrive configuration.
+
+\begin{figure*}[!t]
+\centering
+\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
+\caption{Experimental ASV and its hardware. (a) The ASV with the GPS antenna, the AHRS, and the control PC. (b) Control hardware connected to the control PC of (a) by Ethernet, from the PLC to the engine and the sterndrive, with the communication interface of each link.}
+\label{fig_vessel}
+\end{figure*}
+
+Each shift requires a mechanical time of \pending{mechanical shift time}. On this ASV, the minimum interval between consecutive shift commands was set to 3~s by adding a safety margin to the mechanical shift time, and the PLC enforces this interval regardless of the controller. With the control period of 0.5~s, the dwell corresponds to $D_g = 6$ control steps.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.3}
+\caption{Boat Specifications}
+\label{tab_boat}
+\centering
+\footnotesize
+\begin{tabular}{ll}
+\toprule
+\multicolumn{2}{l}{(a) Platform specification} \\
+\midrule
+Hull & Neo AURA 240 EXP, deep V planing hull \\
+Length overall & 8.29 m \\
+Length between perpendiculars & 6.96 m \\
+Breadth & 2.62 m \\
+Depth & 0.66 m \\
+Draft & 0.34 m \\
+Capacity & 12 persons \\
+Engine & single inboard diesel, \pending{model} \\
+Minimum shift dwell & 3 s, including a safety margin \\
+\midrule
+\multicolumn{2}{l}{(b) Sensor specification} \\
+\midrule
+RTK GPS & \makecell[l]{ZED F9P receiver\\0.01~m $+$ 1~ppm CEP accuracy} \\
+AHRS & \makecell[l]{MicroStrain 3DM GX5\\0.02~mg accelerometer resolution\\0.003$^\circ$/s gyroscope resolution} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Test Site and Protocol}\label{sec_site}
+
+The experiments were conducted on the ASV of Section~\ref{sec_vessel} off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and the proposed controller on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For the proposed controller the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} The proposed controller ran the safety policy of Section~\ref{sec_onboard_ctrl} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
 
 \begin{figure}[!t]
 \centering
@@ -541,7 +531,7 @@ The experiments were conducted on the ASV of Section~\ref{sec_vessel} off Jeongo
 
 \subsubsection{Onboard Implementation}\label{sec_onboard}
 
-The proposed controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. An extended Kalman filter estimates the position, heading, and body rates at 10~Hz from the measurements of the GPS and the AHRS listed in Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, ensuring consistent legality between the controller and the plant. Based on the assembled state, the node evaluates the task policy, the critic, and the shield, and publishes the steering command and the gear request to the PLC. As listed in Table~\ref{tab_field}, the calculation time per step of the proposed node on the control PC remained well within the control period of 0.5~s. The \pid and \ciampc baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, ensuring that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
+The proposed controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. An extended Kalman filter estimates the position, heading, and body rates at 10~Hz from the measurements of the GPS and the AHRS listed in Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, ensuring consistent legality between the controller and the plant. Based on the assembled state, the node evaluates the safety policy and the critics to select the steering command and the gear, and publishes the steering command and the gear request to the PLC. As listed in Table~\ref{tab_field}, the calculation time per step of the proposed node on the control PC remained well within the control period of 0.5~s. The \pid and \ciampc baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, ensuring that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
 
 \subsection{Experimental Results}\label{sec_exp}
 
@@ -583,29 +573,27 @@ All statistics are time weighted over 10~min of the designated runs of each cont
 \end{minipage}
 \end{table}
 
-In contrast, the proposed controller achieved the smallest RMS and maximum distance, and its excursions were short and returned inside the disk. All three controllers shifted the gear at a similar rate, so the improvement was not obtained by shifting more often, but the gear usage differed. \pid and \ciampc cycled through forward, neutral, and reverse, whereas the proposed controller mostly alternated between reverse and neutral and rarely engaged forward, as listed in Table~\ref{tab_field}. Moreover, the calculation time of the proposed controller was comparable to that of \ciampc and remained within the control period. These results confirm that the task policy and the shield trained in simulation transferred to the ASV without retraining and kept the ASV near the setpoint under real sea conditions, with brief excursions that returned inside the disk.
+In contrast, the proposed controller achieved the smallest RMS and maximum distance, and its excursions were short and returned inside the disk. All three controllers shifted the gear at a similar rate, so the improvement was not obtained by shifting more often, but the gear usage differed. \pid and \ciampc cycled through forward, neutral, and reverse, whereas the proposed controller mostly alternated between reverse and neutral and rarely engaged forward, as listed in Table~\ref{tab_field}. Moreover, the calculation time of the proposed controller was comparable to that of \ciampc and remained within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept the ASV near the setpoint under real sea conditions, with brief excursions that returned inside the disk.
 
 \subsubsection{Discussion}\label{sec_exp_disc}
 
 The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the 3~s dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for the proposed controller, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, whereas the proposed controller mostly switched between reverse and neutral, as shown in Fig.~\ref{fig_field_compare}(f).
 
-As shown in Fig.~\ref{fig_field_compare}(e), the safety value $V_h$ explains the interventions of the shield. Since $V_h \le h$ holds by construction, every sample outside the disk had $V_h < 0$. More importantly, $V_h$ fell below zero before every crossing of the circle marked in Fig.~\ref{fig_field_compare}(d), so the learned value anticipated the loss of the margin before it was realized, and some episodes with $V_h < 0$ ended without any excursion. Since the task policy is trained under the floored Lagrangian penalty of \eqref{eq_lagrange}, the shield intervened only when the task action approached the boundary of the deployed set under the worst disturbance, and the margin $\tau$ applied one step ahead makes this test stricter than the zero threshold on $V_h$. \pending{discussion of the realized disturbance relative to the bound, after the system identification}
+As shown in Fig.~\ref{fig_field_compare}(e), the safety value $V_h$ tracked the margin of the ASV. Since $V_h \le h$ holds by construction, every sample outside the disk had $V_h < 0$. More importantly, $V_h$ fell below zero before every crossing of the circle marked in Fig.~\ref{fig_field_compare}(d), so the learned value anticipated the loss of the margin before it was realized, and some episodes with $V_h < 0$ ended without any excursion. \pending{discussion of the realized disturbance relative to the bound, after the system identification}
 
 \section{Conclusion}\label{sec_conclusion}
 
-This article presented a dwell constrained RIS framework for the safe weathervaning control of an ASV driven by a single diesel engine and a sterndrive. Since the dwell restricts only the control player of the safety game while the disturbance acts at every step, the safe set becomes a family of sets that shrinks with the remaining lock time. The gear state and its remaining lock time were augmented to the state, and the dwell constrained safety value was learned by adversarial reinforcement learning with legality masking. A task policy and a value threshold shield were built on the learned value. The proposed framework was validated through simulations, \pending{simulation headline to be stated once the simulation numbers are final}, and through full scale field experiments with an 8~m ASV. In the field, the proposed controller kept the ASV closer to the setpoint than the \pid and \ciampc baselines with short excursions that returned inside the disk, at a shift frequency comparable to the baselines. The current approach provides no bound on the approximation error of the neural representation, and the field validation covers a single dwell channel. Future work will address these limitations by quantifying the approximation error and by extending the validation to several dwell channels.
+This article presented a dwell constrained RIS framework for the safe weathervaning control of an ASV driven by a single diesel engine and a sterndrive. Since the dwell restricts only the control player of the safety game while the disturbance acts at every step, the safe set becomes a family of sets that shrinks with the remaining lock time. The gear state and its remaining lock time were augmented to the state, and the dwell constrained safety value was learned on an SMDP by adversarial reinforcement learning with legality masking. The learned safety policy controlled the ASV by selecting the legal gear and the steering command that maximize the certified value. The proposed framework was validated through simulations, \pending{simulation headline to be stated once the simulation numbers are final}, and through full scale field experiments with an 8~m ASV. In the field, the proposed controller kept the ASV closer to the setpoint than the \pid and \ciampc baselines with short excursions that returned inside the disk, at a shift frequency comparable to the baselines. The current approach provides no bound on the approximation error of the neural representation, and the field validation covers a single dwell channel. Future work will address these limitations by quantifying the approximation error and by extending the validation to several dwell channels.
 
 \appendix[Proof of Lemma 1]
 
-The proof of \cite[Theorems~2 and~3]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}, establishes the contraction and the monotonicity of the backup using only the following structural facts. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over $d \in \calW$ is nonexpansive, and the maximization over the admissible action set is nonexpansive, which requires only that the admissible set is nonempty and compact at every state. The admissible set is not required to be constant across states. Under \eqref{eq_legal} the set $C(\xi)$ is nonempty for every $\xi$, since holding the current gear is always legal, and it is compact as the product of a finite set and a compact interval. Therefore, writing $(\Phi V)(\xi) = \max_{c \in C(\xi)} \min_{d \in \calW} V(F(\xi,c,d))$, for bounded $V$ and $V'$,
+For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the compact steering interval $\calA_\delta$ is nonexpansive, so for bounded $W$ and $W'$,
 \begin{equation}
-\bigl| (\Phi V)(\xi) - (\Phi V')(\xi) \bigr| \le \|V - V'\|_\infty \quad \text{for all } \xi \in \Xi,
+\|\calT_{\hat g} W - \calT_{\hat g} W'\|_\infty \le \gamma_h \|W - W'\|_\infty ,
 \end{equation}
-and composing with the outer structure of \eqref{eq_backup} gives
-\begin{equation}
-\|\calT_h V - \calT_h V'\|_\infty \le \gamma_h \|V - V'\|_\infty .
-\end{equation}
-Monotonicity is inherited term by term, since each of the operations above preserves the pointwise order, and the Banach fixed point theorem on the complete space of bounded functions on $\Xi$ yields the unique bounded fixed point $V_h$. For robust invariance, let $V_h(\xi) \ge 0$ and let $c^\star \in C(\xi)$ attain the maximum in \eqref{eq_backup}, which exists by compactness. The fixed point equation gives $\min\{h(\xi), \min_{d} V_h(F(\xi, c^\star, d))\} \ge V_h(\xi) \ge 0$ after rearrangement, because $V_h(\xi) \le h(\xi)$ holds identically from the structure of \eqref{eq_backup}. Therefore, $h(\xi) \ge 0$ and $V_h(F(\xi, c^\star, d)) \ge 0$ for every $d \in \calW$, so the greedy legal action keeps the successor in $\calS$ for every disturbance, and the greedy policy belongs to $\Pi_C$ by construction. This establishes the robust invariance of $\calS$ under dwell constrained admissible policies. No step of the argument counts the switching channels, which gives Remark~\ref{rem_channels}. $\blacksquare$
+and each operation preserves the pointwise order. Therefore, $\calT_{\hat g}^{D_g}$ is a monotone $\gamma_h^{D_g}$ contraction. The maximum over the nonempty finite set $C_g(g, \tau_g)$ preserves monotonicity and is nonexpansive in the supremum norm, so $\calT_h$ in \eqref{eq_backup} is a monotone $\gamma_h^{D_g}$ contraction, and the Banach fixed point theorem on the complete space of bounded functions on $\Xi$ yields the unique bounded fixed point $V_h$. Since each application of $\calT_{\hat g}$ returns at most $h$, the fixed point satisfies $V_h \le h$.
+
+For the undiscounted value, with $\gamma_h = 1$ the locked operator reduces to $(\check\calT_{\hat g} W)(\xi) = \min\{h(\xi), \max_{\delta_c \in \calA_\delta} \min_{d \in \calW} W(F(\xi, (\delta_c, \hat g), d))\}$. The dynamic programming principle of \eqref{eq_value} over one option, in which the gear is held for $D_g$ steps and the steering command is chosen at every step, gives $V_h^{o} = \max_{\hat g \in C_g(g,\tau_g)} \check\calT_{\hat g}^{D_g} V_h^{o}$, which is the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$. Let $V_h^{o}(\xi) \ge 0$. By compactness, a legal gear $\hat g$ attaining the maximum and a steering command attaining the inner maximum at each step of the option exist. Along this option, every disturbance sequence yields $h(\xi_j) \ge 0$ for $j < D_g$ and $V_h^{o}(\xi_{D_g}) \ge 0$. Repeating the argument from $\xi_{D_g}$ yields an option policy in $\Pi_C^{o} \subset \Pi_C$ that keeps the state in $\calS^{o}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{o}$ under dwell constrained admissible policies. Finally, $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$ follows from $V_h^{o} \le V_h^{*}$. $\blacksquare$
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
