@@ -43,7 +43,7 @@ def make():
     ax1.set_ylim(-fmax, fmax)
     ax1.set_xticks([])
     ax1.set_yticks([-fmin, 0, fmin])
-    ax1.set_yticklabels([r'$-F_{\mathrm{idle}}$', '0', r'$F_{\mathrm{idle}}$'], fontsize=6.2)
+    ax1.set_yticklabels([r'$F_{\mathrm{R}}$', '0', r'$F_{\mathrm{F}}$'], fontsize=6.2)
     ax1.set_xlabel('requested thrust', fontsize=6.6, labelpad=1)
     ax1.set_ylabel('thrust', fontsize=6.6, labelpad=1)
     ax1.tick_params(length=2, pad=1)
