@@ -155,12 +155,12 @@ where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at t
 
 In \cite{lee2024canal} the outboard thrust is commanded continuously through the throttle as $F = c\,n_T^2$. Owing to the deadzone and the gearbox of Section~\ref{sec_dwell}, the thrust in this study takes only the three values selected by the gear, and the gear is the channel that carries the dwell. Since the lateral force $f_Y$ and the yaw moment $f_N$ are proportional to $F_g$, both vanish together with the thrust in neutral.
 
-The steering angle moves toward its command $\delta_c$ at no more than the slew rate of the servo cylinder. Over an integration substep $\Delta t_s$, the steering update can be expressed as
+The steering angle is driven by a servo cylinder, and the steering command and the steering rate are constrained by
 \begin{equation}
-\delta^{+} = \delta + \operatorname{sat}_{\dot{\delta}_{\max}\Delta t_s}\!\bigl(\delta_c - \delta\bigr), \qquad |\delta_c| \le \delta_{\max},
+|\delta_c| \le \delta_{\max}, \qquad |\dot{\delta}| \le \dot{\delta}_{\max},
 \label{eq_steer}
 \end{equation}
-where $\delta_{\max}$ and $\dot{\delta}_{\max}$ are the angle limit and the rate limit of the servo cylinder, respectively \pending{values}.
+where $\delta_{\max}$ and $\dot{\delta}_{\max}$ denote the maximum steering angle and the maximum steering rate of the servo cylinder, respectively.
 
 \begin{figure}[!t]
 \centering
@@ -192,7 +192,7 @@ C(\xi) = \calA_\delta \times C_g(g, \tau_g), \qquad
 C_g = \begin{cases} \{g\}, & \tau_g > 0,\\ \{\gR, \gN, \gF\}, & \tau_g = 0, \end{cases}
 \label{eq_legal}
 \end{equation}
-where the steering channel has no dwell constraint, while the gear channel is locked whenever $\tau_g > 0$. Whenever the gear switches to a new level, the timer resets to $D_g - 1$, and otherwise it counts down toward zero. Holding the current gear is always legal, ensuring that $C(\xi)$ is nonempty, and it is compact as the product of a finite set and a compact interval. The augmented transition $\xi' = F(\xi, c, d)$ consists of the physical map obtained by integrating \eqref{eq_model} and \eqref{eq_steer} over one control period under the legal gear, together with the timer update. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is called dwell constrained admissible if $\pi(\xi) \in C(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_C$.
+where the steering channel has no dwell constraint, while the gear channel is locked whenever $\tau_g > 0$. Whenever the gear switches to a new level, the timer resets to $D_g - 1$, and otherwise it counts down toward zero. Holding the current gear is always legal, ensuring that $C(\xi)$ is nonempty, and it is compact as the product of a finite set and a compact interval. The augmented transition $\xi' = F(\xi, c, d)$ consists of the physical map obtained by integrating \eqref{eq_model} over one control period under the steering limits \eqref{eq_steer} and the legal gear, together with the timer update. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is called dwell constrained admissible if $\pi(\xi) \in C(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_C$.
 
 
 \subsection{Augmented Safety Game}\label{sec_game}
@@ -381,6 +381,7 @@ Discount $\gamma_h$ curriculum & 0.95 to 0.995 \\
 Adversary scale curriculum & 0 to 1 \\
 Network sizes & \pending{TBD} \\
 Gear dwell $D_g$ & 6 steps \\
+Steering limits $(\delta_{\max}, \dot{\delta}_{\max})$ & \pending{TBD} \\
 Parallel simulators, unroll horizon $n$ & \pending{TBD} \\
 Learning rates, soft update $\rho$ & \pending{TBD} \\
 Training steps, seeds & \pending{TBD} \\
