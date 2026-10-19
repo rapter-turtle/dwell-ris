@@ -209,7 +209,10 @@ where $\mu$ ranges over nonanticipative disturbance strategies with values in $\
 
 By the dynamic programming principle \cite{li2023cdc}, $V_h^{*}$ satisfies the Bellman equation
 \begin{equation}
-V_h^{*}(\xi) = \min\Bigl\{ h(\xi),\ \max_{c \in \calC(\xi)} \min_{w \in \calW} V_h^{*}\bigl(\Phi(\xi, c, w)\bigr) \Bigr\}.
+\begin{aligned}
+V_h^{*}(\xi) = \min\Bigl\{ h(\xi),\ &\max_{g_c \in \calC_g(g, \tau_g)} \max_{\dot{\delta}_c \in \calA_\delta} \\
+&\min_{w \in \calW} V_h^{*}\bigl(\Phi(\xi, (\dot{\delta}_c, g_c), w)\bigr) \Bigr\}.
+\end{aligned}
 \label{eq_bellman}
 \end{equation}
 
