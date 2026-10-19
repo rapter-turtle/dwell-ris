@@ -218,16 +218,7 @@ V_h^{*}(\xi) = \min\Bigl\{ h(\xi),\ &\max_{g_c \in \calC_g(g, \tau_g)} \max_{\do
 
 \section{Dwell Constrained Safe Controller}\label{sec_method}
 
-This section presents the safe set family under the dwell, the learning of its safety value, and the onboard safety policy.
-
-\subsection{Safe Set Family Under Remaining Lock Time}\label{sec_family}
-
-For fixed discrete coordinates of the augmented state, the slice of the maximal safe set of \eqref{eq_value} over the physical coordinates is defined as
-\begin{equation}
-\calS(g, \tau_g) = \bigl\{ (\tilde{x}, \tilde{y}, \tilde{\psi}, u, v, r, \delta) \mid V_h^{*}(\xi) \ge 0 \bigr\}.
-\label{eq_family}
-\end{equation}
-Each choice of gear and timer produces a different slice, so the safe set is a family of sets that depends on the gear state $(g, \tau_g)$. When $\tau_g = 0$ the gear can react immediately and the slice is large, whereas when $\tau_g = D_g - 1$ the ASV must survive the entire lock without gear authority and the slice is small.
+This section presents the learning of the dwell constrained safety value and the onboard safety policy.
 
 \subsection{Adversarial Learning of the Dwell Constrained Safety Value}\label{sec_learning}
 The dwell constrained safety value is learned by an adversarial actor critic scheme that follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc}. Neural network critics approximate the safety value and are regressed onto targets that bootstrap the critic values of later states, while a protagonist maximizes and an adversary minimizes the critic.
@@ -253,7 +244,7 @@ where $\calT_{\hat g}^{D_g}$ denotes $D_g$ successive applications of $\calT_{\h
 Let $h$ be bounded and let $\calT_h$ be defined by \eqref{eq_backup}. Then $\calT_h$ is a monotone $\gamma_h^{D_g}$ contraction in the supremum norm and admits a unique bounded fixed point $V_h$ with $V_h \le h$. Moreover, $V_h^{o}$ satisfies the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$, and $\calS^{o} = \{\xi \mid V_h^{o}(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies with $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$.
 \end{lemma}
 
-The proof is given in the Appendix. The legal set enters \eqref{eq_backup} only through the maximization over a nonempty finite set at each decision, so the dwell does not affect the contraction and shapes only the fixed point, as discussed in Section~\ref{sec_family}. As $\gamma_h$ approaches one, the discounted fixed point is expected to approach $V_h^{o}$, as shown in \cite{li2023cdc} for the one step operator.
+The proof is given in the Appendix. The legal set enters \eqref{eq_backup} only through the maximization over a nonempty finite set at each decision, so the dwell does not affect the contraction and shapes only the fixed point. As $\gamma_h$ approaches one, the discounted fixed point is expected to approach $V_h^{o}$, as shown in \cite{li2023cdc} for the one step operator.
 
 The fixed point of \eqref{eq_backup} is learned as summarized in Algorithm~\ref{alg_ris}, and every network receives the augmented state with the heading encoded by its sine and cosine and the gear by a one hot vector, so it observes the gear and the timer.
 
@@ -304,7 +295,7 @@ Two curricula are employed to stabilize the adversarial training. The adversary 
 \end{algorithm}
 
 \subsubsection{Certified Set}
-After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The value is represented by neural networks without a bound on the approximation error, and the zero level set of the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate in this article is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs both effects and is calibrated by the adversarial Monte Carlo audit of Section~\ref{sec_sim}.
+After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The value is represented by neural networks without a bound on the approximation error, and the zero level set of the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate in this article is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs both effects and is calibrated by the adversarial Monte Carlo audit of Section~\ref{sec_sim}. Since the gear and its remaining lock time are part of the state, the certified set is a family of slices over the physical state that depends on them, and a slice shrinks as the remaining lock time grows because the ASV must survive a longer lock without gear authority.
 
 \subsection{Onboard Safety Controller}\label{sec_onboard_ctrl}
 
@@ -538,7 +529,7 @@ All statistics are time weighted over 10~min of the designated runs of each cont
 
 In contrast, the proposed controller achieved the smallest RMS and maximum distance, and its excursions were short and returned inside the disk. All three controllers shifted the gear at a similar rate, so the improvement was not obtained by shifting more often, but the gear usage differed. \pid and \ciampc cycled through forward, neutral, and reverse, whereas the proposed controller mostly alternated between reverse and neutral and rarely engaged forward, as listed in Table~\ref{tab_field}. Moreover, the calculation time of the proposed controller was comparable to that of \ciampc and remained within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept the ASV near the setpoint under real sea conditions, with brief excursions that returned inside the disk.
 
-The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for the proposed controller, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, whereas the proposed controller mostly switched between reverse and neutral, as shown in Fig.~\ref{fig_field_compare}(f).
+The behavior during locked intervals is the direct field evidence for the dwell constrained formulation of Section~\ref{sec_method}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for the proposed controller, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, whereas the proposed controller mostly switched between reverse and neutral, as shown in Fig.~\ref{fig_field_compare}(f).
 
 As shown in Fig.~\ref{fig_field_compare}(e), the safety value $V_h$ tracked the margin of the ASV. Since $V_h \le h$ holds by construction, every sample outside the disk had $V_h < 0$. More importantly, $V_h$ fell below zero before every crossing of the circle marked in Fig.~\ref{fig_field_compare}(d), so the learned value anticipated the loss of the margin before it was realized, and some episodes with $V_h < 0$ ended without any excursion. \pending{discussion of the realized disturbance relative to the bound, after the system identification}
 
