@@ -205,7 +205,7 @@ The task is encoded by the keep in function $h(\xi) = R - \sqrt{\tilde{x}^2 + \t
 V_h^{*}(\xi) = \max_{\pi \in \Pi_{\calC}} \min_{\mu} \min_{k \ge 0} h(\xi_k),
 \label{eq_value}
 \end{equation}
-where $\mu$ ranges over nonanticipative disturbance strategies with values in $\calW$ \cite{bansal2017}. The set $\{\xi \mid V_h^{*}(\xi) \ge 0\}$ is the largest set on which the ASV can remain inside the disk forever against every admissible disturbance.
+where $\mu$ ranges over nonanticipative disturbance strategies with values in $\calW$ \cite{bansal2017}. The set $\{\xi \mid V_h^{*}(\xi) \ge 0\}$ is the largest set from which the ASV can be kept inside the disk for all time against every admissible disturbance.
 
 However, the undiscounted self consistency condition of \eqref{eq_value} is not a contraction, and a discount $\gamma_h \in (0,1)$ restores the contraction \cite{fisac2019}, which was extended to the disturbed game in \cite{li2023cdc}. Under the dwell, the gear decision is not revised until the lock expires. Therefore, each gear decision is treated as an option that holds the selected gear for $D_g$ control steps, while the steering command and the disturbance act at every step. For a fixed gear $\hat g$, the locked one step operator is defined as
 \begin{equation}
