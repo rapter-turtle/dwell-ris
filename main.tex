@@ -229,8 +229,6 @@ For fixed discrete coordinates of the augmented state, the slice of the maximal 
 \end{equation}
 Each choice of gear and timer produces a different slice, so the safe set is a family of sets that depends on the gear state $(g, \tau_g)$. When $\tau_g = 0$ the gear can react immediately and the slice is large, whereas when $\tau_g = D_g - 1$ the ASV must survive the entire lock without gear authority and the slice is small.
 
-The safe set shrinks with the remaining lock time because the dwell restricts only the control in the game \eqref{eq_value}, while the disturbance acts freely at every step. The most critical disturbance therefore acts right after the gear is locked at an unfavorable level, and the dwell constrained safety value anticipates this timing since the remaining lock time is part of its argument.
-
 \subsection{Adversarial Learning of the Dwell Constrained Safety Value}\label{sec_learning}
 A one step backup of \eqref{eq_bellman} propagates the cost of a lock through the learned values of the intermediate locked states, where the value changes sharply with the remaining lock time. In preliminary training, this backup yielded an optimistic value that certified locked states near the disk boundary as safe. Since the gear decision is not revised until the lock expires, each gear decision is instead treated as an option that holds the selected gear for $D_g$ control steps. The steering command and the disturbance act at every step, which defines an SMDP over the gear decisions.
 
