@@ -134,12 +134,12 @@ Once a gear is engaged, the engine runs at least at idle and the propeller deliv
 The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. Following \cite{lee2024canal}, the model is formulated as
 \begin{subequations}\label{eq_model}
 \begin{align}
-M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= \bm{f}_c + d, \\
+M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= \bm{f}_c + w, \\
 \dot{\eta} &= R(\psi)\nu, \\
 R(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
 \end{subequations}
-where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $d = [d_X, d_Y, d_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $\bm{f}_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $\bm{f}_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $R(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $\bm{f}_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
 
 Assuming that the ASV is symmetric in the $x$ and $y$ directions, $M$, $C(\nu)$, and $D(\nu)$ can be expressed as
 \begin{equation}
@@ -176,12 +176,12 @@ The steering command and the steering rate are constrained by
 \end{equation}
 where $\delta_{\max}$ and $\dot{\delta}_{\max}$ denote the maximum steering angle and the maximum steering rate, respectively.
 
-In addition, it is assumed that the unknown and bounded environmental disturbance $d = [d_X, d_Y, d_N]^\top$, which acts on \eqref{eq_model} as body frame forces and a moment, satisfies
+In addition, it is assumed that the unknown and bounded environmental disturbance $w = [w_X, w_Y, w_N]^\top$, which acts on \eqref{eq_model} as body frame forces and a moment, satisfies
 \begin{equation}
-\calW = \bigl\{ d \in \mathbb{R}^3 \mid -\bar{d} \le d \le \bar{d} \bigr\},
+\calW = \bigl\{ w \in \mathbb{R}^3 \mid -\bar{w} \le w \le \bar{w} \bigr\},
 \label{eq_wbox}
 \end{equation}
-where $\bar{d} = [\bar{d}_X, \bar{d}_Y, \bar{d}_N]^\top$ and the inequality holds entry wise.
+where $\bar{w} = [\bar{w}_X, \bar{w}_Y, \bar{w}_N]^\top$ and the inequality holds entry wise.
 
 \section{Problem Formulation}\label{sec_problem}
 
@@ -199,7 +199,7 @@ C(\xi) = \calA_\delta \times C_g(g, \tau_g), \qquad
 C_g = \begin{cases} \{g\}, & \tau_g > 0,\\ \{\gR, \gN, \gF\}, & \tau_g = 0, \end{cases}
 \label{eq_legal}
 \end{equation}
-where the steering channel has no dwell constraint, while the gear channel is locked whenever $\tau_g > 0$. Whenever the gear switches to a new level, the timer resets to $D_g - 1$, and otherwise it counts down toward zero. Holding the current gear is always legal, ensuring that $C(\xi)$ is nonempty, and it is compact as the product of a finite set and a compact interval. The augmented transition $\xi' = F(\xi, c, d)$ consists of the physical map obtained by integrating \eqref{eq_model} over one control period under the steering limits \eqref{eq_steer} and the legal gear, together with the timer update. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is called dwell constrained admissible if $\pi(\xi) \in C(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_C$.
+where the steering channel has no dwell constraint, while the gear channel is locked whenever $\tau_g > 0$. Whenever the gear switches to a new level, the timer resets to $D_g - 1$, and otherwise it counts down toward zero. Holding the current gear is always legal, ensuring that $C(\xi)$ is nonempty, and it is compact as the product of a finite set and a compact interval. The augmented transition $\xi' = F(\xi, c, w)$ consists of the physical map obtained by integrating \eqref{eq_model} over one control period under the steering limits \eqref{eq_steer} and the legal gear, together with the timer update. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is called dwell constrained admissible if $\pi(\xi) \in C(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_C$.
 
 
 \subsection{Augmented Safety Game}\label{sec_game}
@@ -214,8 +214,8 @@ where $\mu$ ranges over nonanticipative disturbance strategies with values in $\
 However, the undiscounted self consistency condition of \eqref{eq_value} is not a contraction, and a discount $\gamma_h \in (0,1)$ restores the contraction \cite{fisac2019}, which was extended to the disturbed game in \cite{li2023cdc}. Under the dwell, the gear decision is not revised until the lock expires. Therefore, each gear decision is treated as an option that holds the selected gear for $D_g$ control steps, while the steering command and the disturbance act at every step. For a fixed gear $\hat g$, the locked one step operator is defined as
 \begin{equation}
 \begin{aligned}
-(\calT_{\hat g} W)(\xi) &= (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi), \\
-&\qquad \max_{\delta_c \in \calA_\delta} \min_{d \in \calW} W\bigl(F(\xi, (\delta_c, \hat g), d)\bigr) \Bigr\},
+(\calT_{\hat g} U)(\xi) &= (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi), \\
+&\qquad \max_{\delta_c \in \calA_\delta} \min_{w \in \calW} U\bigl(F(\xi, (\delta_c, \hat g), w)\bigr) \Bigr\},
 \end{aligned}
 \label{eq_locked}
 \end{equation}
@@ -260,7 +260,7 @@ The physical origin of the family is an asymmetry in the game \eqref{eq_value}, 
 An adversarial actor critic scheme learns the fixed point of \eqref{eq_backup} on the SMDP, as summarized in Algorithm~\ref{alg_ris}. The scheme follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc} and is adapted to the legality structure and to the option. Every network receives the augmented state with the heading encoded by its sine and cosine and the gear by a one hot vector, so it observes the gear and the timer.
 
 \subsubsection{Safety Critics}
-Two safety critics $Q_{h,1}(\xi, c, d)$ and $Q_{h,2}(\xi, c, d)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and the minimum of the two is used wherever a critic value is needed. The regression target is the backward fold of \eqref{eq_backup} along a simulator unroll of $n \ge D_g$ steps from a sampled state $\xi_0$. The committed legal gear is held for $D_g$ steps and the greedy legal gear is chosen afterwards, while the protagonist steering $\pi_h$ and the adversary disturbance $\mu$ act at every step. With the target value $\bar V(\xi) = \max_{g' \in C_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as
+Two safety critics $Q_{h,1}(\xi, c, w)$ and $Q_{h,2}(\xi, c, w)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and the minimum of the two is used wherever a critic value is needed. The regression target is the backward fold of \eqref{eq_backup} along a simulator unroll of $n \ge D_g$ steps from a sampled state $\xi_0$. The committed legal gear is held for $D_g$ steps and the greedy legal gear is chosen afterwards, while the protagonist steering $\pi_h$ and the adversary disturbance $\mu$ act at every step. With the target value $\bar V(\xi) = \max_{g' \in C_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as
 \begin{equation}
 \begin{aligned}
 g_n &= \bar V(\xi_n), \qquad y = g_0, \\
@@ -383,7 +383,7 @@ Control period $\Delta t$ & 0.5 s \\
 Integration & RK4, 10 substeps per period \\
 Keep in radius $R$ & \pending{TBD} m \\
 Value floor $h_{\mathrm{floor}}$ & \pending{TBD} m \\
-Disturbance bounds $(\bar d_X, \bar d_Y, \bar d_N)$ & \pending{TBD} \\
+Disturbance bounds $(\bar{w}_X, \bar{w}_Y, \bar{w}_N)$ & \pending{TBD} \\
 Discount $\gamma_h$ curriculum & 0.95 to 0.995 \\
 Adversary scale curriculum & 0 to 1 \\
 Network sizes & \pending{TBD} \\
@@ -550,13 +550,13 @@ This article presented a dwell constrained RIS framework for safe weathervaning 
 
 \appendix[Proof of Lemma 1]
 
-For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the compact steering interval $\calA_\delta$ is nonexpansive, so for bounded $W$ and $W'$,
+For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the compact steering interval $\calA_\delta$ is nonexpansive, so for bounded $U$ and $U'$,
 \begin{equation}
-\|\calT_{\hat g} W - \calT_{\hat g} W'\|_\infty \le \gamma_h \|W - W'\|_\infty ,
+\|\calT_{\hat g} U - \calT_{\hat g} U'\|_\infty \le \gamma_h \|U - U'\|_\infty ,
 \end{equation}
 and each operation preserves the pointwise order. Therefore, $\calT_{\hat g}^{D_g}$ is a monotone $\gamma_h^{D_g}$ contraction. The maximum over the nonempty finite set $C_g(g, \tau_g)$ preserves monotonicity and is nonexpansive in the supremum norm, so $\calT_h$ in \eqref{eq_backup} is a monotone $\gamma_h^{D_g}$ contraction, and the Banach fixed point theorem on the complete space of bounded functions on $\Xi$ yields the unique bounded fixed point $V_h$. Since each application of $\calT_{\hat g}$ returns at most $h$, the fixed point satisfies $V_h \le h$.
 
-For the undiscounted value, with $\gamma_h = 1$ the locked operator reduces to $(\check\calT_{\hat g} W)(\xi) = \min\{h(\xi), \max_{\delta_c \in \calA_\delta} \min_{d \in \calW} W(F(\xi, (\delta_c, \hat g), d))\}$. The dynamic programming principle of \eqref{eq_value} over one option, in which the gear is held for $D_g$ steps and the steering command is chosen at every step, gives $V_h^{o} = \max_{\hat g \in C_g(g,\tau_g)} \check\calT_{\hat g}^{D_g} V_h^{o}$, which is the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$. Let $V_h^{o}(\xi) \ge 0$. By compactness, a legal gear $\hat g$ attaining the maximum and a steering command attaining the inner maximum at each step of the option exist. Along this option, every disturbance sequence yields $h(\xi_j) \ge 0$ for $j < D_g$ and $V_h^{o}(\xi_{D_g}) \ge 0$. Repeating the argument from $\xi_{D_g}$ yields an option policy in $\Pi_C^{o} \subset \Pi_C$ that keeps the state in $\calS^{o}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{o}$ under dwell constrained admissible policies. Finally, $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$ follows from $V_h^{o} \le V_h^{*}$. $\blacksquare$
+For the undiscounted value, with $\gamma_h = 1$ the locked operator reduces to $(\check\calT_{\hat g} U)(\xi) = \min\{h(\xi), \max_{\delta_c \in \calA_\delta} \min_{w \in \calW} U(F(\xi, (\delta_c, \hat g), w))\}$. The dynamic programming principle of \eqref{eq_value} over one option, in which the gear is held for $D_g$ steps and the steering command is chosen at every step, gives $V_h^{o} = \max_{\hat g \in C_g(g,\tau_g)} \check\calT_{\hat g}^{D_g} V_h^{o}$, which is the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$. Let $V_h^{o}(\xi) \ge 0$. By compactness, a legal gear $\hat g$ attaining the maximum and a steering command attaining the inner maximum at each step of the option exist. Along this option, every disturbance sequence yields $h(\xi_j) \ge 0$ for $j < D_g$ and $V_h^{o}(\xi_{D_g}) \ge 0$. Repeating the argument from $\xi_{D_g}$ yields an option policy in $\Pi_C^{o} \subset \Pi_C$ that keeps the state in $\calS^{o}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{o}$ under dwell constrained admissible policies. Finally, $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$ follows from $V_h^{o} \le V_h^{*}$. $\blacksquare$
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

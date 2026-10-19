@@ -416,11 +416,11 @@ def make_fig1():
     for k, (dx, fc) in enumerate([(0.12, 'D5E2EF'), (0.06, 'E8EFF6'), (0.0, 'FFFFFF')]):
         t.rect(0.14 + dx, 0.58 + dx, 0.86, 0.78, C_PLANT, fc, lw=0.7, radius=0.05, name=f'sim_card_{k}')
     t.gusts(0.22, 0.70, n=3, dy=0.055, L=0.14)
-    t.label(0.40, 0.69, 0.5, 0.14, [T(I('d'), ' ∈ ', M('𝒲'))], size=6.4, color=C_GRAY, align='left')
+    t.label(0.40, 0.69, 0.5, 0.14, [T(I('w'), ' ∈ ', M('𝒲'))], size=6.4, color=C_GRAY, align='left')
     t.boat(0.30, 0.90, 0.58, 0.20)
     t.label(0.14, 1.17, 0.86, 0.14, [T('dwell ', I('D'), ISUB('g'), ' masked')], size=6.2, color=C_PLANT)
     t.label(0.10, 1.56, 1.10, 0.52, [T('gear ', I('g'), ' ∈ {R, N, F}'), T('steering ', I('δ')),
-                                     T('wind and current ', I('d'))], size=6.4)
+                                     T('wind and current ', I('w'))], size=6.4)
 
     # ----- 적대적 RL (SMDP) -----
     s1x, s1y, s1w, s1h = 1.36, 0.34, 3.08, 1.98
@@ -465,7 +465,7 @@ def make_fig1():
     t.arrow((vx + 0.125, oy + 0.045), (vx + 0.195, oy + 0.045), color='000000', lw=0.6, head=False)
     t.label(vx + 0.32, oy + 0.02, 0.60, 0.16, [T('bootstrap')], size=5.8, color=C_GRAY, align='left')
     # 매 스텝 조향과 외란
-    t.label(bx0, oy + 0.21, 6 * (bw + gap), 0.15, [T(I('δ'), ' = ', I('π'), ISUB('h'), ',  ', I('d'), ' = ', I('μ'),
+    t.label(bx0, oy + 0.21, 6 * (bw + gap), 0.15, [T(I('δ'), ' = ', I('π'), ISUB('h'), ',  ', I('w'), ' = ', I('μ'),
                                                   '  at every step')], size=5.9, color=C_GRAY)
     # backward fold
     fy = oy + 0.42
@@ -482,7 +482,7 @@ def make_fig1():
     # 시뮬레이터 왕복 (언롤)
     yy = oy + 0.10
     t.arrow((1.12, yy), (s1x, yy), color=C_PLANT, both=True)
-    t.label(1.06, yy - 0.17, 0.32, 0.14, [T(I('ĝ'), ', ', I('δ'), ', ', I('d'))], size=6.0, color=C_PLANT)
+    t.label(1.06, yy - 0.17, 0.32, 0.14, [T(I('ĝ'), ', ', I('δ'), ', ', I('w'))], size=6.0, color=C_PLANT)
     t.label(1.06, yy + 0.02, 0.32, 0.14, [T(I('ξ'), ISUB('j'), ', ', I('h'), ISUB('j'))], size=6.0, color=C_PLANT)
 
     # ----- Offline 에서 Online 으로 -----
@@ -506,7 +506,7 @@ def make_fig1():
     im.save(pth, quality=92)
     px, py, pw, ph = t.picture(pth, NX + 0.11, 1.12, w=1.96, name='photo_vessel')
     t.gusts(px + 0.08, py + 0.10, n=3, dy=0.06, L=0.18, color='FFFFFF')
-    t.label(px + 0.30, py + 0.10, 0.3, 0.14, [T(I('d'))], size=6.8, color='FFFFFF', align='left')
+    t.label(px + 0.30, py + 0.10, 0.3, 0.14, [T(I('w'))], size=6.8, color='FFFFFF', align='left')
     # 명령과 측정
     xs_ = NX + 1.75
     t.arrow((xs_, 0.86), (xs_, py), color=C_ON)
