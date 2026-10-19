@@ -60,9 +60,6 @@ def make():
     for k, _ in shifts:
         ax2.axvspan(k, k + D, color=C_LOCK, lw=0)
     ax2.step(t, g, where='post', color=fs.C_PLANT, lw=1.2)
-    # 잠금 중 무시된 요청
-    ax2.plot([4.5], [0], marker='x', ms=4, mew=1.0, color='#9B2222')
-    ax2.text(5.2, 0.0, 'ignored', fontsize=6.0, color='#9B2222', ha='left', va='center')
     # dwell 길이 표시
     ax2.annotate('', xy=(10, 2.45), xytext=(16, 2.45),
                  arrowprops=dict(arrowstyle='<->', lw=0.6, color=fs.C_OFF, shrinkA=0, shrinkB=0))
