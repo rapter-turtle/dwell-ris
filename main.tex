@@ -77,7 +77,7 @@ Autonomous surface vessels, dwell time, robust invariant sets, safe reinforcemen
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell are unrolled over each gear decision held for the dwell, and the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the steering protagonist $\pi_h$ and the adversary $\mu$ on the resulting SMDP. In the online stage, the frozen networks run on the ASV at each control period, and the gear that maximizes the certified value among the legal gears is applied together with the steering command of $\pi_h$.}
+\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell are unrolled over each gear decision held for the dwell, and the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the steering protagonist $\pi_h$ and the adversary $\mu$ on the resulting SMDP. In the online stage, the frozen networks run on the ASV at each control period, and the gear that maximizes the certified value among the legal gears is applied together with the steering rate command of $\pi_h$.}
 \label{fig_framework}
 \end{figure*}
 
@@ -165,9 +165,9 @@ f_c = \begin{bmatrix} f_X \\ f_Y \\ f_N \end{bmatrix}
 \end{equation}
 where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Owing to the deadzone of Section~\ref{sec_dwell}, the thrust takes only these three values. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
 
-The steering command and the steering rate are constrained by
+The steering angle and the steering rate are constrained by
 \begin{equation}
-|\delta_c| \le \delta_{\max}, \qquad |\dot{\delta}| \le \dot{\delta}_{\max},
+|\delta| \le \delta_{\max}, \qquad |\dot{\delta}| \le \dot{\delta}_{\max},
 \label{eq_steer}
 \end{equation}
 where $\delta_{\max}$ and $\dot{\delta}_{\max}$ denote the maximum steering angle and the maximum steering rate, respectively.
@@ -187,7 +187,7 @@ This section augments the gear state and its remaining lock time to the state, d
 
 Since the admissible gear command depends on the time elapsed since the last shift, the process is not Markov in the physical state alone. Therefore, the gear state and its remaining lock time are augmented to the state.
 
-Let $(\tilde{x}, \tilde{y}) = (x - x_d, y - y_d)$ be the position error from the setpoint $(x_d, y_d)$, and let $\tilde{\psi}$ be the heading relative to a fixed reference. Let $\tau_g \in \{0, 1, \ldots, D_g - 1\}$ denote the remaining lock time of the shift in control steps, where $\tau_g = 0$ means that the gear may be shifted now. The augmented state is $\xi = (\tilde{x}, \tilde{y}, \tilde{\psi}, u, v, r, \delta, g, \tau_g) \in \Xi$, and the control is $c = (\delta_c, g_c)$, where $\delta_c \in \calA_\delta = [-\delta_{\max}, \delta_{\max}]$ and $g_c$ are the steering command and the gear command, respectively.
+Let $(\tilde{x}, \tilde{y}) = (x - x_d, y - y_d)$ be the position error from the setpoint $(x_d, y_d)$, and let $\tilde{\psi}$ be the heading relative to a fixed reference. Let $\tau_g \in \{0, 1, \ldots, D_g - 1\}$ denote the remaining lock time of the shift in control steps, where $\tau_g = 0$ means that the gear may be shifted now. The augmented state is $\xi = (\tilde{x}, \tilde{y}, \tilde{\psi}, u, v, r, \delta, g, \tau_g) \in \Xi$, and the control is $c = (\dot{\delta}_c, g_c)$, where $\dot{\delta}_c \in \calA_\delta = [-\dot{\delta}_{\max}, \dot{\delta}_{\max}]$ and $g_c$ are the steering rate command and the gear command, respectively. The steering rate is used as the control input instead of the steering angle, because the maximizing control of the safety game tends to be bang bang, and a steering angle command would then jump between its limits, which the steering actuator cannot follow. With the rate command, the steering angle in the state is integrated over each control period and saturated at $\pm\delta_{\max}$, so that the steering trajectory remains physically feasible.
 
 The legal action set is given by
 \begin{equation}
@@ -211,7 +211,7 @@ However, the undiscounted self consistency condition of \eqref{eq_value} is not 
 \begin{equation}
 \begin{aligned}
 (\calT_{\hat g} U)(\xi) &= (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi), \\
-&\qquad \max_{\delta_c \in \calA_\delta} \min_{w \in \calW} U\bigl(\Phi(\xi, (\delta_c, \hat g), w)\bigr) \Bigr\},
+&\qquad \max_{\dot{\delta}_c \in \calA_\delta} \min_{w \in \calW} U\bigl(\Phi(\xi, (\dot{\delta}_c, \hat g), w)\bigr) \Bigr\},
 \end{aligned}
 \label{eq_locked}
 \end{equation}
@@ -267,7 +267,7 @@ g_j &= (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \},
 for $j = n-1, \ldots, 0$, where $\xi_j$ is the state at step $j$ of the unroll. The bootstrap term is clipped to $[-h_{\mathrm{floor}}, R]$ and $h$ is floored at $-h_{\mathrm{floor}}$ outside the disk, ensuring that the value remains bounded as required by Lemma~\ref{lem_aug}. A squared loss regresses the critics onto $y$ at the sampled state and the committed action, and the target copies follow the critics by a soft update.
 
 \subsubsection{Protagonist and Adversary}
-The protagonist $\pi_h$ is a deterministic steering policy whose output is scaled by $\tanh$ into $\calA_\delta$, and the adversary $\mu$ is a deterministic policy whose output is scaled by $\tanh$ into the box $\calW$. Let $q(\xi, c) = \min_i Q_{h,i}(\xi, c, \mu(\xi))$ denote the minimum critic at the disturbance of the adversary. The greedy legal gear is selected by enumerating the at most three legal gears as
+The protagonist $\pi_h$ is a deterministic steering rate policy whose output is scaled by $\tanh$ into $\calA_\delta$, and the adversary $\mu$ is a deterministic policy whose output is scaled by $\tanh$ into the box $\calW$. Let $q(\xi, c) = \min_i Q_{h,i}(\xi, c, \mu(\xi))$ denote the minimum critic at the disturbance of the adversary. The greedy legal gear is selected by enumerating the at most three legal gears as
 \begin{equation}
 g^\star(\xi) = \arg\max_{g' \in \calC_g(g,\tau_g)} q\bigl(\xi, (\pi_h(\xi), g')\bigr).
 \label{eq_gear}
@@ -552,7 +552,7 @@ For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $
 \end{equation}
 and each operation preserves the pointwise order. Therefore, $\calT_{\hat g}^{D_g}$ is a monotone $\gamma_h^{D_g}$ contraction. The maximum over the nonempty finite set $\calC_g(g, \tau_g)$ preserves monotonicity and is nonexpansive in the supremum norm, so $\calT_h$ in \eqref{eq_backup} is a monotone $\gamma_h^{D_g}$ contraction, and the Banach fixed point theorem on the complete space of bounded functions on $\Xi$ yields the unique bounded fixed point $V_h$. Since each application of $\calT_{\hat g}$ returns at most $h$, the fixed point satisfies $V_h \le h$.
 
-For the undiscounted value, with $\gamma_h = 1$ the locked operator reduces to $(\check\calT_{\hat g} U)(\xi) = \min\{h(\xi), \max_{\delta_c \in \calA_\delta} \min_{w \in \calW} U(\Phi(\xi, (\delta_c, \hat g), w))\}$. The dynamic programming principle of \eqref{eq_value} over one option, in which the gear is held for $D_g$ steps and the steering command is chosen at every step, gives $V_h^{o} = \max_{\hat g \in \calC_g(g,\tau_g)} \check\calT_{\hat g}^{D_g} V_h^{o}$, which is the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$. Let $V_h^{o}(\xi) \ge 0$. By compactness, a legal gear $\hat g$ attaining the maximum and a steering command attaining the inner maximum at each step of the option exist. Along this option, every disturbance sequence yields $h(\xi_j) \ge 0$ for $j < D_g$ and $V_h^{o}(\xi_{D_g}) \ge 0$. Repeating the argument from $\xi_{D_g}$ yields an option policy in $\Pi_{\calC}^{o} \subset \Pi_{\calC}$ that keeps the state in $\calS^{o}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{o}$ under dwell constrained admissible policies. Finally, $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$ follows from $V_h^{o} \le V_h^{*}$. $\blacksquare$
+For the undiscounted value, with $\gamma_h = 1$ the locked operator reduces to $(\check\calT_{\hat g} U)(\xi) = \min\{h(\xi), \max_{\dot{\delta}_c \in \calA_\delta} \min_{w \in \calW} U(\Phi(\xi, (\dot{\delta}_c, \hat g), w))\}$. The dynamic programming principle of \eqref{eq_value} over one option, in which the gear is held for $D_g$ steps and the steering command is chosen at every step, gives $V_h^{o} = \max_{\hat g \in \calC_g(g,\tau_g)} \check\calT_{\hat g}^{D_g} V_h^{o}$, which is the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$. Let $V_h^{o}(\xi) \ge 0$. By compactness, a legal gear $\hat g$ attaining the maximum and a steering command attaining the inner maximum at each step of the option exist. Along this option, every disturbance sequence yields $h(\xi_j) \ge 0$ for $j < D_g$ and $V_h^{o}(\xi_{D_g}) \ge 0$. Repeating the argument from $\xi_{D_g}$ yields an option policy in $\Pi_{\calC}^{o} \subset \Pi_{\calC}$ that keeps the state in $\calS^{o}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{o}$ under dwell constrained admissible policies. Finally, $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$ follows from $V_h^{o} \le V_h^{*}$. $\blacksquare$
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
