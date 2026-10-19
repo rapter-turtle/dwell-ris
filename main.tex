@@ -194,9 +194,6 @@ C_g = \begin{cases} \{g\}, & \tau_g > 0,\\ \{\gR, \gN, \gF\}, & \tau_g = 0, \end
 \end{equation}
 where the steering channel has no dwell constraint, while the gear channel is locked whenever $\tau_g > 0$. Whenever the gear switches to a new level, the timer resets to $D_g - 1$, and otherwise it counts down toward zero. Holding the current gear is always legal, ensuring that $C(\xi)$ is nonempty, and it is compact as the product of a finite set and a compact interval. The augmented transition $\xi' = F(\xi, c, d)$ consists of the physical map obtained by integrating \eqref{eq_model} and \eqref{eq_steer} over one control period under the legal gear, together with the timer update. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is called dwell constrained admissible if $\pi(\xi) \in C(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_C$.
 
-\begin{remark}\label{rem_masking}
-The legality structure \eqref{eq_legal} must be enforced in the plant, which ignores a shift request issued during a lock, and in the backup of Section~\ref{sec_game}, which maximizes over $C(\xi)$. If it is enforced only in the plant, the approximation error can lead the learned value to assume that a locked gear can be shifted immediately, resulting in an optimistic certificate that declares unsafe states safe. This failure is examined in Section~\ref{sec_sim_a1}.
-\end{remark}
 
 \subsection{Augmented Safety Game}\label{sec_game}
 
@@ -360,7 +357,7 @@ $N_r$ & \pending{TBD} & $l_d$ & \pending{TBD} \\
 
 \subsection{Simulation Results}\label{sec_sim}
 
-In this subsection, the learned certificate of the proposed framework is audited, contrasted with a dwell unaware certificate, and compared with three baselines in terms of the closed loop behavior on the identified model.
+The learned certificate is audited and the closed loop behavior is compared with three baselines on the identified model.
 
 \subsubsection{Setup and Baselines}\label{sec_baselines}
 
@@ -395,17 +392,13 @@ Monte Carlo audit & \pending{TBD} scenarios, \pending{TBD} s \\
 \end{tabular}
 \end{table}
 
-As baselines, a dwell unaware RIS, denoted \risnd, a proportional integral derivative controller, denoted \pid, and the CIA based MPC of the Introduction, denoted \ciampc, were implemented for comparison under identical plant, disturbance, and initial conditions. \risnd uses the same plant, disturbance bound, networks, and training budget as the proposed controller, but without the timer in the state and with the dwell ignored in the backup. Its critic therefore assumes that the gear can be shifted at every step, and it is then deployed on the plant that enforces the dwell, as any dwell unaware certificate is in practice. \pid quantizes the thrust output of a PID controller to the gear levels, and its shift requests are held by the plant during locks \pending{gains and quantization thresholds}. \ciampc follows the decomposition of \cite{chenlazar2022} on the identified model but replaces sum up rounding by CIA. A relaxed NLP first optimizes the steering command together with relaxed gear weights in $[0, 1]$ that sum to one, and CIA then rounds the relaxed gear sequence to a binary sequence under the minimum dwell constraint by branch and bound in pycombina \cite{buerger2020pycombina}, where the integer approximation follows \cite{sager2011}. Finally, the NLP is solved again with the rounded gear sequence fixed \pending{horizon, weights, solver, and solve time}. \ciampc uses the nominal model without any disturbance tightening. \pid and \ciampc represent current practice and the strongest model based alternative, respectively, and both are run in simulation and in the field, while \risnd is evaluated only in simulation to examine the effect of ignoring the dwell.
+As baselines, a dwell unaware RIS, denoted \risnd, a proportional integral derivative controller, denoted \pid, and the CIA based MPC of the Introduction, denoted \ciampc, were implemented for comparison under identical plant, disturbance, and initial conditions. \risnd uses the same plant, disturbance bound, networks, and training budget as the proposed controller, but it has no timer in the state and ignores the dwell in the backup. It is then run on the plant that enforces the dwell. \pid quantizes the thrust command of a PID controller to the gear levels, and its shift requests are held by the plant during locks \pending{gains and quantization thresholds}. \ciampc follows the decomposition of \cite{chenlazar2022} with CIA in place of sum up rounding. A relaxed NLP optimizes the steering command together with relaxed gear weights, and CIA rounds the gear sequence under the minimum dwell by branch and bound in pycombina \cite{buerger2020pycombina} following \cite{sager2011}. A final NLP is then solved with the gear sequence fixed, all on the nominal model without disturbance tightening \pending{horizon, weights, solver}. \pid and \ciampc are run in simulation and in the field, while \risnd is evaluated only in simulation.
 
-\subsubsection{Certified Set and Monte Carlo Audit}\label{sec_sim_audit}
+\subsubsection{Certificate Audit}\label{sec_sim_audit}\label{sec_sim_a1}
 
-To audit the learned certificate, Monte Carlo rollouts were conducted from initial augmented states sampled over the operating envelope. Each state was rolled out under the safety policy $\pi_h$ against the adversary $\mu$ and against random disturbance sequences for \pending{TBD} seconds, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. Four quantities summarize the audit over the sampled states. The certified fraction is the fraction of sampled states with $\hat V_h \ge \tau$, and the hit rate is the fraction of certified states that remain inside the disk. The false safety rate is the fraction of certified states that are violated, and a safety method must drive this rate to zero. Finally, the correlation between the predicted value and the realized minimum margin measures whether the value ranks states correctly beyond the binary verdict. Based on the audit, the margin $\tau$ is set to the smallest value at which the false safety rate falls to \pending{target}.
+To audit the learned certificate, Monte Carlo rollouts were conducted from augmented states sampled over the operating envelope. Each state was rolled out under the safety policy $\pi_h$ against the adversary and against random disturbance sequences, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. The certified fraction is the fraction of sampled states with $\hat V_h \ge \tau$, and the hit rate is the fraction of certified states that remain inside the disk. The false safety rate is the fraction of certified states that are violated, and the correlation between the predicted value and the realized minimum margin measures whether the value ranks states correctly beyond the binary verdict. The margin $\tau$ is set to the smallest value at which the false safety rate reaches \pending{target}.
 
-At $\tau = 0$ the certificate attained a hit rate of \pending{TBD} with a false safety rate of \pending{TBD} and a correlation of \pending{TBD}. At the audit margin $\tau = \pending{TBD}$ the hit rate rose to \pending{TBD} with a false safety rate of \pending{TBD}, while the certified fraction of the operating envelope was \pending{TBD}. In Fig.~\ref{fig_family}, the family structure of Section~\ref{sec_family} appears directly in the slices, \pending{observed shape of the slices with respect to the gear level and the remaining lock time to be described from the trained value}. These results confirm that \pending{claim on the usability of the certificate and on the errors absorbed by the margin to be stated once the audit numbers are final}.
-
-\subsubsection{Dwell Aware Versus Dwell Unaware Certificates}\label{sec_sim_a1}
-
-To test the claim of Remark~\ref{rem_masking}, \risnd is audited on the plant that enforces the dwell. Since \risnd assumes that a shift is available at every step, it certifies states near the boundary of the disk from which the ASV needs an immediate reversal of thrust. However, on the real plant such a reversal is refused whenever the gear was shifted during the preceding three seconds. As illustrated in Fig.~\ref{fig_a1}, the two certificates are compared at the same heading and velocity. On the audit, \risnd reached a false safety rate of \pending{TBD} with a correlation of \pending{TBD}, and it certified \pending{TBD} of the envelope. In contrast, the proposed certificate reserves the margin for the lock in advance and reached a false safety rate of \pending{TBD} with a correlation of \pending{TBD}, while it certified \pending{TBD} of the envelope. These results confirm that \pending{claim on the false certification of the dwell unaware certificate and on the role of the dwell axis to be stated once the audit numbers are final}.
+To examine the effect of ignoring the dwell, the same audit was applied to \risnd on the plant that enforces the dwell. Since \risnd assumes that a shift is available at every step, it certifies states from which the ASV needs an immediate reversal of thrust, which the plant refuses during the dwell. The audit results are summarized in Table~\ref{tab_sim} and in Figs.~\ref{fig_family} and \ref{fig_a1}. In contrast with \risnd, the proposed certificate reserves the margin for the lock in advance and \pending{qualitative comparison of the two certificates in false safety and certified fraction}. In Fig.~\ref{fig_family}, the slices of the certified set \pending{qualitative shape of the slices with respect to the gear level and the remaining lock time}.
 
 \begin{figure}[!t]
 \centering
@@ -417,11 +410,11 @@ To test the claim of Remark~\ref{rem_masking}, \risnd is audited on the plant th
 
 \subsubsection{Closed Loop Comparison}\label{sec_sim_closed}
 
-To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed controller were simulated from the same set of initial states under the same disturbance realizations, including the adversarial disturbance and random sequences inside $\calW$. The metrics are the mean, root mean square, and maximum distance from the setpoint, the fraction of time inside the disk, and the number of gear switches per minute as a wear indicator. Moreover, the maximum excursion during locked intervals and the calculation time per step are reported, where the maximum excursion during locked intervals is the only direct evidence that the dwell is physically consequential.
+To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed controller were simulated from the same initial states under the same disturbance realizations, including the adversarial and random sequences inside $\calW$. The metrics are listed in Table~\ref{tab_sim}, where the maximum excursion during locked intervals is the direct evidence that the dwell is physically consequential.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.35}
-\caption{Closed Loop Comparison in Simulation}
+\caption{Simulation Results}
 \label{tab_sim}
 \centering
 \footnotesize
@@ -430,6 +423,13 @@ To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed con
 \toprule
 Metric & \risnd & \pid & \ciampc & \textbf{Proposed} \\
 \midrule
+\multicolumn{5}{l}{(a) Certificate audit at the margin $\tau$} \\
+Certified fraction (\%) & \pending{TBD} & n/a & n/a & \textbf{\pending{TBD}} \\
+Hit rate (\%) & \pending{TBD} & n/a & n/a & \textbf{\pending{TBD}} \\
+False safety rate (\%) & \pending{TBD} & n/a & n/a & \textbf{\pending{TBD}} \\
+Value correlation & \pending{TBD} & n/a & n/a & \textbf{\pending{TBD}} \\
+\midrule
+\multicolumn{5}{l}{(b) Closed loop} \\
 Mean distance (m) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
 RMS distance (m) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
 Max distance (m) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{\pending{TBD}} \\
@@ -441,7 +441,7 @@ Calculation time (ms) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim}, the proposed controller \pending{qualitative headline of the closed loop comparison}. \risnd \pending{qualitative closed loop outcome of \risnd, including the excursions from the states that it certifies}, since its gear decisions rely on a value that does not see the lock. \pid \pending{qualitative closed loop outcome of \pid, including the switching frequency}, where a quantized continuous command can chatter around the neutral threshold and each unnecessary shift opens a three second window of lost authority. \ciampc respects the dwell through the rounding step, but it uses the nominal model without disturbance tightening, and \pending{qualitative outcome of \ciampc and its calculation time}. In contrast, the proposed controller \pending{qualitative outcome of the proposed controller, including the switching frequency and the calculation time}, at the fixed cost of a network evaluation per step. These results confirm that \pending{qualitative claim on respecting the dwell inside the certificate}.
+As summarized in Table~\ref{tab_sim}, the proposed controller \pending{qualitative headline of the closed loop comparison, including the switching frequency and the calculation time}. \risnd \pending{qualitative closed loop outcome of \risnd during locks}, since its gear decisions rely on a value that does not see the lock. \pid \pending{qualitative closed loop outcome of \pid in the switching frequency}, because a quantized continuous command can chatter around the neutral threshold and each unnecessary shift loses authority for a full dwell. \ciampc respects the dwell through the rounding step but uses the nominal model without disturbance tightening, whereas the proposed controller pays only a fixed network evaluation per step.
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
@@ -548,7 +548,7 @@ In contrast, the proposed controller achieved the smallest RMS and maximum dista
 
 \subsubsection{Discussion}\label{sec_exp_disc}
 
-The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the 3~s dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for the proposed controller, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, whereas the proposed controller mostly switched between reverse and neutral, as shown in Fig.~\ref{fig_field_compare}(f).
+The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for the proposed controller, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, whereas the proposed controller mostly switched between reverse and neutral, as shown in Fig.~\ref{fig_field_compare}(f).
 
 As shown in Fig.~\ref{fig_field_compare}(e), the safety value $V_h$ tracked the margin of the ASV. Since $V_h \le h$ holds by construction, every sample outside the disk had $V_h < 0$. More importantly, $V_h$ fell below zero before every crossing of the circle marked in Fig.~\ref{fig_field_compare}(d), so the learned value anticipated the loss of the margin before it was realized, and some episodes with $V_h < 0$ ended without any excursion. \pending{discussion of the realized disturbance relative to the bound, after the system identification}
 
