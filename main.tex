@@ -299,7 +299,7 @@ Two curricula are employed to stabilize the adversarial training. The adversary 
 \end{algorithm}
 
 \subsubsection{Certified Set}
-After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The value is represented by neural networks without a bound on the approximation error, and the zero level set of the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate in this article is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs both effects and is calibrated by the adversarial Monte Carlo audit of Section~\ref{sec_sim_audit}.
+After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The value is represented by neural networks without a bound on the approximation error, and the zero level set of the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate in this article is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs both effects and is calibrated by the adversarial Monte Carlo audit of Section~\ref{sec_sim}.
 
 \subsection{Onboard Safety Controller}\label{sec_onboard_ctrl}
 
@@ -359,8 +359,6 @@ $N_r$ & \pending{TBD} & $l_d$ & \pending{TBD} \\
 
 The learned certificate is audited and the closed loop behavior is compared with three baselines on the identified model.
 
-\subsubsection{Setup and Baselines}\label{sec_baselines}
-
 Training and simulation use the model of Section~\ref{sec_model} with the parameters of Table~\ref{tab_si}, the disturbance set \eqref{eq_wbox}, and the settings listed in Table~\ref{tab_params}. The bounds of \eqref{eq_wbox} were set to cover the drift recorded on the ASV with the engine at idle and the gear in neutral \pending{bounds and recording conditions}.
 
 \begin{table}[!t]
@@ -394,8 +392,6 @@ Monte Carlo audit & \pending{TBD} scenarios, \pending{TBD} s \\
 
 As baselines, a dwell unaware RIS, denoted \risnd, a proportional integral derivative controller, denoted \pid, and the CIA based MPC of the Introduction, denoted \ciampc, were implemented for comparison under identical plant, disturbance, and initial conditions. \risnd uses the same plant, disturbance bound, networks, and training budget as the proposed controller, but it has no timer in the state and ignores the dwell in the backup. It is then run on the plant that enforces the dwell. \pid quantizes the thrust command of a PID controller to the gear levels, and its shift requests are held by the plant during locks \pending{gains and quantization thresholds}. \ciampc follows the decomposition of \cite{chenlazar2022} with CIA in place of sum up rounding. A relaxed NLP optimizes the steering command together with relaxed gear weights, and CIA rounds the gear sequence under the minimum dwell by branch and bound in pycombina \cite{buerger2020pycombina} following \cite{sager2011}. A final NLP is then solved with the gear sequence fixed, all on the nominal model without disturbance tightening \pending{horizon, weights, solver}. \pid and \ciampc are run in simulation and in the field, while \risnd is evaluated only in simulation.
 
-\subsubsection{Certificate Audit}\label{sec_sim_audit}\label{sec_sim_a1}
-
 To audit the learned certificate, Monte Carlo rollouts were conducted from augmented states sampled over the operating envelope. Each state was rolled out under the safety policy $\pi_h$ against the adversary and against random disturbance sequences, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. The certified fraction is the fraction of sampled states with $\hat V_h \ge \tau$, and the hit rate is the fraction of certified states that remain inside the disk. The false safety rate is the fraction of certified states that are violated, and the correlation between the predicted value and the realized minimum margin measures whether the value ranks states correctly beyond the binary verdict. The margin $\tau$ is set to the smallest value at which the false safety rate reaches \pending{target}.
 
 To examine the effect of ignoring the dwell, the same audit was applied to \risnd on the plant that enforces the dwell. Since \risnd assumes that a shift is available at every step, it certifies states from which the ASV needs an immediate reversal of thrust, which the plant refuses during the dwell. The audit results are summarized in Table~\ref{tab_sim} and in Figs.~\ref{fig_family} and \ref{fig_a1}. In contrast with \risnd, the proposed certificate reserves the margin for the lock in advance and \pending{qualitative comparison of the two certificates in false safety and certified fraction}. In Fig.~\ref{fig_family}, the slices of the certified set \pending{qualitative shape of the slices with respect to the gear level and the remaining lock time}.
@@ -407,8 +403,6 @@ To examine the effect of ignoring the dwell, the same audit was applied to \risn
 \caption{Dwell aware versus dwell unaware certification on the plant that enforces the dwell. Certified sets of \risnd and of the proposed certificate in the position error plane, and the predicted value versus the realized minimum margin for both certificates. \pending{To be generated from the audit.}}
 \label{fig_a1}
 \end{figure}
-
-\subsubsection{Closed Loop Comparison}\label{sec_sim_closed}
 
 To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed controller were simulated from the same initial states under the same disturbance realizations, including the adversarial and random sequences inside $\calW$. The metrics are listed in Table~\ref{tab_sim}, where the maximum excursion during locked intervals is the direct evidence that the dwell is physically consequential.
 
@@ -444,8 +438,6 @@ Calculation time (ms) & \pending{TBD} & \pending{TBD} & \pending{TBD} & \textbf{
 As summarized in Table~\ref{tab_sim}, the proposed controller \pending{qualitative headline of the closed loop comparison, including the switching frequency and the calculation time}. \risnd \pending{qualitative closed loop outcome of \risnd during locks}, since its gear decisions rely on a value that does not see the lock. \pid \pending{qualitative closed loop outcome of \pid in the switching frequency}, because a quantized continuous command can chatter around the neutral threshold and each unnecessary shift loses authority for a full dwell. \ciampc respects the dwell through the rounding step but uses the nominal model without disturbance tightening, whereas the proposed controller pays only a fixed network evaluation per step.
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
-
-\subsubsection{Vessel and Actuation System}\label{sec_vessel}
 
 The experimental platform is a Neo AURA 240 EXP with a deep V planing hull, propelled by a single inboard diesel engine \pending{model} through a MerCruiser Bravo~1 sterndrive, as shown in Fig.~\ref{fig_vessel}(a). On the ASV, the GPS antenna is mounted on the T top, while the attitude and heading reference system (AHRS) and the control PC, a laptop computer running ROS~2, are located at the console. Table~\ref{tab_boat} lists the specifications of the platform and its sensors.
 
@@ -488,9 +480,7 @@ AHRS & \makecell[l]{MicroStrain 3DM GX5\\0.02~mg accelerometer resolution\\0.003
 \end{tabular}
 \end{table}
 
-\subsubsection{Test Site and Protocol}\label{sec_site}
-
-The experiments were conducted on the ASV of Section~\ref{sec_vessel} off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and the proposed controller on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For the proposed controller the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} The proposed controller ran the safety policy of Section~\ref{sec_onboard_ctrl} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
+The experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and the proposed controller on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For the proposed controller the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} The proposed controller ran the safety policy of Section~\ref{sec_onboard_ctrl} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
 
 \begin{figure}[!t]
 \centering
@@ -500,15 +490,11 @@ The experiments were conducted on the ASV of Section~\ref{sec_vessel} off Jeongo
 \label{fig_site}
 \end{figure}
 
-\subsubsection{Onboard Implementation}\label{sec_onboard}
-
-The proposed controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. An extended Kalman filter estimates the position, heading, and body rates at 10~Hz from the measurements of the GPS and the AHRS listed in Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, ensuring consistent legality between the controller and the plant. Based on the assembled state, the node evaluates the safety policy and the critics to select the steering command and the gear, and publishes the steering command and the gear request to the PLC. As listed in Table~\ref{tab_field}, the calculation time per step of the proposed node on the control PC remained well within the control period of 0.5~s. The \pid and \ciampc baselines of Section~\ref{sec_baselines} run in the same node structure and differ only in the policy evaluation block, ensuring that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
+The proposed controller runs as a ROS~2 node on the control PC of Fig.~\ref{fig_vessel}. An extended Kalman filter estimates the position, heading, and body rates at 10~Hz from the measurements of the GPS and the AHRS listed in Table~\ref{tab_boat}. At each control period the node assembles the augmented state from the latest estimate, the commanded gear, and a software timer that mirrors the PLC lock, ensuring consistent legality between the controller and the plant. Based on the assembled state, the node evaluates the safety policy and the critics to select the steering command and the gear, and publishes the steering command and the gear request to the PLC. As listed in Table~\ref{tab_field}, the calculation time per step of the proposed node on the control PC remained well within the control period of 0.5~s. The \pid and \ciampc baselines of Section~\ref{sec_sim} run in the same node structure and differ only in the policy evaluation block, ensuring that all three controllers share the same state estimate, control period, actuation interfaces, and dwell enforced by the PLC.
 
 \subsection{Experimental Results}\label{sec_exp}
 
 To validate the proposed controller under real sea conditions, its field results are compared with those of \pid and \ciampc over the 10~min window of each controller with the common criterion $R = 4$~m.
-
-\subsubsection{Comparison With Baselines}\label{sec_exp_comp}
 
 As illustrated in Fig.~\ref{fig_field_compare}, the three controllers are compared on a representative run of each over the same time axis, and the field metrics over the 10~min windows are summarized in Table~\ref{tab_field}. The position error $(\tilde{x}, \tilde{y})$ is expressed in an inertial frame whose $x$ axis is aligned with the heading at engagement. \pid drifted out of the disk and stayed outside for a long interval before returning, while its gear cycled regularly through forward, neutral, and reverse. \ciampc crossed the circle repeatedly at nearly regular intervals and reached the largest maximum distance, which is consistent with its nominal model without disturbance tightening.
 
@@ -545,8 +531,6 @@ All statistics are time weighted over 10~min of the designated runs of each cont
 \end{table}
 
 In contrast, the proposed controller achieved the smallest RMS and maximum distance, and its excursions were short and returned inside the disk. All three controllers shifted the gear at a similar rate, so the improvement was not obtained by shifting more often, but the gear usage differed. \pid and \ciampc cycled through forward, neutral, and reverse, whereas the proposed controller mostly alternated between reverse and neutral and rarely engaged forward, as listed in Table~\ref{tab_field}. Moreover, the calculation time of the proposed controller was comparable to that of \ciampc and remained within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept the ASV near the setpoint under real sea conditions, with brief excursions that returned inside the disk.
-
-\subsubsection{Discussion}\label{sec_exp_disc}
 
 The behavior during locked intervals is the direct field evidence for the formulation of Section~\ref{sec_family}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for the proposed controller, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, whereas the proposed controller mostly switched between reverse and neutral, as shown in Fig.~\ref{fig_field_compare}(f).
 
