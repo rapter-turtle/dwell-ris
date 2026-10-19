@@ -1,7 +1,7 @@
 """Fig. 2(a): 추력 deadzone 과 기어 시프트 dwell 설명 그림.
 
-위: 요청 추력에 대해 실제로 낼 수 있는 추력 (아이들 최소 추력 때문에 0 주변이 deadzone).
-아래: 시간에 따른 기어 (R, N, F) 와 시프트 뒤의 잠금 구간 (dwell), 잠금 중에 무시되는 요청.
+왼쪽: 요청 추력에 대해 실제로 낼 수 있는 추력 (아이들 최소 추력 때문에 0 주변이 deadzone).
+오른쪽: 시간에 따른 기어 (R, N, F) 와 시프트 뒤의 잠금 구간 (dwell), 잠금 중에 무시되는 요청.
 """
 import os
 import sys
@@ -23,9 +23,9 @@ C_DZ = '#E3E3E3'
 
 
 def make():
-    fig = plt.figure(figsize=(1.98, 1.62))
-    ax1 = fig.add_axes([0.20, 0.60, 0.76, 0.36])
-    ax2 = fig.add_axes([0.20, 0.13, 0.76, 0.34])
+    fig = plt.figure(figsize=(3.45, 1.0))
+    ax1 = fig.add_axes([0.115, 0.22, 0.355, 0.72])
+    ax2 = fig.add_axes([0.605, 0.22, 0.375, 0.72])
 
     # ---- deadzone: requested thrust -> available thrust ----
     fmin, fmax = 0.35, 1.0
