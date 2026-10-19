@@ -73,13 +73,20 @@ This article presents a dwell constrained robust invariant set (RIS) framework f
 Autonomous surface vessels, dwell time, robust invariant sets, safe reinforcement learning, sterndrive, weathervaning control.
 \end{IEEEkeywords}
 
+\begin{figure*}[!t]
+\centering
+\IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
+\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell are unrolled over each gear decision held for the dwell, and the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the steering protagonist $\pi_h$ and the adversary $\mu$ on the resulting SMDP. In the online stage, the frozen networks run on the ASV at each control period, and the gear that maximizes the certified value among the legal gears is applied together with the steering command of $\pi_h$.}
+\label{fig_framework}
+\end{figure*}
+
 \section{Introduction}\label{sec_intro}
 
 \IEEEPARstart{A}{utonomous} surface vessels (ASVs) have been widely applied to environmental monitoring, hydrographic survey, maritime rescue, coastal surveillance, and maritime transportation \cite{liu2016,shi2017,lee2024canal}. Many of these missions, including water column profiling, greenhouse gas sampling, and water quality mapping \cite{smith2010cinaps,dunbabin2017ghg,kaizu2011airboat}, require the ASV to remain near a target point for some time \cite{chavezgalaviz2024station}. Vessels in inland waterway transport also often have to wait until the passage ahead is cleared, for example at a movable bridge \cite{segovia2025bridges}. During these phases, wind and current continuously push the ASV away from the target point, and its safety depends on keeping the position inside the region around the point.
 
 Keeping the position against these disturbances is demanding for many ASVs because of their propulsion layout. Common layouts are two fixed stern thrusters with differential thrust or a single sterndrive, and the ASV of this study has a single engine, a single sterndrive, and no lateral thruster. Such ASVs are underactuated and cannot counter the sway drift induced by wind, waves, and current \cite{dunbabin2017ghg,qu2022positioning}. Therefore, holding the position and heading together is difficult \cite{chavezgalaviz2024station}, and no smooth static state feedback can stabilize both at fixed values \cite{pettersen2000underactuated,pettersen2004guas}. Weathervaning control is a practical alternative, in which only the position is kept inside a region around the setpoint, as if the ASV were anchored \cite{sarda2016stationkeeping}, while the heading turns toward the mean environmental load. This idea has been widely adopted in weather optimal positioning of dynamically positioned ships \cite{fossen2001wopc,kim2017coordinated,kim2014weathervaning} and has been extended to underactuated ASVs by aligning the bow with the wind \cite{smith2010cinaps,pereira2008stationkeeping} or by adapting the heading against the mean load \cite{wang2022areakeeping,qu2022positioning}. In these studies, the thrust is a continuous control input.
 
-Electric propulsion suits such continuous inputs, since an electric motor varies its torque rapidly and reverses its rotation directly \cite{kirtley2015motors,geertsma2017hybrid}. Nevertheless, many ASVs use internal combustion engines because batteries limit the endurance and payload of larger and faster hulls \cite{zhuang2021highspeed,chiche2021rescue}. Examples include a diesel waterjet USV \cite{han2020aragon}, an ASV with a steerable outboard engine \cite{eriksen2019bcmpc}, and a gasoline airboat without reverse gears \cite{kaizu2011airboat}. In such vessels, the engine cannot reverse its rotation, so the propeller thrust is reversed through a reversing gearbox that selects reverse, neutral, or forward \cite{geertsma2017hybrid}. Once a gear is engaged, the engine runs at least at idle, so the propeller delivers a minimum thrust and a deadzone forms around zero thrust. Every shift takes a finite time and repeated shifts stress the gearbox, so a minimum interval between consecutive shifts protects the drivetrain. The sterndrive of this study is such a drive, and its actuation system enforces this interval as a minimum dwell (Section~\ref{sec_dwell}). Since the sterndrive steers by vectoring the thrust, a lock in neutral leaves the ASV with neither thrust nor steering under wind and current. The weathervaning controllers above treat the thrust as a continuous input, so the gear levels, the deadzone, and the dwell have not been considered.
+Electric propulsion suits such continuous inputs, since an electric motor varies its torque rapidly and reverses its rotation directly \cite{kirtley2015motors,geertsma2017hybrid}. Nevertheless, many ASVs use internal combustion engines because batteries limit the endurance and payload of larger and faster hulls \cite{zhuang2021highspeed,chiche2021rescue}. Examples include a diesel waterjet USV \cite{han2020aragon}, an ASV with a steerable outboard engine \cite{eriksen2019bcmpc}, and a gasoline airboat without reverse gears \cite{kaizu2011airboat}. In such vessels, the engine cannot reverse its rotation, so the propeller thrust is reversed through a reversing gearbox that selects reverse, neutral, or forward \cite{geertsma2017hybrid}. Once a gear is engaged, the engine runs at least at idle, so the propeller delivers a minimum thrust and a deadzone forms around zero thrust. Therefore, a small corrective thrust cannot be produced, and fine corrections near the setpoint must be made by engaging and disengaging the gear, which makes the shift and its dwell frequent. Every shift takes a finite time and repeated shifts stress the gearbox, so a minimum interval between consecutive shifts protects the drivetrain. The sterndrive of this study is such a drive, and its actuation system enforces this interval as a minimum dwell (Section~\ref{sec_dwell}). Since the sterndrive steers by vectoring the thrust, a lock in neutral leaves the ASV with neither thrust nor steering under wind and current. The weathervaning controllers above treat the thrust as a continuous input, so the gear levels, the deadzone, and the dwell have not been considered.
 
 Dwell time constraints have been addressed within model predictive control (MPC) for systems with discrete actuators, a widely studied framework \cite{bemporad1999mld,rawlings2017discrete,mcallister2022advances}. For linear switched systems, dwell time and tube based MPC \cite{zhang2016,tan2024asyncmdt,vicente2019,lavaei2021,zhuang2023} treats the switching signal as an exogenous input and the minimum dwell as an admissibility condition. For linear systems with disturbances, invariant sets under a dwell time restriction have also been computed \cite{dehghan2012}. For nonlinear systems, MPC based on combinatorial integral approximation (CIA) \cite{sager2011,buerger2019switched,zeile2021dwell,buerger2020pycombina} makes the integer input a decision variable and imposes the dwell as a combinatorial constraint in the rounding step. A sum up rounding scheme further establishes recursive feasibility through an $\ell$ step control invariant terminal set \cite{chenlazar2022}. However, these schemes rely on a nominal model, and mixed integer MPC offers only inherent robustness to small disturbances \cite{mcallister2022advances}. As a result, safety under a dwell and disturbances has not been guaranteed for nonlinear systems.
 
@@ -96,22 +103,17 @@ To the best of our knowledge, this study represents the first field demonstratio
 
 The remainder of this article is organized as follows. Section~\ref{sec_system} describes the ASV, the gear shift dwell, and the vehicle dynamics model. Section~\ref{sec_problem} formulates the augmented safety game. Section~\ref{sec_method} presents the proposed dwell constrained safe controller. Section~\ref{sec_results} reports the system identification, simulation, and experimental results. Finally, Section~\ref{sec_conclusion} concludes this article.
 
-\begin{figure*}[!t]
-\centering
-\IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell are unrolled over each gear decision held for the dwell, and the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the steering protagonist $\pi_h$ and the adversary $\mu$ on the resulting SMDP. In the online stage, the frozen networks run on the ASV at each control period, and the gear that maximizes the certified value among the legal gears is applied together with the steering command of $\pi_h$.}
-\label{fig_framework}
-\end{figure*}
-
 \section{System Description and Modeling}\label{sec_system}
 
-This section describes the origin of the gear shift dwell and the vehicle dynamics model used for training together with the disturbance model. In the following, the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011} are adopted.
+This section describes the origin of the gear shift dwell and the thrust deadzone, and the vehicle dynamics model used for training together with the disturbance model. In the following, the modeling practice of \cite{lee2024canal} and the model class of \cite{fossen2011} are adopted.
 
-\subsection{Gear Shift Dwell}\label{sec_dwell}
+\subsection{Gear Shift Dwell and Thrust Deadzone}\label{sec_dwell}
 
 A shift between forward and reverse passes through neutral, and the clutch of the sterndrive gearbox must engage at low engine speed to avoid shock loading of the gear set. Therefore, each shift requires a finite mechanical time, and an immediate reversal of a shift that has just been completed stresses the drivetrain. To protect the drivetrain, the actuation system enforces a minimum interval between consecutive shift commands, which is set by adding a safety margin to the mechanical shift time. This interval is the dwell, and it is given by the actuation system and cannot be shortened by the controller.
 
 With the control period $\Delta t$, the dwell corresponds to $D_g$ control steps. A shift request issued during the dwell is discarded by the actuation system, and the current gear is held. Therefore, the controller must account for the time at which a shift becomes available.
+
+Once a gear is engaged, the engine runs at least at idle and the propeller delivers a minimum thrust. Therefore, thrust magnitudes between zero in neutral and this minimum cannot be produced, which forms a deadzone around zero thrust. Together with the dwell, the deadzone makes the thrust discrete, as modeled in Section~\ref{sec_model}.
 
 \subsection{Vehicle Dynamics Modeling}\label{sec_model}
 
@@ -135,8 +137,10 @@ C(\nu) = \begin{bmatrix} 0 & 0 & -m_{22} v \\ 0 & 0 & m_{11} u \\ m_{22} v & -m_
 \label{eq_coriolis}
 \end{equation}
 \begin{equation}
-D(\nu) = -\begin{bmatrix} X_u & 0 & 0 \\ 0 & Y_v & Y_r \\ 0 & N_v & N_r \end{bmatrix}
-- \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & Y_{r|r|}|r| \\ 0 & N_{v|v|}|v| & N_{r|r|}|r| \end{bmatrix},
+\begin{aligned}
+D(\nu) &= -\begin{bmatrix} X_u & 0 & 0 \\ 0 & Y_v & Y_r \\ 0 & N_v & N_r \end{bmatrix} \\
+&\quad - \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & Y_{r|r|}|r| \\ 0 & N_{v|v|}|v| & N_{r|r|}|r| \end{bmatrix},
+\end{aligned}
 \label{eq_damping}
 \end{equation}
 where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, $Y_{r|r|}$, $N_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively.
@@ -147,9 +151,9 @@ By vectoring the propeller thrust through the steering angle of the drive, the c
 = \begin{bmatrix} F_g\cos\delta \\ F_g\sin\delta \\ -l_d F_g\sin\delta \end{bmatrix},
 \label{eq_force}
 \end{equation}
-where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive. Once a gear is engaged the engine runs at least at idle, so the magnitude of the thrust in forward or reverse cannot be reduced below the idle thrust. Therefore, thrust magnitudes between zero and this minimum are unavailable, which forms a deadzone around zero thrust.
+where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
 
-In \cite{lee2024canal} the outboard thrust is commanded continuously through the throttle as $F = c\,n_T^2$, whereas the thrust in this study takes only the three values selected by the gear, and the gear is the channel that carries the dwell. Since the lateral force $f_Y$ and the yaw moment $f_N$ are proportional to $F_g$, both vanish together with the thrust in neutral.
+In \cite{lee2024canal} the outboard thrust is commanded continuously through the throttle as $F = c\,n_T^2$. Owing to the deadzone and the gearbox of Section~\ref{sec_dwell}, the thrust in this study takes only the three values selected by the gear, and the gear is the channel that carries the dwell. Since the lateral force $f_Y$ and the yaw moment $f_N$ are proportional to $F_g$, both vanish together with the thrust in neutral.
 
 The steering angle moves toward its command $\delta_c$ at no more than the slew rate of the servo cylinder. Over an integration substep $\Delta t_s$, the steering update can be expressed as
 \begin{equation}
@@ -165,22 +169,20 @@ where $\delta_{\max}$ and $\dot{\delta}_{\max}$ are the angle limit and the rate
 \label{fig_frames}
 \end{figure}
 
-A body frame acceleration $d = [d_u, d_v, d_r]^\top$ represents the environmental load, enters \eqref{eq_model} through the term $Md$, and is bounded by the box
+In addition, it is assumed that the unknown and bounded environmental disturbance $d = [d_u, d_v, d_r]^\top$, which acts as a body frame acceleration and enters \eqref{eq_model} through the term $Md$, satisfies
 \begin{equation}
-\calW = [-\bar{d}_u, \bar{d}_u] \times [-\bar{d}_v, \bar{d}_v] \times [-\bar{d}_r, \bar{d}_r].
+\calW = \bigl\{ d \in \mathbb{R}^3 \mid -\bar{d} \le d \le \bar{d} \bigr\},
 \label{eq_wbox}
 \end{equation}
-Based on drift data recorded on the ASV with the engine at idle and the gear in neutral, the bounds cover the recorded drift with a margin \pending{bounds $\bar d_u$, $\bar d_v$, $\bar d_r$ and the recording conditions}. In this condition, the measured accelerations reflect the wind and current load alone. No assumption is made on the time behavior of $d$ within $\calW$, since the disturbance is chosen by an adversary at every step in the safety game of Section~\ref{sec_problem}, providing a stronger model than any particular wind spectrum.
+where $\bar{d} = [\bar{d}_u, \bar{d}_v, \bar{d}_r]^\top$ and the inequality holds entry wise.
 
 \section{Problem Formulation}\label{sec_problem}
 
-This section augments the gear state and its remaining lock time to the state, defines the legal action set induced by the dwell, and formulates the safety game on an SMDP in which each gear decision is held over the dwell.
-
-\subsection{Markov Property Under Gear Shift Dwell}
-
-Under the dwell, two identical physical states can admit different gear commands. Once the dwell has elapsed, any gear command is admissible, whereas immediately after a shift no gear command is admissible until the dwell expires. Since the admissible gear command depends on the time elapsed since the last shift, the process is not Markov in the physical state alone. A value function learned on the physical state therefore conflates the two situations. To restore the Markov property, the gear state and its remaining lock time are augmented to the state.
+This section shows that the dwell breaks the Markov property in the physical state, augments the gear state and its remaining lock time to the state, defines the legal action set induced by the dwell, and formulates the safety game on an SMDP in which each gear decision is held over the dwell.
 
 \subsection{Augmented State and Legal Action Set}
+
+Under the dwell, two identical physical states can admit different gear commands. Once the dwell has elapsed, any gear command is admissible, whereas immediately after a shift no gear command is admissible until the dwell expires. Since the admissible gear command depends on the time elapsed since the last shift, the process is not Markov in the physical state alone. A value function learned on the physical state therefore conflates the two situations. To restore the Markov property, the gear state and its remaining lock time are augmented to the state as follows.
 
 Let $(\tilde{x}, \tilde{y}) = (x - x_d, y - y_d)$ be the position error from the setpoint $(x_d, y_d)$, and let $\tilde{\psi}$ be the heading relative to a fixed reference. The heading is kept in the state for the dynamics but is unconstrained by the task. Let $\tau_g \in \{0, 1, \ldots, D_g - 1\}$ denote the remaining lock time of the shift in control steps, where $\tau_g = 0$ means that the gear may be shifted now. The augmented state is defined as
 \begin{equation}
@@ -223,7 +225,10 @@ where $\mu$ ranges over nonanticipative disturbance strategies with values in $\
 
 However, the undiscounted self consistency condition of \eqref{eq_value} is not a contraction, and a discount $\gamma_h \in (0,1)$ restores the contraction \cite{fisac2019}, which was extended to the disturbed game in \cite{li2023cdc}. Under the dwell, the gear decision is not revised until the lock expires, so the process is semi Markov at the level of the gear decisions. Therefore, each gear decision is treated as an option that holds the selected gear for $D_g$ control steps, while the steering command and the disturbance act at every step. For a fixed gear $\hat g$, the locked one step operator is defined as
 \begin{equation}
-(\calT_{\hat g} W)(\xi) = (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi),\ \max_{\delta_c \in \calA_\delta} \min_{d \in \calW} W\bigl(F(\xi, (\delta_c, \hat g), d)\bigr) \Bigr\},
+\begin{aligned}
+(\calT_{\hat g} W)(\xi) &= (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi), \\
+&\qquad \max_{\delta_c \in \calA_\delta} \min_{d \in \calW} W\bigl(F(\xi, (\delta_c, \hat g), d)\bigr) \Bigr\},
+\end{aligned}
 \label{eq_locked}
 \end{equation}
 and the SMDP backup is given by
@@ -272,7 +277,10 @@ Restricting the admissible actions of the control player reduces the value of th
 
 An adversarial actor critic scheme learns the fixed point of \eqref{eq_backup} on the SMDP, as summarized in Algorithm~\ref{alg_ris}. The scheme follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc} and is adapted to the legality structure and to the option that holds each gear decision over the dwell. As the network input, the augmented state is encoded as
 \begin{equation}
-\bigl(\tilde{x}/R,\ \tilde{y}/R,\ \sin\tilde{\psi},\ \cos\tilde{\psi},\ u,\ v,\ r,\ \delta/\delta_{\max},\ \operatorname{onehot}(g),\ \tau_g/D_g\bigr),
+\begin{aligned}
+\bigl(&\tilde{x}/R,\ \tilde{y}/R,\ \sin\tilde{\psi},\ \cos\tilde{\psi},\ u,\ v,\ r, \\
+&\delta/\delta_{\max},\ \operatorname{onehot}(g),\ \tau_g/D_g\bigr),
+\end{aligned}
 \label{eq_input}
 \end{equation}
 enabling every network to observe the gear and the timer.
@@ -280,7 +288,10 @@ enabling every network to observe the gear and the timer.
 \subsubsection{Safety Critics}
 Two safety critics $Q_{h,1}(\xi, c, d)$ and $Q_{h,2}(\xi, c, d)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and the minimum of the two is used wherever a critic value is needed. The regression target is formed by unrolling the simulator over one option. From a sampled augmented state $\xi_0$ with a committed legal gear, the simulator is unrolled for $n \ge D_g$ steps. The committed gear is held for the first $D_g$ steps and the gear is chosen greedily over the legal set afterwards, while the steering command of the protagonist $\pi_h$ and the disturbance of the adversary $\mu$ act at every step. With the target value $\bar V(\xi) = \max_{g' \in C_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as the backward fold
 \begin{equation}
-g_n = \bar V(\xi_n), \quad g_j = (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \}, \quad y = g_0,
+\begin{aligned}
+g_n &= \bar V(\xi_n), \qquad y = g_0, \\
+g_j &= (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \},
+\end{aligned}
 \label{eq_target}
 \end{equation}
 for $j = n-1, \ldots, 0$, where $\xi_j$ is the state at step $j$ of the unroll. Since $h$ is bounded above by $R$, the bootstrap term is clipped to the physical value range $[-h_{\mathrm{floor}}, R]$, and $h$ itself is floored at $-h_{\mathrm{floor}}$ outside the disk, ensuring that the value remains bounded as required by Lemma~\ref{lem_aug}. A squared loss regresses the critics onto $y$ at the sampled state and the committed action, and the target copies follow the critics by a soft update.
@@ -325,8 +336,10 @@ Two curricula are employed to stabilize the adversarial training and to extend t
 \subsubsection{Certified Set}
 After training, the certified value and the certified set are defined as
 \begin{equation}
-\hat V_h(\xi) = \max_{g' \in C_g(g,\tau_g)} q\bigl(\xi, (\pi_h(\xi), g')\bigr), \qquad
-\hat{\calS} = \bigl\{ \xi \mid \hat V_h(\xi) \ge 0 \bigr\},
+\begin{aligned}
+\hat V_h(\xi) &= \max_{g' \in C_g(g,\tau_g)} q\bigl(\xi, (\pi_h(\xi), g')\bigr), \\
+\hat{\calS} &= \bigl\{ \xi \mid \hat V_h(\xi) \ge 0 \bigr\},
+\end{aligned}
 \label{eq_certified}
 \end{equation}
 and the audited level set is $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, where the margin $\tau > 0$ is calibrated by the adversarial Monte Carlo audit described in Section~\ref{sec_sim_audit}.
@@ -395,7 +408,7 @@ In this subsection, the learned certificate of the proposed framework is audited
 
 \subsubsection{Setup and Baselines}\label{sec_baselines}
 
-Training and simulation use the model of Section~\ref{sec_model} with the parameters of Table~\ref{tab_si}, the disturbance box \eqref{eq_wbox}, and the settings listed in Table~\ref{tab_params}.
+Training and simulation use the model of Section~\ref{sec_model} with the parameters of Table~\ref{tab_si}, the disturbance set \eqref{eq_wbox}, and the settings listed in Table~\ref{tab_params}. The bounds of \eqref{eq_wbox} were set to cover the drift recorded on the ASV with the engine at idle and the gear in neutral \pending{bounds and recording conditions}.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
@@ -403,7 +416,8 @@ Training and simulation use the model of Section~\ref{sec_model} with the parame
 \label{tab_params}
 \centering
 \footnotesize
-\begin{tabular}{lc}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.47\columnwidth}>{\raggedright\arraybackslash}p{0.43\columnwidth}}
 \toprule
 Parameter & Value \\
 \midrule
@@ -455,7 +469,8 @@ To compare the closed loop behavior, \risnd, \pid, \ciampc, and the proposed con
 \label{tab_sim}
 \centering
 \footnotesize
-\begin{tabular}{lcccc}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.27\columnwidth}cccc}
 \toprule
 Metric & \risnd & \pid & \ciampc & \textbf{Proposed} \\
 \midrule
@@ -495,7 +510,7 @@ Each shift requires a mechanical time of \pending{mechanical shift time}. On thi
 \label{tab_boat}
 \centering
 \footnotesize
-\begin{tabular}{ll}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.36\columnwidth}>{\raggedright\arraybackslash}p{0.54\columnwidth}}
 \toprule
 \multicolumn{2}{l}{(a) Platform specification} \\
 \midrule
