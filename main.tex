@@ -163,9 +163,7 @@ f_c = \begin{bmatrix} f_X \\ f_Y \\ f_N \end{bmatrix}
 = \begin{bmatrix} F_g\cos\delta \\ F_g\sin\delta \\ -l_d F_g\sin\delta \end{bmatrix},
 \label{eq_force}
 \end{equation}
-where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
-
-In \cite{lee2024canal} the outboard thrust is commanded continuously through the throttle as $F = c\,n_T^2$. Owing to the deadzone and the gearbox of Section~\ref{sec_dwell}, the thrust in this study takes only the three values selected by the gear, and the gear is the channel that carries the dwell.
+where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Owing to the deadzone of Section~\ref{sec_dwell}, the thrust takes only these three values. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
 
 The steering command and the steering rate are constrained by
 \begin{equation}
