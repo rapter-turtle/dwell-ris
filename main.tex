@@ -293,7 +293,7 @@ To stabilize the adversarial training, the adversary scale is ramped from zero t
 \STATE Form $y$ by the backward fold \eqref{eq_target} with clipping
 \STATE Update $Q_{h,1}, Q_{h,2}$ by regression onto $y$
 \STATE Update $\pi_h$ by ascending \eqref{eq_actor}
-\STATE Update $\mu$ by descending $\min_i Q_{h,i}(\xi, (\pi_h(\xi), g^\star(\xi)), \mu(\xi))$
+\STATE Update $\mu$ by descending \eqref{eq_actor}
 \STATE Soft update $\bar{Q}_{h,i} \gets (1-\rho)\bar{Q}_{h,i} + \rho Q_{h,i}$
 \STATE Advance the curricula on $\kappa$ and $\gamma_h$
 \ENDFOR
