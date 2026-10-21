@@ -44,6 +44,7 @@
 \newcommand{\calW}{\mathcal{W}}
 \newcommand{\calS}{\mathcal{S}}
 \newcommand{\calT}{\mathcal{T}}
+\newcommand{\calN}{\mathcal{N}}
 \newcommand{\gR}{\mathrm{R}}
 \newcommand{\gN}{\mathrm{N}}
 \newcommand{\gF}{\mathrm{F}}
@@ -192,10 +193,10 @@ Let $(\tilde{x}, \tilde{y}) = (x - x_d, y - y_d)$ be the position error from the
 The legal action set is given by
 \begin{equation}
 \calC(\xi) = \calA_\delta \times \calC_g(g, \tau_g), \qquad
-\calC_g = \begin{cases} \{g\}, & \tau_g > 0,\\ \{\gR, \gN, \gF\}, & \tau_g = 0, \end{cases}
+\calC_g = \begin{cases} \{g\}, & \tau_g > 0,\\ \calN(g), & \tau_g = 0, \end{cases}
 \label{eq_legal}
 \end{equation}
-where the steering channel has no dwell constraint. The timer resets to $D_g - 1$ whenever the gear switches to a new level and otherwise counts down toward zero. Since holding the current gear is always legal, $\calC(\xi)$ is nonempty. The augmented transition $\xi' = \Phi(\xi, c, w)$ integrates \eqref{eq_model} over one control period under the steering limits \eqref{eq_steer} and the legal gear and updates the timer. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is dwell constrained admissible if $\pi(\xi) \in \calC(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_{\calC}$.
+where $\calN(g)$ is the set of $g$ and its adjacent levels in the order $(\gR, \gN, \gF)$, and the steering channel has no dwell constraint. Since the gear actuator cannot reverse directly, a reversal between forward and reverse passes through neutral. The timer resets to $D_g - 1$ whenever the gear switches to a new level and otherwise counts down toward zero. Since holding the current gear is always legal, $\calC(\xi)$ is nonempty. The augmented transition $\xi' = \Phi(\xi, c, w)$ integrates \eqref{eq_model} over one control period under the steering limits \eqref{eq_steer} and the legal gear and updates the timer. A policy $\pi \colon \Xi \to \calA_\delta \times \{\gR, \gN, \gF\}$ is dwell constrained admissible if $\pi(\xi) \in \calC(\xi)$ for every $\xi \in \Xi$, and the set of such policies is denoted by $\Pi_{\calC}$.
 
 
 \subsection{Augmented Safety Game}\label{sec_game}
@@ -224,38 +225,38 @@ This section presents the learning of the dwell constrained safety value and the
 \subsection{Adversarial Learning of the Dwell Constrained Safety Value}\label{sec_learning}
 The safety value is learned by an adversarial actor critic scheme that follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc}. Neural network critics are regressed onto bootstrapped targets, while a protagonist maximizes and an adversary minimizes the critic.
 
-Since the dwell is already represented in \eqref{eq_bellman} through the legal gear set and the timer update of $\Phi$, \eqref{eq_bellman} characterizes the dwell constrained safety value without further modification. However, an exact solution of \eqref{eq_bellman} is intractable on the high dimensional augmented state, and a difficulty arises when the value is approximated by neural networks. With a one step backup of \eqref{eq_bellman}, the minimum of $h$ over a lock reaches the state where the lock begins only through the learned values at all intermediate locked states, so their approximation errors accumulate along the lock. An overestimate then certifies an unsafe locked state as safe, which occurred in preliminary training near the boundary of the constraint set $\{h \ge 0\}$. To avoid this accumulation, the safety value is learned on an SMDP. Since only the current gear is legal during a lock by \eqref{eq_legal}, the gear is determined only once per lock, so each gear decision and the lock that follows are combined into an option \cite{sutton1999options} that holds the gear for $D_g$ steps, while the steering rate command and the disturbance act at every step. The SMDP target then evaluates $h$ at every simulated state of the lock and bootstraps the learned value only at the end of the option, which removes the path along which the errors accumulate.
+Since the dwell is already represented in \eqref{eq_bellman} through the legal gear set and the timer update of $\Phi$, \eqref{eq_bellman} characterizes the dwell constrained safety value without further modification. However, an exact solution of \eqref{eq_bellman} is intractable on the high dimensional augmented state, and a difficulty arises when the value is approximated by neural networks. With a one step backup of \eqref{eq_bellman}, the minimum of $h$ over a lock reaches the state where the lock begins only through the learned values at all intermediate locked states, so their approximation errors accumulate along the lock. An overestimate then certifies an unsafe locked state as safe, which occurred in preliminary training near the boundary of the constraint set $\{h \ge 0\}$. To avoid this accumulation, the target unrolls the simulator over $n \ge D_g$ steps, which covers the lock that the first action can start. Since the legal set is enforced at every step of the unroll, the gear is held during the lock and may be held longer or shifted at any step after the lock expires. The minimum of $h$ over the lock is then computed from the simulated states, and the learned value is bootstrapped only at the end of the unroll.
 
-The value is computed by repeatedly applying an update of the form \eqref{eq_bellman}, which is not guaranteed to converge to a unique solution without a discount. A discount $\gamma_h \in (0,1)$ is therefore introduced \cite{fisac2019}, as extended to the disturbed game in \cite{li2023cdc}, which guarantees this convergence. For a bounded function $U \colon \Xi \to \mathbb{R}$ and a fixed gear $\hat g$, the locked one step operator $\calT_{\hat g}$, which maps $U$ to its one step update, is defined as
+The value is computed by repeatedly applying an update of the form \eqref{eq_bellman}, which is not guaranteed to converge to a unique solution without a discount. A discount $\gamma_h \in (0,1)$ is therefore introduced \cite{fisac2019}, as extended to the disturbed game in \cite{li2023cdc}, which guarantees this convergence. For a bounded function $U \colon \Xi \to \mathbb{R}$, the discounted one step operator $\calT_h$, which maps $U$ to its one step update, is defined as
 \begin{equation}
 \begin{aligned}
-(\calT_{\hat g} U)(\xi) &= (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi), \\
-&\qquad \max_{\dot{\delta}_c \in \calA_\delta} \min_{w \in \calW} U\bigl(\Phi(\xi, (\dot{\delta}_c, \hat g), w)\bigr) \Bigr\},
+(\calT_h U)(\xi) &= (1-\gamma_h) h(\xi) + \gamma_h \min\Bigl\{ h(\xi),\ \max_{g_c \in \calC_g(g, \tau_g)} \\
+&\qquad \max_{\dot{\delta}_c \in \calA_\delta} \min_{w \in \calW} U\bigl(\Phi(\xi, (\dot{\delta}_c, g_c), w)\bigr) \Bigr\},
 \end{aligned}
-\label{eq_locked}
+\label{eq_onestep}
 \end{equation}
-and the SMDP backup operator $\calT_h$ is given by
+and the $n$ step operator is its $n$ fold composition
 \begin{equation}
-(\calT_h U)(\xi) = \max_{\hat g \in \calC_g(g, \tau_g)} \bigl(\underbrace{\calT_{\hat g} \circ \cdots \circ \calT_{\hat g}}_{D_g\ \text{times}}\, U\bigr)(\xi),
-\label{eq_backup}
+\calT_h^{n} U = \underbrace{\calT_h \circ \cdots \circ \calT_h}_{n\ \text{times}}\, U,
+\label{eq_nstep}
 \end{equation}
-where \eqref{eq_locked} is applied once per step of the option.The selected gear $\hat g$ is thus held for $D_g$ steps, $h$ at every state of the lock enters through the minimum in \eqref{eq_locked}, and $U$ is evaluated only at the state reached after $D_g$ steps. The SMDP safety value $V_h$ is the fixed point of $\calT_h$, and it is obtained from any bounded $U$ by repeated application of \eqref{eq_backup} as
+in which the legal gear is chosen at every step. The discounted safety value $V_h$ is the fixed point of $\calT_h$, and it is obtained from any bounded $U$ as
 \begin{equation}
-V_h = \calT_h V_h = \lim_{k \to \infty} \calT_h^{k}\, U,
+V_h = \calT_h V_h = \calT_h^{n} V_h = \lim_{k \to \infty} \calT_h^{k}\, U,
 \label{eq_fixed}
 \end{equation}
-where the convergence follows from the contraction in Lemma~\ref{lem_aug}. Every policy generated by the backup is dwell constrained admissible, since holding the selected gear is always legal. Let $\Pi_{\calC}^{o} \subset \Pi_{\calC}$ denote such option policies, which change the gear only at decisions separated by at least $D_g$ steps, and let $V_h^{o}$ be \eqref{eq_value} with $\pi$ restricted to $\Pi_{\calC}^{o}$, so that $V_h^{o} \le V_h^{*}$. The maximum over the steering rate command in \eqref{eq_locked}, also with $\gamma_h = 1$, is assumed to be attained, which is standard for compact action sets and continuous dynamics \cite{bertsekas1972reach,akametalu2024minimum}.
+where the convergence follows from Lemma~\ref{lem_aug}. The maximum over the steering rate command in \eqref{eq_onestep}, also with $\gamma_h = 1$, is assumed to be attained, which is standard for compact action sets and continuous dynamics \cite{bertsekas1972reach,akametalu2024minimum}.
 
 \begin{lemma}\label{lem_aug}
-Let $h$ be bounded and let $\calT_h$ be defined by \eqref{eq_backup}. Then $\calT_h$ is a monotone $\gamma_h^{D_g}$ contraction in the supremum norm and admits a unique bounded fixed point $V_h$ with $V_h \le h$. Moreover, $V_h^{o}$ satisfies the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$, and $\calS^{o} = \{\xi \mid V_h^{o}(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies with $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$.
+Let $h$ be bounded. Then $\calT_h$ is a monotone $\gamma_h$ contraction and $\calT_h^{n}$ is a monotone $\gamma_h^{n}$ contraction in the supremum norm, and both admit the same unique bounded fixed point $V_h$ with $V_h \le h$. Moreover, $\calS^{*} = \{\xi \mid V_h^{*}(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies.
 \end{lemma}
 
-The proof is given in the Appendix. As $\gamma_h$ approaches one, the discounted fixed point is expected to approach $V_h^{o}$, as shown in \cite{li2023cdc} for the one step operator. A critic with residual $\varepsilon$ under a $\beta$ contraction lies within $\varepsilon/(1-\beta)$ of its fixed point, so the modulus $\gamma_h^{D_g}$ of \eqref{eq_backup} in place of $\gamma_h$ reduces this bound by the factor $\bigl(\sum_{j=0}^{D_g-1}\gamma_h^{j}\bigr)^{-1}$.
+The proof is given in the Appendix. As $\gamma_h$ approaches one, $V_h$ is expected to approach $V_h^{*}$ \cite{li2023cdc}. A critic with residual $\varepsilon$ under a $\beta$ contraction lies within $\varepsilon/(1-\beta)$ of its fixed point, so the unroll target with modulus $\gamma_h^{n}$ in place of $\gamma_h$ reduces this bound by the factor $\bigl(\sum_{j=0}^{n-1}\gamma_h^{j}\bigr)^{-1}$.
 
-The fixed point of \eqref{eq_backup} is learned as summarized in Algorithm~\ref{alg_ris}. Every network receives the augmented state with the heading encoded by its sine and cosine and the gear by a one hot vector.
+The fixed point of \eqref{eq_onestep} is learned as summarized in Algorithm~\ref{alg_ris}. Every network receives the augmented state with the heading encoded by its sine and cosine and the gear by a one hot vector.
 
 \subsubsection{Safety Critics}
-Two safety critics $Q_{h,1}(\xi, c, w)$ and $Q_{h,2}(\xi, c, w)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and their minimum is used wherever a critic value is needed. The regression target is the backward fold of \eqref{eq_backup} along a simulator unroll of $n \ge D_g$ steps from a sampled state $\xi_0$. The committed legal gear is held for $D_g$ steps and the greedy legal gear afterwards, while the protagonist $\pi_h$ and the adversary $\mu$ act at every step. With the target value $\bar V(\xi) = \max_{g' \in \calC_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as
+Two safety critics $Q_{h,1}(\xi, c, w)$ and $Q_{h,2}(\xi, c, w)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and their minimum is used wherever a critic value is needed. The regression target is the backward fold of \eqref{eq_nstep} along a simulator unroll of $n \ge D_g$ steps from a sampled state $\xi_0$. The committed action is applied at the first step, the greedy legal gear \eqref{eq_gear} and the protagonist $\pi_h$ act at every later step, and the adversary $\mu$ acts at every step. With the target value $\bar V(\xi) = \max_{g' \in \calC_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as
 \begin{equation}
 \begin{aligned}
 g_n &= \bar V(\xi_n), \qquad y = g_0, \\
@@ -263,7 +264,7 @@ g_j &= (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \},
 \end{aligned}
 \label{eq_target}
 \end{equation}
-for $j = n-1, \ldots, 0$, where $\xi_j$ is the unrolled state at step $j$. The target $y$ thus evaluates \eqref{eq_backup} along the simulator unroll with $U$ given by the target value $\bar V$, so each regression approximates one iteration of \eqref{eq_fixed}. The bootstrap term is clipped to $[-h_{\mathrm{floor}}, R]$ and $h$ is floored at $-h_{\mathrm{floor}}$ outside the disk, which keeps the value bounded as required by Lemma~\ref{lem_aug}. The critics are regressed onto $y$ at the committed action by a squared loss, and the target copies follow them by a soft update.
+for $j = n-1, \ldots, 0$, where $\xi_j$ is the unrolled state at step $j$. The target $y$ thus evaluates \eqref{eq_nstep} along the unroll with $U$ given by $\bar V$, so each regression approximates one iteration of \eqref{eq_fixed}. The bootstrap term is clipped to $[-h_{\mathrm{floor}}, R]$ and $h$ is floored at $-h_{\mathrm{floor}}$ outside the disk, which keeps the value bounded as required by Lemma~\ref{lem_aug}. The critics are regressed onto $y$ at the committed action by a squared loss, and the target copies follow them by a soft update.
 
 \subsubsection{Protagonist and Adversary}
 The protagonist $\pi_h$ and the adversary $\mu$ are deterministic policies whose outputs are scaled by $\tanh$ into $\calA_\delta$ and the box $\calW$, respectively. Let $q(\xi, c) = \min_i Q_{h,i}(\xi, c, \mu(\xi))$ denote the minimum critic at the adversary disturbance. The greedy legal gear is selected as
@@ -289,7 +290,7 @@ To stabilize the adversarial training, the adversary scale is ramped from zero t
 \FOR{each update}
 \STATE Sample a batch of augmented states over $\Xi$, including $g$ and $\tau_g$, in the $N$ parallel simulators
 \STATE At each sampled state, choose a random legal committed gear and perturb the steering command and the disturbance $\kappa\,\mu(\xi)$ by exploration noise
-\STATE Unroll each simulator for $n$ steps, holding the committed gear for $D_g$ steps and the greedy legal gear \eqref{eq_gear} afterwards
+\STATE Unroll each simulator for $n$ steps, with the committed gear at the first step and the greedy legal gear \eqref{eq_gear} at every later step
 \STATE Form $y$ by the backward fold \eqref{eq_target} with clipping
 \STATE Update $Q_{h,1}, Q_{h,2}$ by regression onto $y$
 \STATE Update $\pi_h$ by ascending \eqref{eq_actor}
@@ -301,7 +302,7 @@ To stabilize the adversarial training, the adversary scale is ramped from zero t
 \end{algorithm}
 
 \subsubsection{Certified Set}
-After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The approximation error of the networks is not bounded, the adversary is learned, and the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs these effects and is calibrated by the Monte Carlo audit of Section~\ref{sec_sim}. Since the dynamics do not depend on the timer and every option ends with a zero timer, the fixed point of \eqref{eq_backup} depends on the remaining lock time only through whether the gear is locked, and for each gear the locked slice of the certified set is contained in the free slice.
+After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The approximation error of the networks is not bounded, the adversary is learned, and the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs these effects and is calibrated by the Monte Carlo audit of Section~\ref{sec_sim}. Since a longer remaining lock only removes legal gear sequences, $V_h$ is nonincreasing in $\tau_g$, so for each gear the slice of the certified set over the physical state shrinks as the remaining lock time grows.
 
 \subsection{Onboard Safety Controller}\label{sec_onboard_ctrl}
 
@@ -543,13 +544,13 @@ This article presented a dwell constrained RIS framework for safe weathervaning 
 
 \appendix[Proof of Lemma 1]
 
-Let $\calT_{\hat g}^{D_g}$ denote the $D_g$ fold composition in \eqref{eq_backup}. For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the compact steering interval $\calA_\delta$ is nonexpansive, so for bounded $U$ and $U'$,
+The operator \eqref{eq_onestep} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the nonempty legal set $\calC(\xi)$, a finite gear set times a compact interval, is nonexpansive, so for bounded $U$ and $U'$,
 \begin{equation}
-\|\calT_{\hat g} U - \calT_{\hat g} U'\|_\infty \le \gamma_h \|U - U'\|_\infty ,
+\|\calT_h U - \calT_h U'\|_\infty \le \gamma_h \|U - U'\|_\infty ,
 \end{equation}
-and each operation preserves the pointwise order. Therefore, $\calT_{\hat g}^{D_g}$ is a monotone $\gamma_h^{D_g}$ contraction. The maximum over the nonempty finite set $\calC_g(g, \tau_g)$ preserves monotonicity and is nonexpansive in the supremum norm, so $\calT_h$ in \eqref{eq_backup} is a monotone $\gamma_h^{D_g}$ contraction, and the Banach fixed point theorem on the complete space of bounded functions on $\Xi$ yields the unique bounded fixed point $V_h$. Since each application of $\calT_{\hat g}$ returns at most $h$, the fixed point satisfies $V_h \le h$.
+and each operation preserves the pointwise order. Therefore, $\calT_h^{n}$ is a monotone $\gamma_h^{n}$ contraction. By the Banach fixed point theorem on the complete space of bounded functions on $\Xi$, $\calT_h$ has a unique bounded fixed point $V_h$, and since $\calT_h^{n}$ is a contraction with $\calT_h^{n} V_h = V_h$, $V_h$ is also its unique fixed point. Since each application returns at most $h$, the fixed point satisfies $V_h \le h$.
 
-For the undiscounted value, with $\gamma_h = 1$ the locked operator reduces to $(\check\calT_{\hat g} U)(\xi) = \min\{h(\xi), \max_{\dot{\delta}_c \in \calA_\delta} \min_{w \in \calW} U(\Phi(\xi, (\dot{\delta}_c, \hat g), w))\}$. The dynamic programming principle of \eqref{eq_value} over one option, in which the gear is held for $D_g$ steps and the steering command is chosen at every step, gives $V_h^{o} = \max_{\hat g \in \calC_g(g,\tau_g)} \check\calT_{\hat g}^{D_g} V_h^{o}$, which is the fixed point equation of \eqref{eq_backup} with $\gamma_h = 1$. Let $V_h^{o}(\xi) \ge 0$. By compactness, a legal gear $\hat g$ attaining the maximum and a steering command attaining the inner maximum at each step of the option exist. Along this option, every disturbance sequence yields $h(\xi_j) \ge 0$ for $j < D_g$ and $V_h^{o}(\xi_{D_g}) \ge 0$. Repeating the argument from $\xi_{D_g}$ yields an option policy in $\Pi_{\calC}^{o} \subset \Pi_{\calC}$ that keeps the state in $\calS^{o}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{o}$ under dwell constrained admissible policies. Finally, $\calS^{o} \subseteq \{\xi \mid V_h^{*}(\xi) \ge 0\}$ follows from $V_h^{o} \le V_h^{*}$. $\blacksquare$
+For the invariance, $V_h^{*}$ satisfies \eqref{eq_bellman} by the dynamic programming principle. Let $V_h^{*}(\xi) \ge 0$. Then $h(\xi) \ge 0$, and by the attained maximum there is a legal control $c \in \calC(\xi)$ such that $V_h^{*}(\Phi(\xi, c, w)) \ge 0$ for every $w \in \calW$. Selecting such a control at every state defines a policy in $\Pi_{\calC}$ that keeps the state in $\calS^{*}$ for all time against every disturbance, which establishes the robust invariance of $\calS^{*}$ under dwell constrained admissible policies. $\blacksquare$
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
