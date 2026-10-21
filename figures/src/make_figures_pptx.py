@@ -397,7 +397,7 @@ def new_pres(W, H):
 
 # ======================= Fig. 1 =======================
 def make_fig1():
-    """왼쪽 Offline (병렬 시뮬레이터, SMDP 옵션 언롤, 신경망으로 표현한 적대적 RL), 오른쪽 Online (실제 선박 사진)."""
+    """왼쪽 Offline (병렬 시뮬레이터, 매 스텝 합법 기어 언롤, 신경망으로 표현한 적대적 RL), 오른쪽 Online (실제 선박 사진)."""
     W, H = 7.16, 2.45
     prs, slide = new_pres(W, H)
     t = TC(slide)
@@ -425,7 +425,7 @@ def make_fig1():
     # ----- 적대적 RL (SMDP) -----
     s1x, s1y, s1w, s1h = 1.36, 0.34, 3.08, 1.98
     t.rect(s1x, s1y, s1w, s1h, C_OFF, 'FFFFFF', name='rl_smdp')
-    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Dwell constrained RIS', 'b'), '  by adversarial RL on the SMDP')],
+    t.label(s1x + 0.08, s1y + 0.03, 2.9, 0.18, [T(('Dwell constrained RIS', 'b'), '  by adversarial RL with legality masking')],
             size=7.0, color=C_OFF, align='left')
     # twin critics
     t.nn(s1x + 0.26, s1y + 0.30, 0.56, 0.42, C_OFF, name='critic_2')
@@ -447,15 +447,17 @@ def make_fig1():
     t.label(ex - 0.40, s1y + 0.24, 0.80, 0.14, [T(M('𝒮'), '(', I('g'), ', ', I('τ'), ISUB('g'), ')')],
             size=6.5, color=C_OFF)
 
-    # 옵션 언롤: 결정한 기어를 D_g 스텝 유지한 뒤 끝에서 부트스트랩
+    # 언롤: 첫 스텝만 고정한 기어, 이후 매 스텝 합법 기어 g*, n >= D_g 스텝 뒤 부트스트랩
     oy = s1y + 1.22
     t.label(s1x + 0.24, oy - 0.20, 2.8, 0.15,
-            [T('one gear decision = option, gear held for ', I('D'), ISUB('g'), ' steps')],
+            [T('unroll over ', I('n'), ' ≥ ', I('D'), ISUB('g'), ' steps, legal gear chosen at every step')],
             size=6.3, color=C_OFF, align='left')
     bx0, bw, gap = s1x + 0.24, 0.22, 0.05
+    step_labels = [[T(I('g'), ISUB('c'))], [T(I('g'), '*')], [T(I('g'), '*')], [T(I('g'), '*')],
+                   [T(I('g'), '*')], [T('…')]]
     for k in range(6):
-        t.node(bx0 + k * (bw + gap), oy, bw, 0.20, [T(I('ĝ'))], C_OFF, fc=C_OFF_BG, size=6.4,
-               name=f'option_step_{k}')
+        t.node(bx0 + k * (bw + gap), oy, bw, 0.20, step_labels[k], C_OFF,
+               fc=('FFFFFF' if k == 0 else C_OFF_BG), size=6.4, name=f'unroll_step_{k}')
     for k in range(5):
         x0 = bx0 + k * (bw + gap) + bw
         t.arrow((x0, oy + 0.10), (x0 + gap, oy + 0.10), color=C_OFF, lw=0.6)
