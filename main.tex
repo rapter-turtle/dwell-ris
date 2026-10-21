@@ -244,7 +244,7 @@ in which the legal gear is chosen at every step. The discounted safety value $V_
 V_h = \calT_h V_h = \calT_h^{n} V_h = \lim_{k \to \infty} \calT_h^{k}\, U,
 \label{eq_fixed}
 \end{equation}
-where the convergence follows from Lemma~\ref{lem_aug}. The maximum over the steering rate command in \eqref{eq_onestep}, also with $\gamma_h = 1$, is assumed to be attained, which is standard for compact action sets and continuous dynamics \cite{bertsekas1972reach,akametalu2024minimum}.
+where the convergence follows from Lemma~\ref{lem_aug}. {\color{red}The maximum over the steering rate command in \eqref{eq_onestep}, also with $\gamma_h = 1$, is assumed to be attained, which is standard for compact action sets and continuous dynamics \cite{bertsekas1972reach,akametalu2024minimum}.}
 
 \begin{lemma}\label{lem_aug}
 Let $h$ be bounded. Then $\calT_h$ is a monotone $\gamma_h$ contraction and $\calT_h^{n}$ is a monotone $\gamma_h^{n}$ contraction in the supremum norm, and both admit the same unique bounded fixed point $V_h$ with $V_h \le h$. Moreover, $\calS^{*} = \{\xi \mid V_h^{*}(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies.
