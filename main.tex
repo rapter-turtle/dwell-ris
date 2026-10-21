@@ -239,7 +239,7 @@ and the SMDP backup operator $\calT_h$ is given by
 (\calT_h U)(\xi) = \max_{\hat g \in \calC_g(g, \tau_g)} \bigl(\underbrace{\calT_{\hat g} \circ \cdots \circ \calT_{\hat g}}_{D_g\ \text{times}}\, U\bigr)(\xi),
 \label{eq_backup}
 \end{equation}
-where \eqref{eq_locked} is applied once per step of the option, and the composition is denoted by $\calT_{\hat g}^{D_g}$. The selected gear $\hat g$ is thus held for $D_g$ steps, $h$ at every state of the lock enters through the minimum in \eqref{eq_locked}, and $U$ is evaluated only at the state reached after $D_g$ steps. The SMDP safety value $V_h$ is the fixed point of $\calT_h$, and it is obtained from any bounded $U$ by repeated application of \eqref{eq_backup} as
+where \eqref{eq_locked} is applied once per step of the option.The selected gear $\hat g$ is thus held for $D_g$ steps, $h$ at every state of the lock enters through the minimum in \eqref{eq_locked}, and $U$ is evaluated only at the state reached after $D_g$ steps. The SMDP safety value $V_h$ is the fixed point of $\calT_h$, and it is obtained from any bounded $U$ by repeated application of \eqref{eq_backup} as
 \begin{equation}
 V_h = \calT_h V_h = \lim_{k \to \infty} \calT_h^{k}\, U,
 \label{eq_fixed}
@@ -543,7 +543,7 @@ This article presented a dwell constrained RIS framework for safe weathervaning 
 
 \appendix[Proof of Lemma 1]
 
-For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the compact steering interval $\calA_\delta$ is nonexpansive, so for bounded $U$ and $U'$,
+Let $\calT_{\hat g}^{D_g}$ denote the $D_g$ fold composition in \eqref{eq_backup}. For a fixed gear $\hat g$, the locked operator \eqref{eq_locked} is a monotone $\gamma_h$ contraction in the supremum norm by the argument of \cite[Theorem~2]{li2023cdc}, which builds on the discounted construction of \cite{fisac2019}. The instantaneous term $(1-\gamma_h)h$ is fixed, the outer minimum with $h$ is nonexpansive, the minimization over the compact box $\calW$ is nonexpansive, and the maximization over the compact steering interval $\calA_\delta$ is nonexpansive, so for bounded $U$ and $U'$,
 \begin{equation}
 \|\calT_{\hat g} U - \calT_{\hat g} U'\|_\infty \le \gamma_h \|U - U'\|_\infty ,
 \end{equation}
