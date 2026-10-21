@@ -222,7 +222,6 @@ where the dwell enters only through the legal gear set $\calC_g(g, \tau_g)$ and 
 
 This section presents the learning of the dwell constrained safety value and the onboard safety policy.
 
-\subsection{Adversarial Learning of the Dwell Constrained Safety Value}\label{sec_learning}
 The safety value is learned by an adversarial actor critic scheme that follows reachability constrained reinforcement learning \cite{yu2022} and its disturbed extension \cite{li2023cdc}. Neural network critics are regressed onto bootstrapped targets, while a protagonist maximizes and an adversary minimizes the critic.
 
 Since the dwell is already represented in \eqref{eq_bellman} through the legal gear set and the timer update of $\Phi$, \eqref{eq_bellman} characterizes the dwell constrained safety value without further modification. However, an exact solution of \eqref{eq_bellman} is intractable on the high dimensional augmented state, and a difficulty arises when the value is approximated by neural networks. With a one step backup of \eqref{eq_bellman}, the minimum of $h$ over a lock reaches the state where the lock begins only through the learned values at all intermediate locked states, so their approximation errors accumulate along the lock. An overestimate then certifies an unsafe locked state as safe, which occurred in preliminary training near the boundary of the constraint set $\{h \ge 0\}$. To avoid this accumulation, the target unrolls the simulator over $n \ge D_g$ steps, which covers the lock that the first action can start. Since the legal set is enforced at every step of the unroll, the gear is held during the lock and may be held longer or shifted at any step after the lock expires. The minimum of $h$ over the lock is then computed from the simulated states, and the learned value is bootstrapped only at the end of the unroll.
@@ -280,7 +279,7 @@ J_\pi = \mathbb{E}_{\xi}\Bigl[ q\bigl(\xi, (\pi_h(\xi), g^\star(\xi))\bigr) \Big
 and the adversary minimizes $\min_i Q_{h,i}$ at the action $(\pi_h(\xi), g^\star(\xi))$.
 
 \subsubsection{Curricula and Coverage}
-To stabilize the adversarial training, the adversary scale is ramped from zero to one and the discount $\gamma_h$ is ramped toward its final value. Every update resets the $N$ parallel simulators to augmented states sampled over $\Xi$, including the gear, the timer, and states in the middle of a lock.
+To stabilize the adversarial training, the adversary scale is ramped from zero to one, the discount $\gamma_h$ is ramped toward its final value, and the protagonist and the adversary are updated in alternating blocks before final updates of the adversary alone and of the critics alone. Every update samples $N$ augmented states over $\Xi$, including the gear, the timer, and states in the middle of a lock, adds them to a buffer of recent states, and trains on a batch resampled from the buffer, so that hard states near the boundary are revisited. States from rollouts that left the disk under the learned adversary are also replayed in the batch.
 
 \begin{algorithm}[!t]
 \caption{Adversarial Learning of the Dwell Constrained Safety Value}
@@ -288,7 +287,7 @@ To stabilize the adversarial training, the adversary scale is ramped from zero t
 \begin{algorithmic}[1]
 \STATE Initialize critics $Q_{h,1}, Q_{h,2}$, targets $\bar{Q}_{h,1}, \bar{Q}_{h,2}$, protagonist $\pi_h$, adversary $\mu$, adversary scale $\kappa \gets 0$
 \FOR{each update}
-\STATE Sample a batch of augmented states over $\Xi$, including $g$ and $\tau_g$, in the $N$ parallel simulators
+\STATE Sample $N$ augmented states over $\Xi$, including $g$ and $\tau_g$, add them to the buffer, and restore the $N$ parallel simulators to a batch resampled from the buffer
 \STATE At each sampled state, choose a random legal committed gear and perturb the steering command and the disturbance $\kappa\,\mu(\xi)$ by exploration noise
 \STATE Unroll each simulator for $n$ steps, with the committed gear at the first step and the greedy legal gear \eqref{eq_gear} at every later step
 \STATE Form $y$ by the backward fold \eqref{eq_target} with clipping
@@ -304,7 +303,7 @@ To stabilize the adversarial training, the adversary scale is ramped from zero t
 \subsubsection{Certified Set}
 After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. The approximation error of the networks is not bounded, the adversary is learned, and the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$. Therefore, every certified rate is reported on the audited level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, whose margin $\tau > 0$ absorbs these effects and is calibrated by the Monte Carlo audit of Section~\ref{sec_sim}. Since a longer remaining lock only removes legal gear sequences, $V_h$ is nonincreasing in $\tau_g$, so for each gear the slice of the certified set over the physical state shrinks as the remaining lock time grows.
 
-\subsection{Onboard Safety Controller}\label{sec_onboard_ctrl}
+\subsubsection{Onboard Safety Controller}
 
 The deployed controller applies $\pi_h(\xi)$ and $g^\star(\xi)$ of \eqref{eq_gear} at each control period without a separate task policy, so a shift is requested only when it is legal and raises the certified value. Since this policy maximizes the certified margin, it keeps the ASV away from the boundary of the disk.
 
@@ -375,19 +374,21 @@ Parameter & Value \\
 \midrule
 Control period $\Delta t$ & 0.5 s \\
 Integration & RK4, 10 substeps per period \\
-Keep in radius $R$ & \pending{TBD} m \\
-Value floor $h_{\mathrm{floor}}$ & \pending{TBD} m \\
+Keep in radius $R$ & 4 m \\
+Value floor $h_{\mathrm{floor}}$ & 2 m \\
 Disturbance bounds $(\bar{w}_X, \bar{w}_Y, \bar{w}_N)$ & \pending{TBD} \\
-Discount $\gamma_h$ curriculum & 0.95 to 0.995 \\
-Adversary scale curriculum & 0 to 1 \\
-Network sizes & \pending{TBD} \\
+Steering limits $(\delta_{\max}, \dot{\delta}_{\max})$ & $25^\circ$, $10^\circ$/s \\
 Gear dwell $D_g$ & 6 steps \\
-Steering limits $(\delta_{\max}, \dot{\delta}_{\max})$ & \pending{TBD} \\
-Parallel simulators, unroll horizon $n$ & \pending{TBD} \\
-Learning rates, soft update $\rho$ & \pending{TBD} \\
-Training steps, seeds & \pending{TBD} \\
-Audit margin $\tau$ & \pending{TBD} \\
-Monte Carlo audit & \pending{TBD} scenarios, \pending{TBD} s \\
+Unroll horizon $n$ & 16 steps \\
+Parallel simulators $N$, buffer & 1024, $150N$ states \\
+Hidden layers of critics, policies & $3 \times 256$, $3 \times 128$ \\
+Learning rates of critics, protagonist, adversary & $5{\times}10^{-4}$, $2{\times}10^{-4}$, $3{\times}10^{-4}$ \\
+Soft update $\rho$ & 0.005 \\
+Discount $\gamma_h$ curriculum & 0.90 to 0.995 over 6000 updates \\
+Adversary scale $\kappa$ curriculum & 0 for 2000 updates, then to 1 over 12000 updates \\
+Training updates & 40000, alternating blocks of 500, then 8000 adversary and 4000 critic updates \\
+Audit margin $\tau$ & 0.5 m \\
+Monte Carlo audit & 512 states, 210 steps (105 s) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -482,7 +483,7 @@ AHRS & \makecell[l]{MicroStrain 3DM GX5\\0.02~mg accelerometer resolution\\0.003
 \end{tabular}
 \end{table}
 
-The experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and the proposed controller on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For the proposed controller the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} The proposed controller ran the safety policy of Section~\ref{sec_onboard_ctrl} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
+The experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and the proposed controller on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For the proposed controller the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} The proposed controller ran the safety policy of Section~\ref{sec_method} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
 
 \begin{figure}[!t]
 \centering
