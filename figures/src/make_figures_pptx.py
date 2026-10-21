@@ -474,8 +474,8 @@ def make_fig1():
     t.arrow((vx + 0.15, fy), (bx0, fy), color=C_OFF, lw=0.8)
     t.label(bx0 + 0.60, fy - 0.01, 1.4, 0.14, [T('backward fold')], size=5.9, color=C_OFF)
     t.label(s1x + 0.08, fy + 0.10, 2.95, 0.15,
-            [T(I('g'), ISUB('j'), ' = (1 − ', I('γ'), ISUB('h'), ') ', I('h'), ISUB('j'), ' + ', I('γ'), ISUB('h'),
-               ' min{', I('h'), ISUB('j'), ', ', I('g'), ISUB('j+1'), '},   ', I('y'), ' = ', I('g'), ISUB('0'))],
+            [T(I('y'), ISUB('j'), ' = (1 − ', I('γ'), ISUB('h'), ') ', I('h'), ISUB('j'), ' + ', I('γ'), ISUB('h'),
+               ' min{', I('h'), ISUB('j'), ', ', I('y'), ISUB('j+1'), '},   ', I('y'), ' = ', I('y'), ISUB('0'))],
             size=6.3, color=C_OFF)
     # 타깃이 critic 으로
     t.arrow((s1x + 0.14, oy), (s1x + 0.14, s1y + 0.78), color=C_OFF)

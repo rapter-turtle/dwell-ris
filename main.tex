@@ -255,15 +255,15 @@ The proof is given in the Appendix. As $\gamma_h$ approaches one, $V_h$ is expec
 The fixed point of \eqref{eq_onestep} is learned as summarized in Algorithm~\ref{alg_ris}. Every network receives the augmented state with the heading encoded by its sine and cosine and the gear by a one hot vector.
 
 \subsubsection{Safety Critics}
-Two safety critics $Q_{h,1}(\xi, c, w)$ and $Q_{h,2}(\xi, c, w)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of the joint action and disturbance, and their minimum is used wherever a critic value is needed. The regression target is the backward fold of \eqref{eq_nstep} along a simulator unroll of $n \ge D_g$ steps from a sampled state $\xi_0$. The committed action is applied at the first step, the greedy legal gear \eqref{eq_gear} and the protagonist $\pi_h$ act at every later step, and the adversary $\mu$ acts at every step. With the target value $\bar V(\xi) = \max_{g' \in \calC_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the target is formulated as
+Two safety critics $Q_{h,1}(\xi, c, w)$ and $Q_{h,2}(\xi, c, w)$ with target copies $\bar{Q}_{h,1}$ and $\bar{Q}_{h,2}$ approximate the value of applying the control $c = (\dot{\delta}_c, g_c)$ and the disturbance $w$ at $\xi$, and their minimum is used wherever a critic value is needed. The regression target is the backward fold of \eqref{eq_nstep} along a simulator unroll of $n \ge D_g$ steps from a sampled state $\xi_0$. The committed action is applied at the first step, the greedy legal gear \eqref{eq_gear} and the protagonist $\pi_h$ act at every later step, and the adversary $\mu$ acts at every step. With the target value $\bar V(\xi) = \max_{g' \in \calC_g(g,\tau_g)} \min_i \bar{Q}_{h,i}(\xi, (\pi_h(\xi), g'), \mu(\xi))$ at the end of the unroll, the regression target $y$ of the critics at the sampled state and the committed action is computed by the backward recursion
 \begin{equation}
 \begin{aligned}
-g_n &= \bar V(\xi_n), \qquad y = g_0, \\
-g_j &= (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ g_{j+1} \},
+y_n &= \bar V(\xi_n), \qquad y = y_0, \\
+y_j &= (1-\gamma_h) h(\xi_j) + \gamma_h \min\{ h(\xi_j),\ y_{j+1} \},
 \end{aligned}
 \label{eq_target}
 \end{equation}
-for $j = n-1, \ldots, 0$, where $\xi_j$ is the unrolled state at step $j$. The target $y$ thus evaluates \eqref{eq_nstep} along the unroll with $U$ given by $\bar V$ and with $\pi_h$, $g^\star$, and $\mu$ in place of the maximization and minimization, so each regression approximates one iteration of \eqref{eq_fixed}. The bootstrap term is clipped to $[-h_{\mathrm{floor}}, R]$ and $h$ is floored at $-h_{\mathrm{floor}}$ outside the disk, which keeps the value bounded as required by Lemma~\ref{lem_aug}. The critics are regressed onto $y$ at the committed action by a squared loss, and the target copies follow them by a soft update.
+for $j = n-1, \ldots, 0$, where $\xi_j$ is the unrolled state at step $j$ and $y_j$ is the value of the unroll from step $j$ onward. The target $y$ thus evaluates \eqref{eq_nstep} along the unroll with $U$ given by $\bar V$ and with $\pi_h$, $g^\star$, and $\mu$ in place of the maximization and minimization, so each regression approximates one iteration of \eqref{eq_fixed}. The bootstrap term is clipped to $[-h_{\mathrm{floor}}, R]$ and $h$ is floored at $-h_{\mathrm{floor}}$ outside the disk, which keeps the value bounded as required by Lemma~\ref{lem_aug}. The critics are regressed onto $y$ by a squared loss, and the target copies follow them by a soft update.
 
 \subsubsection{Protagonist and Adversary}
 The protagonist $\pi_h$ and the adversary $\mu$ are deterministic policies whose outputs are scaled by $\tanh$ into $\calA_\delta$ and the box $\calW$, respectively. Let $q(\xi, c) = \min_i Q_{h,i}(\xi, c, \mu(\xi))$ denote the minimum critic at the adversary disturbance. The greedy legal gear is selected as
