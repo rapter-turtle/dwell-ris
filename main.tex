@@ -236,10 +236,10 @@ The value is computed by repeatedly applying an update of the form \eqref{eq_bel
 \end{equation}
 and the SMDP backup operator $\calT_h$ is given by
 \begin{equation}
-(\calT_h U)(\xi) = \max_{\hat g \in \calC_g(g, \tau_g)} \bigl(\calT_{\hat g}^{D_g} U\bigr)(\xi),
+(\calT_h U)(\xi) = \max_{\hat g \in \calC_g(g, \tau_g)} \bigl(\underbrace{\calT_{\hat g} \circ \cdots \circ \calT_{\hat g}}_{D_g\ \text{times}}\, U\bigr)(\xi),
 \label{eq_backup}
 \end{equation}
-where $\calT_{\hat g}^{D_g}$ denotes $D_g$ successive applications of $\calT_{\hat g}$. The SMDP safety value $V_h$ is the fixed point of $\calT_h$, and it is obtained from any bounded $U$ by repeated application of \eqref{eq_backup} as
+where \eqref{eq_locked} is applied once per step of the option, and the composition is denoted by $\calT_{\hat g}^{D_g}$. The selected gear $\hat g$ is thus held for $D_g$ steps, $h$ at every state of the lock enters through the minimum in \eqref{eq_locked}, and $U$ is evaluated only at the state reached after $D_g$ steps. The SMDP safety value $V_h$ is the fixed point of $\calT_h$, and it is obtained from any bounded $U$ by repeated application of \eqref{eq_backup} as
 \begin{equation}
 V_h = \calT_h V_h = \lim_{k \to \infty} \calT_h^{k}\, U,
 \label{eq_fixed}
