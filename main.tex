@@ -413,9 +413,9 @@ In the closed loop study, the wind is an earth fixed acceleration proportional t
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_sim_lock.pdf}
-\caption{Effect of ignoring the dwell from the same start under the gust profile with current, with the distance to the setpoint of \risnd and \dcris (top, $R$ dashed) and their gears (middle and bottom) with the 3~s lock after each shift shaded. The dotted vertical line marks the first exit of \risnd at 36~s, which occurs during a lock.}
-\label{fig_sim_lock}
+\includegraphics[width=\linewidth]{figures/fig_sim_compare.pdf}
+\caption{Overall comparison of \dcris, \risnd, \pid, and \ciampc from the starts in $\hat{\calS}_{0.1}$ under all five wind profiles with current pooled, giving 320 runs per controller. (a) Share of runs that have not left the disk up to each time. (b) Cumulative distribution of the maximum distance to the setpoint reached in each run, with $R$ dashed.}
+\label{fig_sim_compare}
 \end{figure}
 
 \begin{figure}[!t]
@@ -456,7 +456,7 @@ Exits within a lock (\%)$^{\dagger}$ & 95 & 70 & 66 & n/a \\
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk from every certified start under all wind profiles with current, and from nearly all uncertified starts in the disk. The poorest result was obtained with \risnd, which left the disk in most runs and nearly always within a lock because its value assumes an immediate shift, as illustrated in Fig.~\ref{fig_sim_lock}, while the detuned \pid and \ciampc left the disk in part of the runs. In contrast, \dcris kept a larger RMS distance than \pid and \ciampc at a similar shift rate, because its policy maximizes the margin to the boundary instead of tracking the setpoint.
+As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk from every certified start and from nearly all uncertified starts under all wind profiles with current. The poorest result was obtained with \risnd, which left the disk in most runs and nearly always within a lock, as listed in Table~\ref{tab_sim}(b), because its value assumes an immediate shift, while the detuned \pid and \ciampc left the disk in part of the runs. As shown in Fig.~\ref{fig_sim_compare}(a), these exits accumulated over the whole run for every baseline, whereas every run of \dcris remained inside. However, \dcris kept a larger RMS distance than \pid and \ciampc at a similar shift rate, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) accordingly ends just short of $R$ in all runs, while that of \pid and \ciampc has a long tail beyond $R$.
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
