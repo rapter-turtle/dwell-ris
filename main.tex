@@ -402,6 +402,13 @@ To audit the learned certificate, 512 states of $\hat{\calS}_\tau$ were rolled o
 
 As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies nearly the whole disk in every slice, whatever the gear and the motion, because its value assumes that a shift takes effect immediately. In contrast, the set of \dcris is smaller, depends on the gear and on the remaining lock time, and shrinks further when a lock has just started. The strongest case is the ASV moving ahead in $\gF$, which cannot reverse until the lock ends, so the set of \dcris nearly vanishes and keeps only the states behind the setpoint, from which the forward motion carries the ASV toward the setpoint.
 
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_sim_set.pdf}
+\caption{Slices of the certified sets $\{\xi \mid \hat V_h(\xi) \ge 0\}$ over the position error $(\tilde{x}, \tilde{y})$ with the heading along $\tilde{x}$, zero steering angle, and zero yaw rate, for the ASV at rest (top) and moving ahead at 0.3~m/s (bottom) in gears $\gR$, $\gN$, and $\gF$ (left to right). Each panel shows the set of \dcris with the gear free (light fill), the set of \dcris just after a shift with the lock of the dwell still running (dark fill), and the set of \risnd for the same gear (dashed), which has no timer, so the lock cannot change it. The keep in circle $h = 0$ of radius $R = 4$~m is dotted and is mostly hidden under the boundary of \risnd, and the arrow marks the velocity of the ASV. Small isolated regions are removed and the boundaries are smoothed for display.}
+\label{fig_sim_set}
+\end{figure}
+
 In the closed loop study, the wind is an earth fixed acceleration proportional to $V|V|$ from one of eight directions per start, where the steady value of the wind speed $V$ corresponds to the surge upper bound of $\calW$. Five profiles of 105 s are used, a steady wind, gusts (Ornstein Uhlenbeck with standard deviation 1 m/s and time constant 5 s), squalls (2 m/s and 2 s), a veer of $90^\circ$ over the run, and a shift of $90^\circ$ at 52 s. A current of 0.35 m/s, the median identified current, acts from an independent direction through the damping and coupling of the plant, and the sum is clipped to $\calW$. All controllers start from the same 64 states at rest with random heading, neutral gear, and released timer under the same disturbance realizations. The starts are spread over the disk of radius 3 m or drawn from 4000 such candidates with $\hat V_h \ge \tau$ for $\tau = 0.1$ and $0.2$ m.
 
 \begin{figure}[!t]
@@ -416,13 +423,6 @@ In the closed loop study, the wind is an earth fixed acceleration proportional t
 \includegraphics[width=\linewidth]{figures/fig_sim_compare.pdf}
 \caption{Overall comparison of \dcris, \risnd, \pid, and \ciampc from the starts in $\hat{\calS}_{0.1}$ under all five wind profiles with current pooled, giving 320 runs per controller. (a) Share of runs that have not left the disk up to each time. (b) Cumulative distribution of the maximum distance to the setpoint reached in each run, with $R$ dashed.}
 \label{fig_sim_compare}
-\end{figure}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig_sim_set.pdf}
-\caption{Slices of the certified sets $\{\xi \mid \hat V_h(\xi) \ge 0\}$ over the position error $(\tilde{x}, \tilde{y})$ with the heading along $\tilde{x}$, zero steering angle, and zero yaw rate, for the ASV at rest (top) and moving ahead at 0.3~m/s (bottom) in gears $\gR$, $\gN$, and $\gF$ (left to right). Each panel shows the set of \dcris with the gear free (light fill), the set of \dcris just after a shift with the lock of the dwell still running (dark fill), and the set of \risnd for the same gear (dashed), which has no timer, so the lock cannot change it. The keep in circle $h = 0$ of radius $R = 4$~m is dotted and is mostly hidden under the boundary of \risnd, and the arrow marks the velocity of the ASV. Small isolated regions are removed and the boundaries are smoothed for display.}
-\label{fig_sim_set}
 \end{figure}
 
 \begin{table}[!t]
