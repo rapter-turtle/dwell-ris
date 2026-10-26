@@ -131,7 +131,7 @@ Once a gear is engaged, the engine runs at least at idle and the propeller deliv
 \label{fig_frames}
 \end{figure}
 
-The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. Following the MMG standard method \cite{yasukawa2015mmg}, the motion equations with the origin at the center of gravity are formulated as
+The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. With the origin at the center of gravity, the motion equations are written in the standard form of ship maneuvering models \cite{yasukawa2015mmg} as
 \begin{subequations}\label{eq_model}
 \begin{align}
 m_{11}\dot{u} - m_{22} v r &= X_H + f_X + w_X, \\
@@ -152,7 +152,7 @@ N_H &= N_v v + N_{v|v|}|v|v + N_r r + N_{r|r|}|r|r + N_{uv} u v,
 \end{aligned}
 \label{eq_hull}
 \end{equation}
-where $X_u$ to $N_{r|r|}$ are the linear and nonlinear drag derivatives. The derivatives $X_{vr}$ and $Y_{ur}$ represent the lift on the hull, which grows with the forward speed and partly offsets the inertial coupling \cite{fossen2011}, and $N_{uv}$ is the net yaw moment in $uv$ including the Munk moment of the added mass \cite{yasukawa2015mmg}. Since each lift term multiplies the same product of velocities as an inertial coupling term, the regression identifies only their sums, from which $X_{vr}$ and $Y_{ur}$ follow with the identified masses.
+where $X_u$ to $N_{r|r|}$ are the linear and nonlinear drag derivatives. The derivatives $X_{vr}$ and $Y_{ur}$ represent the lift on the hull, which grows with the forward speed and partly offsets the inertial coupling \cite{fossen2011,yasukawa2015mmg}, and $N_{uv}$ is the net yaw moment in $uv$ including the Munk moment of the added mass \cite{yasukawa2015mmg}. Since each lift term multiplies the same product of velocities as an inertial coupling term, the regression identifies only their sums, from which $X_{vr}$ and $Y_{ur}$ follow with the identified masses.
 
 By vectoring the propeller thrust through the steering angle of the drive, the control force and moment are expressed as
 \begin{equation}
