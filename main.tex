@@ -131,33 +131,28 @@ Once a gear is engaged, the engine runs at least at idle and the propeller deliv
 \label{fig_frames}
 \end{figure}
 
-The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. Following \cite{lee2024canal}, the model is formulated as
+The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. Following the MMG standard method \cite{yasukawa2015mmg}, the motion equations with the origin at the center of gravity are formulated as
 \begin{subequations}\label{eq_model}
 \begin{align}
-M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= f_c + w, \\
+m_{11}\dot{u} - m_{22} v r &= X_H + f_X + w_X, \\
+m_{22}\dot{v} + m_{11} u r &= Y_H + f_Y + w_Y, \\
+m_{33}\dot{r} &= N_H + f_N + w_N, \\
 \dot{\eta} &= J(\psi)\nu, \\
 J(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
 \end{subequations}
-where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $f_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $J(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $f_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, $m_{11} = m + m_x$ and $m_{22} = m + m_y$ are the mass $m$ of the ASV plus the added masses in surge and sway, and $m_{33} = I_z + J_z$ is the moment of inertia plus the added moment of inertia. Here, $f_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $J(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $f_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
 
-Assuming that the ASV is symmetric in the $x$ and $y$ directions, $M$, $C(\nu)$, and $D(\nu)$ can be expressed as
-\begin{equation}
-M = \operatorname{diag}(m_{11}, m_{22}, m_{33}),
-\label{eq_mass}
-\end{equation}
-\begin{equation}
-C(\nu) = \begin{bmatrix} 0 & 0 & -c_{vr} v \\ 0 & 0 & c_{ur} u \\ 0 & c_{uv} u & 0 \end{bmatrix},
-\label{eq_coriolis}
-\end{equation}
+The hull forces and moment are expressed as
 \begin{equation}
 \begin{aligned}
-D(\nu) &= -\begin{bmatrix} X_u & 0 & 0 \\ 0 & Y_v & Y_r \\ 0 & N_v & N_r \end{bmatrix} \\
-&\quad - \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & Y_{r|r|}|r| \\ 0 & N_{v|v|}|v| & N_{r|r|}|r| \end{bmatrix},
+X_H &= X_u u + X_{u|u|}|u|u + X_{vr} v r, \\
+Y_H &= Y_v v + Y_{v|v|}|v|v + Y_r r + Y_{r|r|}|r|r + Y_{ur} u r, \\
+N_H &= N_v v + N_{v|v|}|v|v + N_r r + N_{r|r|}|r|r + N_{uv} u v,
 \end{aligned}
-\label{eq_damping}
+\label{eq_hull}
 \end{equation}
-where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, $Y_{r|r|}$, $N_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively. The effective coupling coefficients $c_{vr}$, $c_{ur}$, and $c_{uv}$ combine the Coriolis and centripetal coupling of the rigid body and added mass with the lift acting on the hull, which grows with the forward speed and partly offsets that coupling \cite{fossen2011}. Without the lift, they reduce to $c_{vr} = m_{22}$, $c_{ur} = m_{11}$, and $c_{uv} = m_{22} - m_{11}$. Since the two contributions multiply the same products of velocities, only their sums can be identified from motion data.
+where $X_u$ to $N_{r|r|}$ are the linear and nonlinear drag derivatives. The derivatives $X_{vr}$ and $Y_{ur}$ represent the lift on the hull, which grows with the forward speed and partly offsets the inertial coupling \cite{fossen2011}, and $N_{uv}$ is the net yaw moment in $uv$ including the Munk moment of the added mass \cite{yasukawa2015mmg}. Since each lift term multiplies the same product of velocities as an inertial coupling term, the regression identifies only their sums, from which $X_{vr}$ and $Y_{ur}$ follow with the identified masses.
 
 By vectoring the propeller thrust through the steering angle of the drive, the control force and moment are expressed as
 \begin{equation}
@@ -325,7 +320,7 @@ The proposed framework was validated through numerical simulations and full scal
 % \end{subequations}
 % where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. The identification data, the sequential procedure, and the resulting parameter values are reported in Section~\ref{sec_si_results}.
 % ---- end of kept block ----
-To identify the parameters of \eqref{eq_mass} to \eqref{eq_force}, about 33 min of zigzag and random maneuvers were recorded on the ASV in calm conditions. The runs with the smallest disturbance were used together with forward gear segments of further runs to cover the forward thrust, and the velocity was taken from the onboard extended Kalman filter. The parameters in Table~\ref{tab_si} were estimated by least squares regression of the measured accelerations onto the terms of \eqref{eq_mass} to \eqref{eq_force}, separately for each axis, under three physical constraints. The added mass is nonnegative with $m_{22} \ge m_{11}$, the diagonal damping is nonnegative, and each effective coupling coefficient lies between zero and its value without lift, so that the lift may weaken but not reverse the inertial coupling. The yaw coupling was further kept at $c_{uv} \ge (m_{22} - m_{11})/4$, since the data hardly determine it and the lift should not cancel the Munk moment entirely. In addition, $m_{11}$ was fixed to the mass of the ASV and $l_d$ to the position of the drive, and a constant current over every 15 min of data was estimated as a nuisance term alternating with the regression.
+To identify the parameters of \eqref{eq_model} to \eqref{eq_force}, about 33 min of zigzag and random maneuvers were recorded on the ASV in calm conditions. The runs with the smallest disturbance were used together with forward gear segments of further runs to cover the forward thrust, and the velocity was taken from the onboard extended Kalman filter. The parameters in Table~\ref{tab_si} were estimated by least squares regression of the measured accelerations onto the terms of \eqref{eq_model} to \eqref{eq_force}, separately for each axis, under three physical constraints. The added mass is nonnegative with $m_{22} \ge m_{11}$, the diagonal drag derivatives $X_u$, $X_{u|u|}$, $Y_v$, $Y_{v|v|}$, $N_r$, and $N_{r|r|}$ are nonpositive, and the lift weakens but does not reverse the inertial coupling, with $-m_{22} \le X_{vr} \le 0$ and $0 \le Y_{ur} \le m_{11}$. The yaw coupling was further kept between the full Munk moment and a quarter of it, $-(m_{22} - m_{11}) \le N_{uv} \le -(m_{22} - m_{11})/4$, since the data hardly determine it. In addition, $m_{11}$ was fixed to the mass of the ASV and $l_d$ to the position of the drive, and a constant current over every 15 min of data was estimated as a nuisance term alternating with the regression.
 
 The disturbance was then obtained in reverse as the force and moment $w$ that \eqref{eq_model} requires to reproduce the measured motion within the velocity range of weathervaning. Its distribution is shown in Fig.~\ref{fig_si}. The bounds of the disturbance set $\calW$ were set to enclose the residual, and the samples beyond them, 1 to 2 percent in each axis, were regarded as noise. Because the heading was left free, the ASV kept its stern toward the current, which biased the surge residual toward a forward push, so the bounds of $\calW$ are not symmetric.
 
@@ -349,9 +344,9 @@ Item & Estimated value & Item & Estimated value \\
 $m_{11}$ & $1800$~kg & $X_u$ & $-108.4$~kg/s \\
 $m_{22}$ & $1987.3$~kg & $Y_v$ & $-48.7$~kg/s \\
 $m_{33}$ & $13620.4$~kg\,m$^2$ & $Y_r$ & $204.5$~kg\,m/s \\
-$c_{vr}$ & $1986.2$~kg & $N_v$ & $477.9$~kg\,m/s \\
-$c_{ur}$ & $686.1$~kg & $N_r$ & $-303.4$~kg\,m$^2$/s \\
-$c_{uv}$ & $46.8$~kg & $X_{u|u|}$ & $-13.0$~kg/m \\
+$X_{vr}$ & $-1.1$~kg & $N_v$ & $477.9$~kg\,m/s \\
+$Y_{ur}$ & $1113.9$~kg & $N_r$ & $-303.4$~kg\,m$^2$/s \\
+$N_{uv}$ & $-46.8$~kg & $X_{u|u|}$ & $-13.0$~kg/m \\
 $F_{\gF}$ & $276.1$~N & $Y_{v|v|}$ & $-545.1$~kg/m \\
 $F_{\gR}$ & $-178.4$~N & $Y_{r|r|}$ & $-545.1$~kg\,m \\
 $l_d$ & $3.0$~m & $N_{v|v|}$ & $0$~kg \\
