@@ -400,19 +400,19 @@ As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies nearly the whole disk
 \label{fig_sim_set}
 \end{figure}
 
-In the closed loop study, each run lasts 300 s at the same control period, and the wind is an earth fixed acceleration proportional to $V|V|$, where the steady value of the wind speed $V$ corresponds to the surge upper bound of $\calW$. Five profiles are used, a steady wind, gusts (Ornstein Uhlenbeck with standard deviation 1 m/s and time constant 5 s), squalls (2 m/s and 2 s), a veer of $90^\circ$ over the run, and a shift of $90^\circ$ at 150 s. A current of 0.35 m/s, the median identified current, acts from a direction independent of the wind through the damping and coupling of the plant, and the sum is clipped to $\calW$. Ten runs are reported, two per profile with different wind and current directions, and every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer. All controllers use the same starts and disturbance realizations.
+In the closed loop study, each run lasts 300 s, and the wind is an earth fixed acceleration proportional to $V|V|$ for the wind speed $V$, whose steady value gives the surge upper bound of $\calW$. It also exerts a yaw moment proportional to its acceleration and to the sine of twice its angle to the heading, reaching the yaw bound of $\calW$ at the strongest wind. Five profiles are used, a steady wind, gusts (Ornstein Uhlenbeck with standard deviation 1 m/s and time constant 5 s), squalls (2 m/s and 2 s), a veer of $90^\circ$ over the run, and a shift of $90^\circ$ at 150 s. A current of 0.35 m/s, the median identified current, flows in the direction of the wind, and the sum is clipped to $\calW$. Each controller is run 60 times in six sets of ten, each set using every profile twice with the wind directions spread over the circle and rotated randomly between sets. Every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer, and all controllers share the same starts and disturbances.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_traj.pdf}
-\caption{Simulated trajectories of \dcris, \risnd, \pid, and \ciampc in the setpoint frame over the ten runs of 300 s under wind and current, with the keep in circle of radius $R = 4$~m dashed and the number of runs inside given in each panel. Runs that stay inside are drawn with thin lines, the segments after the first exit with thick dark lines and a cross at the exit, and the black dots mark the starts.}
+\caption{Simulated trajectories of \dcris, \risnd, \pid, and \ciampc in the setpoint frame, with the keep in circle of radius $R = 4$~m dashed and the number of runs inside given in each panel. Each panel shows ten of the 60 runs of 300 s, the runs that left the disk in the same share as over all runs and farthest first, then the safe runs closest to the boundary. Runs that stay inside are drawn thin, the segments after the first exit thick and dark with a cross at the exit, and the black dots mark the starts.}
 \label{fig_sim_traj}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_compare.pdf}
-\caption{Comparison of \dcris, \risnd, \pid, and \ciampc over the ten runs of Fig.~\ref{fig_sim_traj}. (a) Share of runs that have not left the disk up to each time. (b) Maximum distance to the setpoint reached in each run, with $R$ dashed, the runs beyond 8 m marked at the top, and the number of runs inside given above each controller.}
+\caption{Comparison of \dcris, \risnd, \pid, and \ciampc over the 60 runs of each controller. (a) Share of runs that have not left the disk up to each time. (b) Maximum distance to the setpoint reached in each run, with $R$ dashed, the runs beyond 8 m marked at the top, and the share of runs inside given above each controller.}
 \label{fig_sim_compare}
 \end{figure}
 
@@ -434,18 +434,18 @@ False safety rate (\%) & 0.0$^{*}$ & n/a & n/a & 0.2 \\
 Value correlation & 0.97$^{*}$ & n/a & n/a & 0.52 \\
 \midrule
 \multicolumn{5}{l}{(b) Closed loop under wind and current} \\
-Runs inside for 300 s (\%) & 10 & 70 & 60 & \textbf{100} \\
-RMS distance (m) & 3.12 & 1.54 & 1.79 & 1.82 \\
-Max distance (m) & 6.11 & 4.03 & 3.80 & 3.38 \\
-Time in $\gR$ or $\gF$ (\%) & 55.8 & 68.1 & 65.3 & 68.2 \\
-Switches per minute & 15.6 & 12.4 & 12.9 & 10.7 \\
-Exits within a lock (\%) & 78 & 67 & 25 & n/a \\
+Runs inside for 300 s (\%) & 10 & 72 & 57 & \textbf{100} \\
+RMS distance (m) & 2.69 & 1.66 & 1.95 & 1.91 \\
+Max distance (m) & 5.26 & 3.57 & 3.92 & 3.49 \\
+Time in $\gR$ or $\gF$ (\%) & 54.2 & 71.0 & 65.5 & 70.4 \\
+Switches per minute & 15.3 & 11.4 & 12.7 & 10.2 \\
+Exits within a lock (\%) & 80 & 12 & 27 & n/a \\
 \bottomrule
-\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize Ten runs of 300 s, per run mean. $^{*}$ Audited on a plant without the dwell.} \\
+\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize 60 runs of 300 s. Distances are medians over the runs and the other metrics are means. $^{*}$ Audited on a plant without the dwell.} \\
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under wind and current. The poorest result was obtained with \risnd, which left the disk in most runs and mostly within a lock, as listed in Table~\ref{tab_sim}(b), because its value assumes an immediate shift. \pid and \ciampc left the disk in part of the runs at different times over the run, and \ciampc lost runs late in the run, as shown in Fig.~\ref{fig_sim_compare}(a). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts per minute, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) accordingly stays short of $R$ in every run, while some runs of \pid and \ciampc exceed $R$.
+As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run. The poorest result was obtained with \risnd, which left the disk in most runs, mostly within a lock, because its value assumes an immediate shift, and some of its runs drifted far from the setpoint. \pid and \ciampc left the disk in part of the runs, mostly outside locks, and usually returned after excursions of a few meters, crossing the boundary repeatedly, and the exits of every baseline accumulated over the run (Fig.~\ref{fig_sim_compare}(a)). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts per minute, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) stays short of $R$ in every run, while part of the runs of \pid and \ciampc exceed $R$.
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
