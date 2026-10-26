@@ -131,28 +131,29 @@ Once a gear is engaged, the engine runs at least at idle and the propeller deliv
 \label{fig_frames}
 \end{figure}
 
-The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. With the origin at the center of gravity, the motion equations are written in the standard form of ship maneuvering models \cite{yasukawa2015mmg} as
+The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. Following \cite{lee2024canal}, the model is formulated as
 \begin{subequations}\label{eq_model}
 \begin{align}
-m_{11}\dot{u} - m_{22} v r &= X_H + f_X + w_X, \\
-m_{22}\dot{v} + m_{11} u r &= Y_H + f_Y + w_Y, \\
-m_{33}\dot{r} &= N_H + f_N + w_N, \\
+M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= f_c + w, \\
 \dot{\eta} &= J(\psi)\nu, \\
 J(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
 \end{subequations}
-where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, $m_{11} = m + m_x$ and $m_{22} = m + m_y$ are the mass $m$ of the ASV plus the added masses in surge and sway, and $m_{33} = I_z + J_z$ is the moment of inertia plus the added moment of inertia. Here, $f_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $J(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $f_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $f_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $J(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $f_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
 
-The hull forces and moment are expressed as
+Assuming that the ASV is symmetric in the $x$ and $y$ directions, $M = \operatorname{diag}(m_{11}, m_{22}, m_{33})$, and $C(\nu)$ and $D(\nu)$ can be expressed as
+\begin{equation}
+C(\nu) = \begin{bmatrix} 0 & 0 & -m_{22} v \\ 0 & 0 & m_{11} u \\ m_{22} v & -m_{11} u & 0 \end{bmatrix},
+\label{eq_coriolis}
+\end{equation}
 \begin{equation}
 \begin{aligned}
-X_H &= X_u u + X_{u|u|}|u|u + X_{vr} v r, \\
-Y_H &= Y_v v + Y_{v|v|}|v|v + Y_r r + Y_{r|r|}|r|r + Y_{ur} u r, \\
-N_H &= N_v v + N_{v|v|}|v|v + N_r r + N_{r|r|}|r|r + N_{uv} u v,
+D(\nu) &= -\begin{bmatrix} X_u & 0 & X_{vr} v \\ 0 & Y_v & Y_r + Y_{ur} u \\ 0 & N_v + N_{uv} u & N_r \end{bmatrix} \\
+&\quad - \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & Y_{r|r|}|r| \\ 0 & N_{v|v|}|v| & N_{r|r|}|r| \end{bmatrix},
 \end{aligned}
-\label{eq_hull}
+\label{eq_damping}
 \end{equation}
-where $X_u$ to $N_{r|r|}$ are the linear and nonlinear drag derivatives. The derivatives $X_{vr}$ and $Y_{ur}$ represent the lift on the hull, which grows with the forward speed and partly offsets the inertial coupling \cite{fossen2011,yasukawa2015mmg}, and $N_{uv}$ is the net yaw moment in $uv$ including the Munk moment of the added mass \cite{yasukawa2015mmg}. Since each lift term multiplies the same product of velocities as an inertial coupling term, the regression identifies only their sums, from which $X_{vr}$ and $Y_{ur}$ follow with the identified masses.
+where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, $Y_{r|r|}$, $N_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively. Since the lift on the hull grows with the forward speed, the cross derivatives include the speed dependent terms $X_{vr} v$, $Y_{ur} u$, and $N_{uv} u$, which partly offset the inertial coupling of $C(\nu)$ \cite[Sec.~7.1.2]{fossen2011}, \cite{yasukawa2015mmg}. These terms multiply the same products of velocities as $C(\nu)$, so only their sums with the inertial coupling are identified, and $X_{vr}$, $Y_{ur}$, and $N_{uv}$ follow from these sums and the identified masses.
 
 By vectoring the propeller thrust through the steering angle of the drive, the control force and moment are expressed as
 \begin{equation}
@@ -320,7 +321,7 @@ The proposed framework was validated through numerical simulations and full scal
 % \end{subequations}
 % where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. The identification data, the sequential procedure, and the resulting parameter values are reported in Section~\ref{sec_si_results}.
 % ---- end of kept block ----
-To identify the parameters of \eqref{eq_model} to \eqref{eq_force}, about 33 min of zigzag and random maneuvers were recorded on the ASV in calm conditions. The runs with the smallest disturbance were used together with forward gear segments of further runs to cover the forward thrust, and the velocity was taken from the onboard extended Kalman filter. The parameters in Table~\ref{tab_si} were estimated by least squares regression of the measured accelerations onto the terms of \eqref{eq_model} to \eqref{eq_force}, separately for each axis, under three physical constraints. The added mass is nonnegative with $m_{22} \ge m_{11}$, the diagonal drag derivatives $X_u$, $X_{u|u|}$, $Y_v$, $Y_{v|v|}$, $N_r$, and $N_{r|r|}$ are nonpositive, and the lift weakens but does not reverse the inertial coupling, with $-m_{22} \le X_{vr} \le 0$ and $0 \le Y_{ur} \le m_{11}$. The yaw coupling was further kept between the full Munk moment and a quarter of it, $-(m_{22} - m_{11}) \le N_{uv} \le -(m_{22} - m_{11})/4$, since the data hardly determine it. In addition, $m_{11}$ was fixed to the mass of the ASV and $l_d$ to the position of the drive, and a constant current over every 15 min of data was estimated as a nuisance term alternating with the regression.
+To identify the parameters of \eqref{eq_model} to \eqref{eq_force}, about 33 min of zigzag and random maneuvers were recorded on the ASV in calm conditions. The runs with the smallest disturbance were used together with forward gear segments of further runs to cover the forward thrust, and the velocity was taken from the onboard extended Kalman filter. The parameters in Table~\ref{tab_si} were estimated by least squares regression of the measured accelerations onto the terms of \eqref{eq_model} to \eqref{eq_force}, separately for each axis, under three physical constraints. The added mass and the diagonal damping are nonnegative with $m_{22} \ge m_{11}$, and each speed dependent term of \eqref{eq_damping} lies between zero and the opposite of the coupling coefficient of $C(\nu)$, so that the lift weakens but does not reverse the inertial coupling, with $N_{uv}$ at most three quarters of $m_{22} - m_{11}$ since the data hardly determine it. In addition, $m_{11}$ was fixed to the mass of the ASV and $l_d$ to the position of the drive, and a constant current over every 15 min of data was estimated as a nuisance term alternating with the regression.
 
 The disturbance was then obtained in reverse as the force and moment $w$ that \eqref{eq_model} requires to reproduce the measured motion within the velocity range of weathervaning. Its distribution is shown in Fig.~\ref{fig_si}. The bounds of the disturbance set $\calW$ were set to enclose the residual, and the samples beyond them, 1 to 2 percent in each axis, were regarded as noise. Because the heading was left free, the ASV kept its stern toward the current, which biased the surge residual toward a forward push, so the bounds of $\calW$ are not symmetric.
 
@@ -346,7 +347,7 @@ $m_{22}$ & $1987.3$~kg & $Y_v$ & $-48.7$~kg/s \\
 $m_{33}$ & $13620.4$~kg\,m$^2$ & $Y_r$ & $204.5$~kg\,m/s \\
 $X_{vr}$ & $-1.1$~kg & $N_v$ & $477.9$~kg\,m/s \\
 $Y_{ur}$ & $1113.9$~kg & $N_r$ & $-303.4$~kg\,m$^2$/s \\
-$N_{uv}$ & $-46.8$~kg & $X_{u|u|}$ & $-13.0$~kg/m \\
+$N_{uv}$ & $140.5$~kg & $X_{u|u|}$ & $-13.0$~kg/m \\
 $F_{\gF}$ & $276.1$~N & $Y_{v|v|}$ & $-545.1$~kg/m \\
 $F_{\gR}$ & $-178.4$~N & $Y_{r|r|}$ & $-545.1$~kg\,m \\
 $l_d$ & $3.0$~m & $N_{v|v|}$ & $0$~kg \\
@@ -502,9 +503,9 @@ The experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in
 
 \subsection{Experimental Results}\label{sec_exp}
 
-To validate \dcris under real sea conditions, its field results are compared with those of \pid and \ciampc over the 10~min window of each controller with the common criterion $R = 4$~m.
+To validate \dcris under real sea conditions, its field results over a 10~min window with $R = 4$~m are compared with those of \pid and \ciampc.
 
-As illustrated in Fig.~\ref{fig_field_compare}, the three controllers are compared on a representative run of each over the same time axis, and the field metrics over the 10~min windows are summarized in Table~\ref{tab_field}. The position error $(\tilde{x}, \tilde{y})$ is expressed in an inertial frame whose $x$ axis is aligned with the heading at engagement. \pid drifted out of the disk and stayed outside for a long interval before returning. \ciampc crossed the circle repeatedly at nearly regular intervals and reached the largest maximum distance, which is consistent with its nominal model without disturbance tightening.
+Fig.~\ref{fig_field_compare} compares a representative run of each controller, and Table~\ref{tab_field} summarizes the field metrics. The position error $(\tilde{x}, \tilde{y})$ is expressed in an inertial frame aligned with the heading at engagement. \pid left the disk for a long interval, while \ciampc crossed the circle at nearly regular intervals and reached the largest maximum distance, consistent with its nominal model without disturbance tightening.
 
 \begin{figure*}[!t]
 \centering
@@ -538,11 +539,11 @@ All statistics are time weighted over 10~min of the designated runs of each cont
 \end{minipage}
 \end{table}
 
-In contrast, \dcris achieved the smallest RMS and maximum distance, and its excursions were short and returned inside the disk. All three controllers shifted the gear at a similar rate, so the improvement was not obtained by shifting more often, but the gear usage differed. \pid and \ciampc cycled through forward, neutral, and reverse, whereas \dcris mostly alternated between reverse and neutral and rarely engaged forward, as listed in Table~\ref{tab_field}. Moreover, the calculation time of \dcris was comparable to that of \ciampc and remained within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept the ASV near the setpoint under real sea conditions.
+In contrast, \dcris achieved the smallest RMS and maximum distance with short excursions. All three controllers shifted at a similar rate, and the improvement came from the gear usage in Table~\ref{tab_field}, where \pid and \ciampc cycled through all three gears, whereas \dcris mostly alternated between reverse and neutral and rarely engaged forward. Its calculation time was comparable to that of \ciampc and within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept it near the setpoint.
 
-The behavior during locked intervals is the direct field evidence for the dwell constrained formulation of Section~\ref{sec_method}. The PLC enforced the dwell for every controller, and the measured interval between consecutive shifts was never shorter than the dwell in any run. The mean growth of the distance within the lock after a shift was the smallest for \dcris, whereas its largest single growth was the largest among the three controllers, indicating that a lock opened at an unfavorable moment can still consume a large part of the margin. Under the dwell, a reversal between forward and reverse must pass through neutral and therefore spans at least two locks. \pid and \ciampc repeatedly committed to such full reversals, as shown in Fig.~\ref{fig_field_compare}(f).
+The locked intervals provide direct field evidence for the dwell constrained formulation of Section~\ref{sec_method}. The PLC enforced the dwell for every controller, and no interval between shifts was shorter than the dwell. \dcris had the smallest mean growth of the distance within a lock but the largest single growth, indicating that a lock opened at an unfavorable moment can still consume much of the margin. Full reversals between forward and reverse, which span at least two locks through neutral, were repeatedly committed by \pid and \ciampc, as shown in Fig.~\ref{fig_field_compare}(f).
 
-As shown in Fig.~\ref{fig_field_compare}(e), $\hat V_h$ of \dcris tracked the margin of the ASV, and every sample outside the disk had $\hat V_h < 0$. More importantly, $\hat V_h$ fell below zero before every crossing of the circle marked in Fig.~\ref{fig_field_compare}(d), so the learned value anticipated the loss of the margin before it was realized, and some episodes with $\hat V_h < 0$ ended without any excursion. \pending{discussion of the realized disturbance relative to the bound, after the system identification}
+As shown in Fig.~\ref{fig_field_compare}(e), $\hat V_h$ of \dcris tracked the margin of the ASV, with $\hat V_h < 0$ at every sample outside the disk and before every crossing marked in Fig.~\ref{fig_field_compare}(d). Therefore, the learned value anticipated the loss of the margin, while some intervals with $\hat V_h < 0$ ended without any excursion. \pending{discussion of the realized disturbance relative to the bound, after the system identification}
 
 \section{Conclusion}\label{sec_conclusion}
 
