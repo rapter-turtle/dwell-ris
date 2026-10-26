@@ -280,7 +280,7 @@ J_\pi = \mathbb{E}_{\xi}\Bigl[ q\bigl(\xi, (\pi_h(\xi), g^\star(\xi))\bigr) \Big
 and the adversary minimizes $\min_i Q_{h,i}$ at the action $(\pi_h(\xi), g^\star(\xi))$.
 
 \subsubsection{Staged Training and Coverage}
-Training starts from a value trained on an earlier ASV model and proceeds in stages warm started from the previous networks. The disturbance box is enlarged in five stages to $\calW$ from just over half of it, and each stage ramps the scale $\kappa$ to its box over its first 6000 updates. Regular stages update the protagonist and the adversary in alternating blocks of fixed length, then the adversary alone and the critics alone. In the stage where the certified set collapsed, the protagonist alone was first trained against the frozen adversary, the alternation then ran until the certified fraction converged, and the critics alone were calibrated last. The discount is fixed at its value in Table~\ref{tab_params}, since a lower discount counts late and shallow departures from the disk as safe. Every update samples $N$ augmented states over $\Xi$, including the gear, the timer, and states in the middle of a lock, adds them to a buffer of recent states, and trains on a batch resampled from the buffer, so that hard states near the boundary are revisited.
+Training starts from networks trained on the previously identified model of the ASV with a box of 0.9 times its bounds. On the present model, two stages use the box at 0.9 times $\calW$ and then at $\calW$, each ramping the scale $\kappa$ from the previous box over its first updates. In every stage the protagonist and the adversary are updated in alternating blocks until the last four evaluations of the certified fraction agree within a small tolerance, then the adversary alone, and then the critics alone. After the last stage the critics alone were calibrated once more with a smaller learning rate and more parallel simulators, since the value correlation of the audit fell short of its acceptance criterion before this step. The discount is fixed at its value in Table~\ref{tab_params}, since a lower discount counts late and shallow departures from the disk as safe. Every update samples $N$ augmented states over $\Xi$, including the gear, the timer, and states in the middle of a lock, adds them to a buffer of recent states, and trains on a batch resampled from the buffer, so that hard states near the boundary are revisited.
 
 \begin{algorithm}[!t]
 \caption{Adversarial Learning of the Dwell Constrained Safety Value}
@@ -302,7 +302,7 @@ Training starts from a value trained on an earlier ASV model and proceeds in sta
 \end{algorithm}
 
 \subsubsection{Certified Set}
-After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. As in other learned reachability methods, the approximation error of the networks is not bounded, the learned adversary may be weaker than the worst case disturbance, and the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$ \cite{hsu2023sim2lab,li2025certifiable}. Prior work therefore calibrates the certified level after training, by a margin from the failure set \cite{hsu2023sim2lab} or by a high confidence bound from sampled rollouts \cite{borquez2024filtering}. Following this practice, the certified rates are reported on the level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$, where the audit of Section~\ref{sec_sim} reports the certificate at $\tau = 0$ and the closed loop starts are drawn from $\hat{\calS}_\tau$ with positive margins. Since a longer remaining lock only removes legal gear sequences, $V_h$ is nonincreasing in $\tau_g$, so for each gear the slice of the certified set over the physical state shrinks as the remaining lock time grows.
+After training, the certified value is $\hat V_h(\xi) = q(\xi, (\pi_h(\xi), g^\star(\xi)))$ and the certified set is $\hat{\calS} = \{\xi \mid \hat V_h(\xi) \ge 0\}$. As in other learned reachability methods, the approximation error of the networks is not bounded, the learned adversary may be weaker than the worst case disturbance, and the discounted fixed point is optimistic relative to \eqref{eq_value} for $\gamma_h < 1$ \cite{hsu2023sim2lab,li2025certifiable}. Prior work therefore calibrates the certified level after training, by a margin from the failure set \cite{hsu2023sim2lab} or by a high confidence bound from sampled rollouts \cite{borquez2024filtering}. Following this practice, the certificate is accepted on the level set $\hat{\calS}_\tau = \{\xi \mid \hat V_h(\xi) \ge \tau\}$ with the smallest margin $\tau \ge 0$ at which the Monte Carlo audit of Section~\ref{sec_sim} gives a hit rate of at least 95 percent and a correlation of at least 0.5 between the certified value and the realized margin. Since a longer remaining lock only removes legal gear sequences, $V_h$ is nonincreasing in $\tau_g$, so for each gear the slice of the certified set over the physical state shrinks as the remaining lock time grows.
 
 \subsubsection{Onboard Safety Controller}
 
@@ -325,9 +325,9 @@ The proposed framework was validated through numerical simulations and full scal
 % \end{subequations}
 % where $N$ is the number of data samples, $W$ is the state weight matrix, $\bar{\bm{x}}$ and $\bar{\bm{u}}$ are the state and control input of the experimental data, respectively, $f_d$ is the discretization of \eqref{eq_complete} over the sampling time of the dataset, and $\bm{x}_{\mathrm{init}}$ is the initial state. The identification data, the sequential procedure, and the resulting parameter values are reported in Section~\ref{sec_si_results}.
 % ---- end of kept block ----
-To identify the parameters of \eqref{eq_mass} to \eqref{eq_force}, about 33 min of zigzag and random maneuvers were recorded on the ASV in calm conditions. The runs with the smallest disturbance were used together with forward gear segments of further runs to cover the forward thrust, and the velocity was taken from the onboard extended Kalman filter. The parameters in Table~\ref{tab_si} were estimated by least squares regression of the measured accelerations onto the terms of \eqref{eq_mass} to \eqref{eq_force}, separately for each axis, under three physical constraints. The added mass is nonnegative with $m_{22} \ge m_{11}$, the diagonal damping is nonnegative, and each effective coupling coefficient lies between zero and its value without lift, so that the lift may weaken but not reverse the inertial coupling. In addition, $m_{11}$ was fixed to the mass of the ASV and $l_d$ to the position of the drive, and a constant current over every 15 min of data was estimated as a nuisance term alternating with the regression.
+To identify the parameters of \eqref{eq_mass} to \eqref{eq_force}, about 33 min of zigzag and random maneuvers were recorded on the ASV in calm conditions. The runs with the smallest disturbance were used together with forward gear segments of further runs to cover the forward thrust, and the velocity was taken from the onboard extended Kalman filter. The parameters in Table~\ref{tab_si} were estimated by least squares regression of the measured accelerations onto the terms of \eqref{eq_mass} to \eqref{eq_force}, separately for each axis, under three physical constraints. The added mass is nonnegative with $m_{22} \ge m_{11}$, the diagonal damping is nonnegative, and each effective coupling coefficient lies between zero and its value without lift, so that the lift may weaken but not reverse the inertial coupling. The yaw coupling was further kept at $c_{uv} \ge (m_{22} - m_{11})/4$, since the data hardly determine it and the lift should not cancel the Munk moment entirely. In addition, $m_{11}$ was fixed to the mass of the ASV and $l_d$ to the position of the drive, and a constant current over every 15 min of data was estimated as a nuisance term alternating with the regression.
 
-The disturbance was then obtained in reverse as the force and moment $w$ that \eqref{eq_model} requires to reproduce the measured motion within the velocity range of weathervaning. Its distribution is shown in Fig.~\ref{fig_si}. The bounds of the disturbance set $\calW$ were set to enclose the residual, and the samples beyond them, 2 to 4 percent in each axis, were regarded as noise. Because the heading was left free, the ASV kept its stern toward the current, which biased the surge residual toward a forward push, so the bounds of $\calW$ are not symmetric.
+The disturbance was then obtained in reverse as the force and moment $w$ that \eqref{eq_model} requires to reproduce the measured motion within the velocity range of weathervaning. Its distribution is shown in Fig.~\ref{fig_si}. The bounds of the disturbance set $\calW$ were set to enclose the residual, and the samples beyond them, 1 to 2 percent in each axis, were regarded as noise. Because the heading was left free, the ASV kept its stern toward the current, which biased the surge residual toward a forward push, so the bounds of $\calW$ are not symmetric.
 
 \begin{figure}[!t]
 \centering
@@ -346,16 +346,16 @@ The disturbance was then obtained in reverse as the force and moment $w$ that \e
 \toprule
 Item & Estimated value & Item & Estimated value \\
 \midrule
-$m_{11}$ & $1800$~kg & $X_u$ & $-107.7$~kg/s \\
-$m_{22}$ & $1906.3$~kg & $Y_v$ & $-27.3$~kg/s \\
-$m_{33}$ & $13359.2$~kg\,m$^2$ & $Y_r$ & $221.8$~kg\,m/s \\
-$c_{vr}$ & $1901.9$~kg & $N_v$ & $397.1$~kg\,m/s \\
-$c_{ur}$ & $617.4$~kg & $N_r$ & $-331.9$~kg\,m$^2$/s \\
-$c_{uv}$ & $0$~kg & $X_{u|u|}$ & $-12.2$~kg/m \\
-$F_{\gF}$ & $274.0$~N & $Y_{v|v|}$ & $-463.1$~kg/m \\
-$F_{\gR}$ & $-179.2$~N & $Y_{r|r|}$ & $-20.2$~kg\,m \\
+$m_{11}$ & $1800$~kg & $X_u$ & $-108.4$~kg/s \\
+$m_{22}$ & $1987.3$~kg & $Y_v$ & $-48.7$~kg/s \\
+$m_{33}$ & $13620.4$~kg\,m$^2$ & $Y_r$ & $204.5$~kg\,m/s \\
+$c_{vr}$ & $1986.2$~kg & $N_v$ & $477.9$~kg\,m/s \\
+$c_{ur}$ & $686.1$~kg & $N_r$ & $-303.4$~kg\,m$^2$/s \\
+$c_{uv}$ & $46.8$~kg & $X_{u|u|}$ & $-13.0$~kg/m \\
+$F_{\gF}$ & $276.1$~N & $Y_{v|v|}$ & $-545.1$~kg/m \\
+$F_{\gR}$ & $-178.4$~N & $Y_{r|r|}$ & $-545.1$~kg\,m \\
 $l_d$ & $3.0$~m & $N_{v|v|}$ & $0$~kg \\
- & & $N_{r|r|}$ & $-7980.9$~kg\,m$^2$ \\
+ & & $N_{r|r|}$ & $-8333.0$~kg\,m$^2$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -377,25 +377,25 @@ Parameter & Value \\
 \midrule
 Control period $\Delta t$, integration & 0.5 s, RK4 with 10 substeps \\
 Keep in radius $R$, value floor $h_{\mathrm{floor}}$ & 4 m, 2 m \\
-Disturbance bounds $(\underline{w}, \bar{w})$ & $w_X \in [-15.1, 73.9]$~N,\newline $|w_Y| \le 32.1$~N, $|w_N| \le 111.8$~N\,m \\
+Disturbance bounds $(\underline{w}, \bar{w})$ & $w_X \in [-17.7, 81.3]$~N,\newline $|w_Y| \le 35.5$~N, $|w_N| \le 121.2$~N\,m \\
 Steering limits $(\delta_{\max}, \dot{\delta}_{\max})$ & $25^\circ$, $10^\circ$/s \\
 Gear dwell $D_g$, unroll horizon $n$ & 6 steps, 16 steps \\
 Parallel simulators $N$, buffer & 1024 (2048 in the final calibration), $150N$ states \\
 Hidden layers of critics, policies & $3 \times 256$, $3 \times 128$ \\
 Learning rates of critics, protagonist, adversary & $5{\times}10^{-4}$ ($2.5{\times}10^{-4}$ in the final calibration), $1{\times}10^{-4}$, $1.5{\times}10^{-4}$ \\
 Soft update $\rho$, discount $\gamma_h$ & 0.005, 0.999 \\
-Disturbance stages & 0.56, 0.67, 0.78, 0.89, and 1 times $\calW$, each ramped over 6000 updates \\
-Updates per stage & 28000, alternating blocks of 500 for 20000 updates, then 3000 adversary and 5000 critic updates \\
+Disturbance stages & 0.9 and 1 times $\calW$, ramped over 6000 and 12000 updates \\
+Updates per stage & Alternation until convergence (12000 to 50000), then 3000 adversary and 5000 critic updates, and a final critic calibration of 8000 updates \\
 Monte Carlo audit & 512 states, 210 steps (105 s), worst of three disturbances \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-As baselines, the dwell unaware \risnd, a detuned proportional derivative controller, denoted \pid, and a CIA based MPC, denoted \ciampc, were implemented. \risnd is \dcris without the timer and with the dwell ignored in the backup, on the same plant, disturbance set $\calW$, and networks, trained from scratch in one stage. It passes the audit at every margin on a plant without the dwell. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose shift requests are held by the plant during locks. Its gains are deliberately detuned for this disturbance level. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina,sager2011}, which predicts with the identified model under the six step gear hold and without a disturbance model. \pid and \ciampc are also run in the field, while \risnd is evaluated only in simulation.
+As baselines, the dwell unaware \risnd, a proportional derivative controller, denoted \pid, and a CIA based MPC, denoted \ciampc, were implemented. \risnd is initialized from the networks of \dcris with the timer inputs removed and trained at $\calW$ on the plant without the dwell, where it passes the audit at every margin. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose shift requests are held by the plant during locks and whose gains were tuned on an earlier identified model of the ASV. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina,sager2011}, which predicts with the identified model under the six step gear hold and without a disturbance model. \pid and \ciampc are also run in the field, while \risnd is evaluated only in simulation.
 
-To audit the learned certificate, 512 states of $\hat{\calS}_\tau$ were rolled out for 105 s under the safety policy against the worst of the learned adversary, a disturbance that pushes the ASV radially outward at the bounds of $\calW$, and a random disturbance in $\calW$, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. The certified fraction is the fraction of sampled states with $\hat V_h \ge \tau$, the hit rate and the false safety rate are the fractions of certified states that stay inside and that leave the disk, and the value correlation with the realized margin measures whether $\hat V_h$ ranks the states beyond the binary verdict. As summarized in Table~\ref{tab_sim}(a), nearly all certified states of \dcris stay inside the disk, but the value ranks them only weakly, so the closed loop starts are drawn from $\hat{\calS}_\tau$ with positive margins. The certificate of \risnd, audited on a plant without the dwell, does not hold on the plant with the dwell, as the closed loop results show.
+To audit the learned certificate, 512 sampled states were rolled out for 105 s under the safety policy against the worst of the learned adversary, a disturbance that pushes the ASV radially outward at the bounds of $\calW$, and a random disturbance in $\calW$, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. The certified fraction is the fraction of sampled states with $\hat V_h \ge \tau$, the hit rate and the false safety rate are the fractions of certified states that stay inside and that leave the disk, and the value correlation with the realized margin measures whether $\hat V_h$ ranks the states beyond the binary verdict. As summarized in Table~\ref{tab_sim}(a), nearly all certified states of \dcris stay inside the disk, and the value ranks them well enough to meet the acceptance criterion, so the certificate is accepted at $\tau = 0$. The certificate of \risnd, audited on a plant without the dwell, does not hold on the plant with the dwell, as the closed loop results show.
 
-As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies nearly the whole disk in every slice, whatever the gear and the motion, because its value assumes that a shift takes effect immediately. In contrast, the set of \dcris is smaller, depends on the gear and on the remaining lock time, and shrinks further when a lock has just started. The strongest case is the ASV moving ahead in $\gF$, which cannot reverse until the lock ends, so the set of \dcris nearly vanishes and keeps only the states behind the setpoint, from which the forward motion carries the ASV toward the setpoint.
+As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies nearly the whole disk in every slice, whatever the gear and the motion, because its value assumes that a shift takes effect immediately. In contrast, the set of \dcris is smaller, depends on the gear and on the remaining lock time, and shrinks further when a lock has just started. The strongest case is the ASV moving ahead in $\gF$, which cannot reverse until the lock ends, so the set of \dcris shrinks the most and keeps only the states behind the setpoint, from which the forward motion carries the ASV toward the setpoint.
 
 \begin{figure}[!t]
 \centering
@@ -404,19 +404,19 @@ As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies nearly the whole disk
 \label{fig_sim_set}
 \end{figure}
 
-In the closed loop study, the wind is an earth fixed acceleration proportional to $V|V|$ from one of eight directions per start, where the steady value of the wind speed $V$ corresponds to the surge upper bound of $\calW$. Five profiles of 105 s are used, a steady wind, gusts (Ornstein Uhlenbeck with standard deviation 1 m/s and time constant 5 s), squalls (2 m/s and 2 s), a veer of $90^\circ$ over the run, and a shift of $90^\circ$ at 52 s. A current of 0.35 m/s, the median identified current, acts from an independent direction through the damping and coupling of the plant, and the sum is clipped to $\calW$. All controllers start from the same 64 states at rest with random heading, neutral gear, and released timer under the same disturbance realizations. The starts are spread over the disk of radius 3 m or drawn from 4000 such candidates with $\hat V_h \ge \tau$ for $\tau = 0.1$ and $0.2$ m.
+In the closed loop study, each run lasts 300 s at the same control period, and the wind is an earth fixed acceleration proportional to $V|V|$, where the steady value of the wind speed $V$ corresponds to the surge upper bound of $\calW$. Five profiles are used, a steady wind, gusts (Ornstein Uhlenbeck with standard deviation 1 m/s and time constant 5 s), squalls (2 m/s and 2 s), a veer of $90^\circ$ over the run, and a shift of $90^\circ$ at 150 s. A current of 0.35 m/s, the median identified current, acts from a direction independent of the wind through the damping and coupling of the plant, and the sum is clipped to $\calW$. Ten runs are reported, two per profile with different wind and current directions, and every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer. All controllers use the same starts and disturbance realizations.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_traj.pdf}
-\caption{Simulated trajectories of \dcris, \risnd, \pid, and \ciampc in the setpoint frame under the gust profile with current from the 64 starts in $\hat{\calS}_{0.1}$, with the keep in circle of radius $R = 4$~m dashed and the fraction of runs inside given in each panel. Runs that stay inside are drawn with thin lines, the segments after the first exit with thick dark lines and a cross at the exit, and the black dots mark the starts.}
+\caption{Simulated trajectories of \dcris, \risnd, \pid, and \ciampc in the setpoint frame over the ten runs of 300 s under wind and current, with the keep in circle of radius $R = 4$~m dashed and the number of runs inside given in each panel. Runs that stay inside are drawn with thin lines, the segments after the first exit with thick dark lines and a cross at the exit, and the black dots mark the starts.}
 \label{fig_sim_traj}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_compare.pdf}
-\caption{Overall comparison of \dcris, \risnd, \pid, and \ciampc from the starts in $\hat{\calS}_{0.1}$ under all five wind profiles with current pooled, giving 320 runs per controller. (a) Share of runs that have not left the disk up to each time. (b) Cumulative distribution of the maximum distance to the setpoint reached in each run, with $R$ dashed.}
+\caption{Comparison of \dcris, \risnd, \pid, and \ciampc over the ten runs of Fig.~\ref{fig_sim_traj}. (a) Share of runs that have not left the disk up to each time. (b) Maximum distance to the setpoint reached in each run, with $R$ dashed, the runs beyond 8 m marked at the top, and the number of runs inside given above each controller.}
 \label{fig_sim_compare}
 \end{figure}
 
@@ -432,26 +432,24 @@ In the closed loop study, the wind is an earth fixed acceleration proportional t
 Metric & \risnd & \pid & \ciampc & \textbf{\dcris} \\
 \midrule
 \multicolumn{5}{l}{(a) Certificate audit at $\tau = 0$} \\
-Certified fraction (\%) & 45.9$^{*}$ & n/a & n/a & 14.1 \\
-Hit rate (\%) & 99.6$^{*}$ & n/a & n/a & 98.6 \\
-False safety rate (\%) & 0.4$^{*}$ & n/a & n/a & 1.4 \\
-Value correlation & 0.98$^{*}$ & n/a & n/a & 0.31 \\
+Certified fraction (\%) & 44.8$^{*}$ & n/a & n/a & 15.6 \\
+Hit rate (\%) & 100$^{*}$ & n/a & n/a & 99.8 \\
+False safety rate (\%) & 0.0$^{*}$ & n/a & n/a & 0.2 \\
+Value correlation & 0.97$^{*}$ & n/a & n/a & 0.52 \\
 \midrule
 \multicolumn{5}{l}{(b) Closed loop under wind and current} \\
-Inside the disk, starts in $\hat{\calS}_{0.1}$ (\%) & 35.9 & 78.8 & 89.4 & \textbf{100} \\
-Inside the disk, starts in $\hat{\calS}_{0.2}$ (\%) & 30.3 & 80.6 & 88.1 & \textbf{99.7} \\
-Inside the disk, starts in the 3 m disk (\%) & 25.0 & 82.8 & 87.2 & \textbf{96.9} \\
-RMS distance (m)$^{\dagger}$ & 2.85 & 1.61 & 1.48 & 2.08 \\
-Max distance (m)$^{\dagger}$ & 4.68 & 3.32 & 3.12 & 3.38 \\
-Time in $\gR$ or $\gF$ (\%)$^{\dagger}$ & 54.3 & 66.4 & 60.8 & 56.4 \\
-Switches per minute$^{\dagger}$ & 16.5 & 13.2 & 14.9 & 13.1 \\
-Exits within a lock (\%)$^{\dagger}$ & 95 & 70 & 66 & n/a \\
+Runs inside for 300 s (\%) & 10 & 70 & 60 & \textbf{100} \\
+RMS distance (m) & 3.12 & 1.54 & 1.79 & 1.82 \\
+Max distance (m) & 6.11 & 4.03 & 3.80 & 3.38 \\
+Time in $\gR$ or $\gF$ (\%) & 55.8 & 68.1 & 65.3 & 68.2 \\
+Switches per minute & 15.6 & 12.4 & 12.9 & 10.7 \\
+Exits within a lock (\%) & 78 & 67 & 25 & n/a \\
 \bottomrule
-\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize Mean over the five wind profiles. $^{*}$ Audited on a plant without the dwell. $^{\dagger}$ Starts in $\hat{\calS}_{0.1}$, per run mean. \pid is detuned.} \\
+\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize Ten runs of 300 s, per run mean. $^{*}$ Audited on a plant without the dwell.} \\
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk from every certified start and from nearly all uncertified starts under all wind profiles with current. The poorest result was obtained with \risnd, which left the disk in most runs and nearly always within a lock, as listed in Table~\ref{tab_sim}(b), because its value assumes an immediate shift, while the detuned \pid and \ciampc left the disk in part of the runs. As shown in Fig.~\ref{fig_sim_compare}(a), these exits accumulated over the whole run for every baseline, whereas every run of \dcris remained inside. However, \dcris kept a larger RMS distance than \pid and \ciampc at a similar shift rate, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) accordingly ends just short of $R$ in all runs, while that of \pid and \ciampc has a long tail beyond $R$.
+As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under wind and current. The poorest result was obtained with \risnd, which left the disk in most runs and mostly within a lock, as listed in Table~\ref{tab_sim}(b), because its value assumes an immediate shift. \pid and \ciampc left the disk in part of the runs at different times over the run, and \ciampc lost runs late in the run, as shown in Fig.~\ref{fig_sim_compare}(a). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts per minute, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) accordingly stays short of $R$ in every run, while some runs of \pid and \ciampc exceed $R$.
 
 \subsection{Experimental Setup}\label{sec_exp_setup}
 
