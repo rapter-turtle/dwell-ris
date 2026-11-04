@@ -275,6 +275,14 @@ J_\pi = \mathbb{E}_{\xi}\Bigl[ q\bigl(\xi, (\pi_h(\xi), g^\star(\xi))\bigr) \Big
 \end{equation}
 and the adversary minimizes $\min_i Q_{h,i}$ at the action $(\pi_h(\xi), g^\star(\xi))$.
 
+% Fig. 4 is defined here so that the double column float lands at the top of the page where Section V begins
+\begin{figure*}[!t]
+\centering
+\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
+\caption{Experimental ASV and its hardware. (a) The ASV with the GPS antenna, the AHRS, and the control PC. (b) Control hardware connected to the control PC of (a) by Ethernet, from the PLC to the engine and the sterndrive, with the communication interface of each link.}
+\label{fig_vessel}
+\end{figure*}
+
 \subsubsection{Training Schedule and Coverage}
 Training starts from networks trained on a previously identified model of the ASV, and the disturbance is ramped up to $\calW$ through the scale $\kappa$ of Algorithm~\ref{alg_ris}. The adversary and the protagonist are trained alternately until the certified fraction converges, then the adversary alone, and then the critics alone. Finally, the critics alone are calibrated once more with a smaller learning rate and more parallel simulators, since the value correlation of the audit fell short of its acceptance criterion before this step. The discount is fixed at its value in Table~\ref{tab_params}, since a lower discount counts late and shallow departures from the disk as safe. Every update samples $N$ augmented states over $\Xi$, including the gear, the timer, and states within a lock, adds them to a buffer of recent states, and trains on a batch resampled from the buffer, so that hard states near the boundary are revisited.
 
@@ -314,13 +322,6 @@ The experimental platform is a Neo AURA 240 EXP with a deep V planing hull, prop
 
 The controller accesses three actuation channels through the chain shown in Fig.~\ref{fig_vessel}(b). Among them, the engine speed is commanded over a CAN interface, while two electric linear servo cylinders execute the gear shift among reverse, neutral, and forward and the steering angle of the drive. The two cylinders act on the shift cable and the drive pivot, respectively, and both are driven by an LS XGB programmable logic controller (PLC) through an EtherCAT servo interface. A bow thruster is installed on the vessel but is not used in this study, so the results concern a single engine sterndrive configuration.
 
-\begin{figure*}[!t]
-\centering
-\IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
-\caption{Experimental ASV and its hardware. (a) The ASV with the GPS antenna, the AHRS, and the control PC. (b) Control hardware connected to the control PC of (a) by Ethernet, from the PLC to the engine and the sterndrive, with the communication interface of each link.}
-\label{fig_vessel}
-\end{figure*}
-
 Each shift requires a mechanical time of \pending{mechanical shift time}. On this ASV, the dwell was set to 3~s, which corresponds to $D_g = 6$ control steps at the control period of 0.5~s.
 
 \begin{table}[!t]
@@ -336,6 +337,7 @@ Each shift requires a mechanical time of \pending{mechanical shift time}. On thi
 Length overall & 8.29 m \\
 Length between perpendiculars & 6.96 m \\
 Breadth & 2.62 m \\
+Height & 2.0 m \\
 Engine & single inboard diesel, \pending{model} \\
 Minimum shift dwell & 3 s, including a safety margin \\
 \midrule
