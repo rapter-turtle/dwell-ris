@@ -492,12 +492,12 @@ As summarized in Table~\ref{tab_sim}(b) and Fig.~\ref{fig_sim_traj}, \dcris kept
 
 \subsection{Experimental Results}\label{sec_exp}
 
-To validate \dcris under real sea conditions against \pid and \ciampc, the experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The baselines were tested on September 11, 2026, and \dcris on September 17, 2026, so the conditions may differ between the two days. During the trials the wind speed was 5 to 6 knots, and the tidal current was \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. Each controller is evaluated over 10~min of its designated runs. For \dcris the window consists of the 325~s run of Fig.~\ref{fig_field_compare} and the first 275~s of a second run of the same day, and for \ciampc it consists of three consecutive runs of September 11 with the last run truncated to fill the window. \pending{PID is currently evaluated on a single 364.5 s run and will be extended to 10 min.} \dcris ran the safety policy of Section~\ref{sec_method} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
+To validate \dcris under real sea conditions against \pid and \ciampc, the experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The trials were run on several days in the same sea area under similar conditions, with a wind speed of 5 to 6 knots on every trial day and a tidal current of \pending{tidal current speed at the trial time}. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. As summarized in Table~\ref{tab_field}, each controller is evaluated over about 15~min of its designated runs, which are three runs of 5~min for \dcris, three runs of about 5~min for \pid, and four runs of 2 to 5~min for \ciampc. \dcris ran the safety policy of Section~\ref{sec_method} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_site_drone.pdf}
-\caption{Experimental site off Jeongok Port with the ASV on station. The inset is an overhead drone view of the ASV under \dcris on November 12, 2026, with the setpoint and the keep in circle of radius $R$ drawn to scale.}
+\caption{Experimental site off Jeongok Port with the ASV on station. The inset is an overhead drone view of the ASV under \dcris, with the setpoint and the keep in circle of radius $R$ drawn to scale.}
 \label{fig_site}
 \end{figure}
 
@@ -506,7 +506,7 @@ Fig.~\ref{fig_field_compare} compares a representative run of each controller, a
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_field_compare.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_compare.pdf}}{\figph{Fig. 8 placeholder. Field comparison of the three controllers.}{4cm}}
-\caption{Field comparison of the three controllers. (a) to (c) Trajectories of \pid, \ciampc, and \dcris in the setpoint frame with the keep in circle of radius $R = 4$~m, where the segments outside the circle are drawn with thick dark lines, and the cross, the open circle, and the filled square mark the setpoint, the start, and the end, respectively. (d) Distance to the setpoint of the three controllers with $R$ dashed. (e) Safety value $\hat V_h$ of \dcris. (f) Gear of each controller with thin lines at the $\gR$, $\gN$, and $\gF$ levels. The runs are the first 250~s of the \pid and \ciampc runs on September 11, 2026, and of a \dcris run on November 12, 2026.}
+\caption{Field comparison of the three controllers. (a) to (c) Trajectories of \pid, \ciampc, and \dcris in the setpoint frame with the keep in circle of radius $R = 4$~m, where the segments outside the circle are drawn with thick dark lines, and the cross, the open circle, and the filled square mark the setpoint, the start, and the end, respectively. (d) Distance to the setpoint of the three controllers with $R$ dashed. (e) Safety value $\hat V_h$ of \dcris. (f) Gear of each controller with thin lines at the $\gR$, $\gN$, and $\gF$ levels. The panels show the first 250~s of one designated run of each controller.}
 \label{fig_field_compare}
 \end{figure*}
 
@@ -535,7 +535,14 @@ All statistics are time weighted over about 15~min of the designated runs of eac
 \end{minipage}
 \end{table}
 
-In contrast, \dcris achieved the smallest RMS and maximum distance with short excursions. All three controllers shifted at a similar rate, and the improvement came from the gear usage in Table~\ref{tab_field}, where \pid and \ciampc cycled through all three gears, whereas \dcris mostly alternated between reverse and neutral and rarely engaged forward. Its calculation time was comparable to that of \ciampc and within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept it near the setpoint.
+\begin{figure}[!t]
+\centering
+\includegraphics[width=2.5in]{figures/fig_drone_composite.pdf}
+\caption{Overhead drone composite of one designated run of \dcris. The hull is shown at five instants from engagement to the end of the run, which were selected to span the heading range of the run and are not evenly spaced. Each outline is the hull seen by the drone at that instant, aligned to the GPS track, labeled at its bow with the time since engagement, and drawn fainter for earlier instants. The dots mark the GPS position of the ASV at those instants, and the dark line traces this position over the whole run. The yellow circle is the keep in circle of radius $R$, and the cross marks the setpoint. Since the keep in constraint applies to the GPS position, the hull extends beyond the circle while this position stays inside it.}
+\label{fig_drone}
+\end{figure}
+
+In contrast, \dcris achieved the smallest RMS and maximum distance with short excursions. As seen from above in Fig.~\ref{fig_drone}, the hull swung through a wide range of headings shortly after engagement and was pushed toward the boundary before returning, while the GPS position of the ASV stayed inside the circle for the whole run. All three controllers shifted at a similar rate, and the improvement came from the gear usage in Table~\ref{tab_field}, where \pid and \ciampc cycled through all three gears, whereas \dcris mostly alternated between reverse and neutral and rarely engaged forward. Its calculation time was comparable to that of \ciampc and within the control period. These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept it near the setpoint.
 
 The locked intervals provide direct field evidence for the dwell constrained formulation of Section~\ref{sec_method}. The PLC enforced the dwell for every controller, and no interval between shifts was shorter than the dwell. \dcris had the smallest mean growth of the distance within a lock but the largest single growth, indicating that a lock opened at an unfavorable moment can still consume much of the margin. Full reversals between forward and reverse, which span at least two locks through neutral, were repeatedly committed by \pid and \ciampc, as shown in Fig.~\ref{fig_field_compare}(f).
 
