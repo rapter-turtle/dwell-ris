@@ -4,8 +4,9 @@ Main photo: photos/site_base.png, the contrast enhanced crop of test_site.png th
 fig_site.pdf embedded (extracted from it unchanged), with the zoom box and labels at the same
 positions as before.
 
-Inset: photos/drone_run27_v156.1_crop.png, a 900 x 600 crop (origin u = 582, v = 241) of
-EXP_video/output_1080p/2026-11-12_1112_DJI_0384-0389_1080p.mp4 at 156.1 s, during run 27
+Inset: photos/drone_run27_v156.1_crop_wide.png, a 1200 x 780 crop (origin u = 432, v = 150) of
+EXP_video/output_1080p/2026-11-12_1112_DJI_0384-0389_1080p.mp4 at 156.1 s (ffmpeg -ss 156.1, the same
+frame as the earlier 900 x 600 crop at u = 582, v = 241, pixel identical), during run 27
 (DC-RIS), when the ASV was 1.54 m from the setpoint (median over the drone segment 1.62 m).
 The keep in circle and the setpoint are drawn to scale. Georeferencing (scratchpad fig9/georef.py):
 on ten frames over the 309 s segment the white hull was segmented, scale = hull length / 8.29 m
@@ -31,8 +32,10 @@ YEL = "#FFD34D"
 
 # georeferencing result, in pixels of the crop
 SCALE = 46.62                                 # px per m
-SP_U, SP_V = 1031.9 - 582, 540.8 - 241        # setpoint
+CROP_U0, CROP_V0 = 432, 150                   # origin of the crop in the 1920 x 1080 frame
+SP_U, SP_V = 1031.9 - CROP_U0, 540.8 - CROP_V0   # setpoint
 R_KEEP = 4.0
+ZOOM = 1 / 0.6                                # inset shows 1/0.6 times the earlier region, so the ASV appears at 60 % (user, 2026-11-16)
 
 plt.rcParams.update({"font.family": "serif", "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
                      "font.size": 7, "mathtext.fontset": "stix"})
@@ -50,12 +53,12 @@ ax.text((bx0 + bx1) / 2, by0 - 3.2, "ASV", color="white", ha="center", va="botto
 
 # inset
 ix0, ix1, iy1 = 147.0, 247.0, 134.7
-HU, HV = 340.0, 215.0                         # half extent of the shown region, px
+HU, HV = 340.0 * ZOOM, 215.0 * ZOOM           # half extent of the shown region, px
 iy0 = iy1 - (ix1 - ix0) * HV / HU
 for (xa, ya), (xb, yb) in (((bx1, by0), (ix0, iy0)), ((bx1, by1), (ix0, iy1))):
     ax.plot([xa, xb], [ya, yb], color="white", lw=0.6)
 axi = fig.add_axes([ix0 / W, 1 - iy1 / H, (ix1 - ix0) / W, (iy1 - iy0) / H])
-img = mpimg.imread(os.path.join(PH, "drone_run27_v156.1_crop.png"))[..., :3].astype(float)
+img = mpimg.imread(os.path.join(PH, "drone_run27_v156.1_crop_wide.png"))[..., :3].astype(float)
 # the drone footage is flat, so stretch all channels together (hue kept) between the 1 and 99.8 percentiles
 reg = img[int(SP_V - HV):int(SP_V + HV), int(SP_U - HU):int(SP_U + HU)]
 lo, hi = np.percentile(reg, 1.0), np.percentile(reg, 99.8)
@@ -75,10 +78,11 @@ axi.plot([SP_U, ue], [SP_V, ve], color=YEL, lw=0.8)
 axi.text(SP_U + 0.62 * rk * np.cos(a) + 10, SP_V + 0.62 * rk * np.sin(a) + 16, r"$R$", color="white",
          ha="left", va="top", fontsize=7.5, path_effects=OUT)
 axi.plot([SP_U], [SP_V], "o", ms=2.6, mfc=YEL, mec="black", mew=0.4)
-lu, lv = SP_U - 175, SP_V + 140
-axi.plot([SP_U, lu + 40], [SP_V, lv - 22], color="white", lw=0.5)
-axi.text(lu, lv, "Setpoint", color="white", ha="center", va="top", fontsize=7, path_effects=OUT)
-axi.text(SP_U - rk * 0.95, SP_V - rk * 0.80, "Keep in circle", color="white", ha="center", va="bottom",
+# labels in the open water around the smaller circle: setpoint up right with a leader, circle name below it
+lu, lv = SP_U + 300, SP_V - 230
+axi.plot([SP_U + 8, lu - 45], [SP_V - 6, lv + 5], color="white", lw=0.5)
+axi.text(lu, lv, "Setpoint", color="white", ha="center", va="bottom", fontsize=7, path_effects=OUT)
+axi.text(SP_U - 40, SP_V + rk + 30, "Keep in circle", color="white", ha="center", va="top",
          fontsize=7, path_effects=OUT)
 
 fig.savefig(os.path.join(HERE, "..", "fig_site_drone.pdf"))
