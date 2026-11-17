@@ -79,7 +79,7 @@ Autonomous surface vessels, dwell time, robust invariant sets, safe reinforcemen
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_framework.pdf}{\includegraphics[width=\textwidth]{figures/fig_framework.pdf}}{\figph{Fig. 1 placeholder. Overall framework.}{5cm}}
-\caption{Overall framework of the proposed dwell constrained safe weathervaning control. In the offline stage, parallel simulators that enforce the gear dwell are unrolled over at least the dwell with the legal gear chosen at every step, and the twin safety critics $Q_{h,1}$ and $Q_{h,2}$ are learned by an adversarial game between the steering protagonist $\pi_h$ and the adversary $\mu$. In the online stage, the frozen networks run on the ASV at each control period, and the gear that maximizes the certified value among the legal gears is applied together with the steering rate command of $\pi_h$.}
+\caption{Overall framework of the proposed dwell constrained safe weathervaning control with offline training and online deployment.}
 \label{fig_framework}
 \end{figure*}
 
@@ -114,7 +114,7 @@ This section describes the gear shift dwell and the thrust deadzone of the stern
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_gear.pdf}
-\caption{Gear shift restrictions of the sterndrive. Left, deadzone around zero thrust caused by the idle minimum thrust. Right, gear over time with the lock of $D_g$ steps after each shift.}
+\caption{Gear shift restrictions of the sterndrive with the thrust deadzone (left) and the lock of $D_g$ steps after each shift (right).}
 \label{fig_gear}
 \end{figure}
 
@@ -127,7 +127,7 @@ Once a gear is engaged, the engine runs at least at idle and the propeller deliv
 \begin{figure}[!t]
 \centering
 \IfFileExists{figures/fig_frames.pdf}{\includegraphics[width=0.6\linewidth]{figures/fig_frames.pdf}}{\figph{Coordinate frames and sterndrive geometry.}{4cm}}
-\caption{Coordinate frames and sterndrive geometry. Inertial and body fixed frames, the keep in disk of radius $R$ around the setpoint, and the thrust $F_g$ vectored by the steering angle $\delta$ at the distance $l_d$ behind the origin.}
+\caption{Coordinate frames and sterndrive geometry of the ASV with the keep in disk of radius $R$.}
 \label{fig_frames}
 \end{figure}
 
@@ -277,7 +277,7 @@ and the adversary minimizes $\min_i Q_{h,i}$ at the action $(\pi_h(\xi), g^\star
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
-\caption{Experimental ASV and its hardware. (a) The ASV with the GPS antenna, the AHRS, and the control PC. (b) Control hardware connected to the control PC of (a) by Ethernet, from the PLC to the engine and the sterndrive, with the communication interface of each link.}
+\caption{Experimental ASV and its hardware with (a) the ASV and its sensors and (b) the control hardware from the control PC to the engine and the sterndrive.}
 \label{fig_vessel}
 \end{figure*}
 
@@ -336,7 +336,7 @@ Length overall & 8.29 m \\
 Length between perpendiculars & 6.96 m \\
 Breadth & 2.62 m \\
 Height & 2.0 m \\
-Engine & single inboard diesel, \pending{model} \\
+Engine & \makecell[l]{Hyundai SeasAll S270S\\single 199~kW V6 diesel} \\
 Minimum shift dwell & 3 s, including a safety margin \\
 \midrule
 \multicolumn{2}{l}{(b) Sensor specification} \\
@@ -369,7 +369,7 @@ The disturbance was then obtained in reverse as the force and moment $w$ that \e
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_si_residual.pdf}
-\caption{Distribution of the disturbance obtained in reverse from the identified model in surge, sway, and yaw within the bounds of $\calW$, with the samples beyond them removed as noise.}
+\caption{Distribution of the disturbance residual in surge, sway, and yaw within the bounds of $\calW$.}
 \label{fig_si}
 \end{figure}
 
@@ -464,7 +464,7 @@ As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies nearly the whole disk
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_set.pdf}
-\caption{Slices of the certified sets $\{\xi \mid \hat V_h(\xi) \ge 0\}$ over the position error $(\tilde{x}, \tilde{y})$ with the heading along $\tilde{x}$, zero steering angle, and zero yaw rate, for the ASV at rest (top) and moving ahead at 0.3~m/s (bottom) in gears $\gR$, $\gN$, and $\gF$ (left to right). Each panel shows the set of \dcris with the gear free (light fill), the set of \dcris just after a shift with the lock of the dwell still running (dark fill), and the set of \risnd for the same gear (dashed), which has no timer, so the lock cannot change it. The keep in circle $h = 0$ of radius $R = 4$~m is dotted and is mostly hidden under the boundary of \risnd, and the arrow marks the velocity of the ASV. Small isolated regions are removed and the boundaries are smoothed for display.}
+\caption{Slices of the certified sets of \dcris and \risnd over the position error $(\tilde{x}, \tilde{y})$ with the heading along $\tilde{x}$, zero steering angle, and zero yaw rate. The locked set is taken just after a shift. Small isolated regions are removed and the boundaries are smoothed for display.}
 \label{fig_sim_set}
 \end{figure}
 
@@ -477,14 +477,14 @@ Each closed loop run lasts 300 s under wind and current loads modeled after \cit
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_traj.pdf}
-\caption{Simulated trajectories of \dcris, \risnd, \pid, and \ciampc in the setpoint frame, with the keep in circle of radius $R = 4$~m dashed and the number of runs inside given in each panel. Each panel shows ten of the 50 runs of 300 s, the runs that left the disk in the same share as over all runs and farthest first, then the safe runs closest to the boundary. Runs that stay inside are drawn thin, the segments after the first exit thick and dark with a cross at the exit, and the black dots mark the starts.}
+\caption{Simulated trajectories with the keep in circle dashed. Each panel shows ten of the 50 runs, with the exits in the same share as over all runs, farthest first, and the safe runs closest to the boundary. Dots and crosses mark starts and first exits.}
 \label{fig_sim_traj}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_compare.pdf}
-\caption{Comparison of \dcris, \risnd, \pid, and \ciampc over the 50 runs of each controller. (a) Share of runs that have not left the disk up to each time. (b) Maximum distance to the setpoint reached in each run, with $R$ dashed, the runs beyond 8 m marked at the top, and the share of runs inside given above each controller.}
+\caption{Simulation comparison of the four controllers with (a) the share of runs still inside the disk over time and (b) the maximum distance of each run, with $R$ dashed and the share of runs inside given on top.}
 \label{fig_sim_compare}
 \end{figure}
 
@@ -497,7 +497,7 @@ To validate \dcris under real sea conditions against \pid and \ciampc, the exper
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_site_drone.pdf}
-\caption{Experimental site off Jeongok Port with the ASV on station. The inset is an overhead drone view of the ASV under \dcris, with the setpoint and the keep in circle of radius $R$ drawn to scale.}
+\caption{Experimental site off Jeongok Port with an inset drone view of the ASV under \dcris and the keep in circle to scale.}
 \label{fig_site}
 \end{figure}
 
@@ -506,7 +506,7 @@ Fig.~\ref{fig_field_compare} compares a representative run of each controller, a
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_field_compare.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_compare.pdf}}{\figph{Fig. 8 placeholder. Field comparison of the three controllers.}{4cm}}
-\caption{Field comparison of the three controllers. (a) to (c) Trajectories of \pid, \ciampc, and \dcris in the setpoint frame with the keep in circle of radius $R = 4$~m, where the segments outside the circle are drawn with thick dark lines, and the cross, the open circle, and the filled square mark the setpoint, the start, and the end, respectively. (d) Distance to the setpoint of the three controllers with $R$ dashed. (e) Safety value $\hat V_h$ of \dcris. (f) Gear of each controller with thin lines at the $\gR$, $\gN$, and $\gF$ levels. The panels show the first 250~s of one designated run of each controller.}
+\caption{Field comparison of the three controllers over the first 250~s of one designated run each, with (a) to (c) trajectories, (d) distance to the setpoint, (e) safety value of \dcris, and (f) gear. The cross, open circle, and square mark the setpoint, start, and end.}
 \label{fig_field_compare}
 \end{figure*}
 
@@ -538,7 +538,7 @@ All statistics are time weighted over about 15~min of the designated runs of eac
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_drone_composite.pdf}
-\caption{Overhead drone composite of one designated run of \dcris and of the free drift that followed it. The hull is shown at five instants, which were selected to span the heading range of the run and are marked on the time bar on the right. Each outline is the hull seen by the drone, aligned to the GPS track and colored by the time bar, with a dot at the GPS position. The dark line traces the GPS position over the run. The red line traces it after the controller was disengaged with the gear in neutral and the throttle at idle, and the dashed red outlines show the hull at two instants of this drift, labeled with the time since engagement, until the ASV left the drone view. The yellow circle is the keep in circle of radius $R$, and the cross marks the setpoint. The white fan and its arrow indicate the approximate direction in which the wind and the tidal current acted. During the run, the hull extends beyond the circle while the GPS position, to which the keep in constraint applies, stays inside it.}
+\caption{Drone composite of a designated \dcris run with the hull at five selected instants spanning the heading range and the GPS track. Red marks the free drift after disengagement, labeled by time since engagement. The fan is the approximate wind and current direction. The hull overhangs the circle while the GPS position, where the constraint applies, stays inside.}
 \label{fig_drone}
 \end{figure}
 
