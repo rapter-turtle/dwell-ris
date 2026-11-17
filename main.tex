@@ -320,7 +320,7 @@ The experimental platform is an AURA with a deep V planing hull, propelled by a 
 
 The controller accesses three actuation channels through the chain shown in Fig.~\ref{fig_vessel}(b). Among them, the engine speed is commanded over a CAN interface, while two electric linear servo cylinders execute the gear shift among reverse, neutral, and forward and the steering angle of the drive. The two cylinders act on the shift cable and the drive pivot, respectively, and both are driven by a programmable logic controller (PLC).
 
-On this ASV, the dwell filter holds each shift for 3~s, which corresponds to $D_g = 6$ control steps at the control period of 0.5~s.
+On this ASV, the dwell filter holds each shift for 3~s, which corresponds to $D_g = 6$ control steps at the control period of 0.5~s. This interval follows the operating practice of marine reversing gears, in which the lever is held in neutral before the opposite gear is engaged \cite{mercruiser2017manual,volvopenta2007d4d6}, and electronic controls apply a pause of a few seconds to a quick reversal, with a default of 3~s in a commercial control \cite{yanmar2025jh,zf2014clearcommand}.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.3}
