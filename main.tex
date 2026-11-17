@@ -449,9 +449,9 @@ False safety rate (\%) & 0.0$^{*}$ & 0.2 \\
 \end{tabular}
 \end{table}
 
-\risnd certifies 44.8 percent of the state space against 15.6 percent for \dcris, because its value assumes that a shift takes effect immediately, so it also certifies states that only an immediate reversal can save. This difference is also visible in Fig.~\ref{fig_sim_set}, where the dashed curve of \risnd encloses most of the disk in every panel. The light region of \dcris with the lock released is narrower across the heading, and the dark region just after a shift lies inside it. In the upper row, the dark region keeps the states ahead of the setpoint in $\gR$ and those behind it in $\gF$.
+\risnd certifies 44.8 percent of the state space against 15.6 percent for \dcris, because it treats a shift as immediate and thus certifies states that need an immediate reversal. In Fig.~\ref{fig_sim_set}, its dashed curve encloses most of the disk in every panel, while the \dcris sets are smaller and narrower across the heading. These sets also depend on the dwell. The dark dwell locked set, taken just after a shift while the dwell holds the gear, lies inside the light set with the dwell released and the next legal gear available at once. In the upper row, the dark set keeps the states ahead of the setpoint in $\gR$ and those behind in $\gF$.
 
-In the lower right panel, where the ASV moves ahead in $\gF$, the dashed curve still covers most of the disk because \risnd assumes that reverse is engaged at once. The light region ends near the setpoint because $\gR$ is reached only through $\gN$ and the next lock, and the dark region shrinks to the rear because the forward thrust persists until the lock ends. In the lower left panel, the two regions coincide because $\gR$ already brakes the forward motion.
+The cause of these differences is clearest in the lower right panel, where the ASV moves ahead in $\gF$ and the dashed curve still covers most of the disk because \risnd assumes reverse is engaged at once. The light region ends near the setpoint because $\gR$ is reached only through $\gN$ and the next lock, and the dark region shrinks to the rear because the forward thrust persists until the lock ends. In the lower left panel, the two regions coincide because $\gR$ already brakes the forward motion.
 
 \begin{figure}[!t]
 \centering
