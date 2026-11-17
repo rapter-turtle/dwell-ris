@@ -87,9 +87,9 @@ Autonomous surface vessels, dwell time, robust invariant sets, safe reinforcemen
 
 \IEEEPARstart{A}{utonomous} surface vessels (ASVs) have been widely applied to environmental monitoring, hydrographic survey, maritime rescue, coastal surveillance, and maritime transportation \cite{liu2016,shi2017,lee2024canal}. Many of these missions, including water column profiling, greenhouse gas sampling, and water quality mapping \cite{smith2010cinaps,dunbabin2017ghg,kaizu2011airboat}, require the ASV to remain near a target point for some time \cite{chavezgalaviz2024station}. Vessels in inland waterway transport also often have to wait until the passage ahead is cleared, for example at a movable bridge \cite{segovia2025bridges}. During these phases, wind and current continuously push the ASV away from the target point, and its safety depends on keeping the position inside the region around the point.
 
-Keeping the position against these disturbances is demanding for many ASVs because of their propulsion layout. Common layouts are two fixed stern thrusters with differential thrust or a single sterndrive, and the ASV of this study has a single engine and a single sterndrive and does not use a lateral thruster. Such ASVs are underactuated and cannot counter the sway drift induced by wind, waves, and current \cite{dunbabin2017ghg,qu2022positioning}. Therefore, holding the position and heading together is difficult \cite{chavezgalaviz2024station}, and no smooth static state feedback can stabilize both at fixed values \cite{pettersen2000underactuated,pettersen2004guas}. Weathervaning control is a practical alternative, in which only the position is kept inside a region around the setpoint, as if the ASV were anchored \cite{sarda2016stationkeeping}, while the heading turns toward the mean environmental load. This idea has been widely adopted in weather optimal positioning of dynamically positioned ships \cite{fossen2001wopc,kim2017coordinated,kim2014weathervaning} and has been extended to underactuated ASVs by aligning the bow with the wind \cite{smith2010cinaps,pereira2008stationkeeping} or by adapting the heading against the mean load \cite{wang2022areakeeping,qu2022positioning}. In these studies, the thrust is a continuous control input.
+Keeping the position against these disturbances is demanding for many ASVs because of their propulsion layout. Common layouts are two fixed stern thrusters with differential thrust or a single sterndrive, and the ASV of this study has a single engine and a single sterndrive and does not use a lateral thruster. Such ASVs are underactuated and cannot counter the sway drift induced by wind, waves, and current \cite{dunbabin2017ghg,qu2022positioning}. Therefore, holding the position and heading together is difficult \cite{chavezgalaviz2024station,park2026handposition}, and no smooth static state feedback can stabilize both at fixed values \cite{pettersen2000underactuated,pettersen2004guas}. Weathervaning control is a practical alternative, in which only the position is kept inside a region around the setpoint, as if the ASV were anchored \cite{sarda2016stationkeeping}, while the heading turns toward the mean environmental load. This idea has been widely adopted in weather optimal positioning of dynamically positioned ships \cite{fossen2001wopc,kim2017coordinated,kim2014weathervaning} and has been extended to underactuated ASVs by aligning the bow with the wind \cite{smith2010cinaps,pereira2008stationkeeping} or by adapting the heading against the mean load \cite{wang2022areakeeping,qu2022positioning}. In these studies, the thrust is a continuous control input.
 
-Electric propulsion suits such continuous inputs, since an electric motor varies its torque rapidly and reverses its rotation directly \cite{kirtley2015motors,geertsma2017hybrid}. Nevertheless, many ASVs use internal combustion engines because batteries limit the endurance and payload of larger and faster hulls \cite{zhuang2021highspeed,chiche2021rescue}. Examples include a diesel waterjet USV \cite{han2020aragon}, an ASV with a steerable outboard engine \cite{eriksen2019bcmpc}, and a gasoline airboat \cite{kaizu2011airboat}. In such vessels, the engine cannot reverse its rotation, so the propeller thrust is reversed through a reversing gearbox that selects reverse, neutral, or forward \cite{geertsma2017hybrid}. Once a gear is engaged, the engine runs at least at idle, so the propeller delivers a minimum thrust and a deadzone forms around zero thrust. Therefore, a small corrective thrust cannot be produced, and fine corrections near the setpoint must be made by engaging and disengaging the gear, which makes the shift and its dwell frequent. Repeated shifts stress the gearbox, so a minimum interval between consecutive shifts protects the drivetrain. In practice, the lever is held in neutral before the opposite gear is engaged \cite{mercruiser2017manual,volvopenta2007d4d6}, and electronic controls apply a pause of a few seconds to a quick reversal \cite{yanmar2025jh,zf2014clearcommand}. The sterndrive of this study is such a drive, and a dwell filter in its actuation chain enforces this interval (Section~\ref{sec_dwell}). Since the sterndrive steers by vectoring the thrust, a lock in neutral leaves the ASV with neither thrust nor steering under wind and current. The weathervaning controllers above treat the thrust as a continuous input, so the gear levels, the deadzone, and the dwell have not been considered.
+Electric propulsion suits such continuous inputs, since an electric motor varies its torque rapidly and reverses its rotation directly. Nevertheless, many ASVs use internal combustion engines because batteries limit the endurance and payload of larger and faster hulls \cite{zhuang2021highspeed,chiche2021rescue}. Examples include a diesel waterjet USV \cite{han2020aragon}, an ASV with a steerable outboard engine \cite{eriksen2019bcmpc}, and a gasoline airboat \cite{kaizu2011airboat}. In such vessels, the engine cannot reverse its rotation, so the propeller thrust is reversed through a reversing gearbox that selects reverse, neutral, or forward. Once a gear is engaged, the engine runs at least at idle, so the propeller delivers a minimum thrust and a deadzone forms around zero thrust. Therefore, a small corrective thrust cannot be produced, and fine corrections near the setpoint must be made by engaging and disengaging the gear, which makes the shift and its dwell frequent. Repeated shifts stress the gearbox, so a minimum interval between consecutive shifts protects the drivetrain. In practice, the lever is held in neutral before the opposite gear is engaged \cite{mercruiser2017manual,volvopenta2007d4d6}, and electronic controls apply a pause of a few seconds to a quick reversal \cite{yanmar2025jh,zf2014clearcommand}. The sterndrive of this study is such a drive, and a dwell filter in its actuation chain enforces this interval (Section~\ref{sec_dwell}). Since the sterndrive steers by vectoring the thrust, a lock in neutral leaves the ASV with neither thrust nor steering under wind and current. The weathervaning controllers above treat the thrust as a continuous input, so the gear levels, the deadzone, and the dwell have not been considered.
 
 Dwell time constraints have been addressed within model predictive control (MPC) for systems with discrete actuators, a widely studied framework \cite{bemporad1999mld,rawlings2017discrete,mcallister2022advances}. For linear switched systems, dwell time and tube based MPC \cite{zhang2016,tan2024asyncmdt,vicente2019,lavaei2021,zhuang2023} treats the switching signal as an exogenous input and the minimum dwell as an admissibility condition. For linear systems with disturbances, invariant sets under a dwell time restriction have also been computed \cite{dehghan2012}. For nonlinear systems, MPC based on combinatorial integral approximation (CIA) \cite{sager2011,buerger2019switched,zeile2021dwell,buerger2020pycombina} makes the integer input a decision variable and imposes the dwell as a combinatorial constraint in the rounding step. A sum up rounding scheme further establishes recursive feasibility through an $\ell$ step control invariant terminal set \cite{chenlazar2022}. However, these schemes rely on a nominal model, and mixed integer MPC offers only inherent robustness to small disturbances \cite{mcallister2022advances}. As a result, safety under a dwell and disturbances has not been guaranteed for nonlinear systems.
 
@@ -449,28 +449,6 @@ False safety rate (\%) & 0.0$^{*}$ & 0.2 \\
 \end{tabular}
 \end{table}
 
-\begin{table}[!t]
-\renewcommand{\arraystretch}{1.15}
-\caption{Closed Loop Simulation Results}
-\label{tab_sim}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.36\columnwidth}cccc}
-\toprule
-Metric & \risnd & \pid & \ciampc & \textbf{\dcris} \\
-\midrule
-Runs inside for 300 s (\%) & 8 & 70 & 56 & \textbf{100} \\
-RMS distance (m) & 2.71 & 1.65 & 1.94 & 1.90 \\
-Max distance (m) & 5.26 & 3.56 & 3.94 & 3.50 \\
-Time in $\gR$ or $\gF$ (\%) & 54.3 & 70.6 & 65.3 & 70.4 \\
-Switches per minute & 15.4 & 11.6 & 12.7 & 10.2 \\
-Exits within a lock (\%) & 80 & 13 & 32 & n/a \\
-\bottomrule
-\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize 50 runs of 300 s. Distances are medians over the runs and the other metrics are means.} \\
-\end{tabular}
-\end{table}
-
 As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies most of the disk in every slice because its value assumes that a shift takes effect immediately. In contrast, the set of \dcris is elongated along the heading and narrow across it, and it depends on the gear and on the remaining lock time. The locked set keeps the states ahead of the setpoint with $\gR$ and those behind it with $\gF$. The strongest case is the ASV moving ahead in $\gF$, which cannot reverse until the lock ends, so the locked set shrinks to a small region at the rear of the disk.
 
 \begin{figure}[!t]
@@ -523,6 +501,28 @@ As baselines, \pid and \ciampc are compared with \dcris and \risnd. \pid is the 
 Each closed loop run lasts 300 s under wind and current loads modeled after \cite[Ch.~8]{fossen2011}, with a mean wind speed of 4.75~m/s and the wind load of \cite[Sec.~8.1]{fossen2011}. Five profiles are used, a steady wind, gusts (Ornstein Uhlenbeck with standard deviation 1 m/s and time constant 5 s), squalls (2 m/s and 2 s), a veer of $90^\circ$ over the run, and a shift of $90^\circ$ at 150 s. The current is constant and irrotational in the inertial frame and enters through the velocity relative to the water in the hydrodynamic terms \cite[Sec.~8.3]{fossen2011}. It flows in the direction of the wind at 0.35 m/s, the median identified current, and the sum of the wind and current loads is clipped to $\calW$. Each controller is run 50 times in five sets of ten, each set using every profile twice with the wind directions spread over the circle and rotated randomly between sets. Every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer, and all controllers share the same starts and disturbances.
 
 
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.15}
+\caption{Closed Loop Simulation Results}
+\label{tab_sim}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.36\columnwidth}cccc}
+\toprule
+Metric & \risnd & \pid & \ciampc & \textbf{\dcris} \\
+\midrule
+Runs inside for 300 s (\%) & 8 & 70 & 56 & \textbf{100} \\
+RMS distance (m) & 2.71 & 1.65 & 1.94 & 1.90 \\
+Max distance (m) & 5.26 & 3.56 & 3.94 & 3.50 \\
+Time in $\gR$ or $\gF$ (\%) & 54.3 & 70.6 & 65.3 & 70.4 \\
+Switches per minute & 15.4 & 11.6 & 12.7 & 10.2 \\
+Exits within a lock (\%) & 80 & 13 & 32 & n/a \\
+\bottomrule
+\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize 50 runs of 300 s. Distances are medians over the runs and the other metrics are means.} \\
+\end{tabular}
+\end{table}
 
 As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run. \risnd left the disk in most runs, mostly within a lock, because its value assumes an immediate shift, and some of its runs drifted far from the setpoint. \pid and \ciampc left the disk in part of the runs, each in a single short excursion in $\gR$ after reverse was engaged too late. The exits of \pid occurred only in the first half of the run, while those of \risnd and \ciampc accumulated to the end (Fig.~\ref{fig_sim_compare}(a)). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) stays short of $R$ in every run, unlike \pid and \ciampc.
 
