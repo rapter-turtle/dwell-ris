@@ -428,7 +428,7 @@ Final critic training & 8000 updates, $N = 2048$, critic learning rate $2.5{\tim
 
 As a reference, the dwell unaware \risnd is trained in the same way on the plant without the dwell.
 
-To audit the learned certificate, 512 certified states were rolled out for 105 s under the safety policy against the worst of the learned adversary, a disturbance that pushes the ASV radially outward at the bounds of $\calW$, and a random disturbance in $\calW$, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. The certified fraction is the share of the state space occupied by the learned RIS, which is the set of states with $\hat V_h \ge \tau$, estimated from states drawn uniformly around the setpoint. The hit rate and the false safety rate are the fractions of the certified states that stay inside and that leave the disk. As summarized in Table~\ref{tab_audit}, the \dcris occupies 15.6 percent of the state space at $\tau = 0$, and its certified states stay inside the disk with a hit rate of 99.8 percent and a false safety rate of 0.2 percent, so the certificate is accepted at $\tau = 0$. The certificate of \risnd was audited in the same way on the plant without the dwell.
+To audit the learned certificate, 512 certified states were rolled out for 105 s under the safety policy against the worst of the learned adversary, a disturbance that pushes the ASV radially outward at the bounds of $\calW$, and a random disturbance in $\calW$, and the realized minimum margin $\min_k h(\xi_k)$ was recorded. The certified fraction is the share of the state space occupied by the learned RIS $\{\xi \mid \hat V_h(\xi) \ge \tau\}$, estimated from states drawn uniformly around the setpoint. The hit rate and the false safety rate are the fractions of the certified states that stay inside and that leave the disk. As summarized in Table~\ref{tab_audit}, \dcris certifies 15.6 percent of the state space at $\tau = 0$ with a hit rate of 99.8 percent and a false safety rate of 0.2 percent, so the certificate is accepted. The certificate of \risnd was audited in the same way on the plant without the dwell.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.15}
@@ -449,7 +449,9 @@ False safety rate (\%) & 0.0$^{*}$ & 0.2 \\
 \end{tabular}
 \end{table}
 
-As illustrated in Fig.~\ref{fig_sim_set}, \risnd certifies most of the disk in every slice because its value assumes that a shift takes effect immediately. In contrast, the set of \dcris is elongated along the heading and narrow across it, and it depends on the gear and on the remaining lock time. The locked set keeps the states ahead of the setpoint with $\gR$ and those behind it with $\gF$. The strongest case is the ASV moving ahead in $\gF$, which cannot reverse until the lock ends, so the locked set shrinks to a small region at the rear of the disk.
+\risnd certifies 44.8 percent of the state space against 15.6 percent for \dcris, because its value assumes that a shift takes effect immediately, so it also certifies states that only an immediate reversal can save. This difference is also visible in Fig.~\ref{fig_sim_set}, where the dashed curve of \risnd encloses most of the disk in every panel. The light region of \dcris with the lock released is narrower across the heading, and the dark region just after a shift lies inside it. In the upper row, the dark region keeps the states ahead of the setpoint in $\gR$ and those behind it in $\gF$.
+
+In the lower right panel, where the ASV moves ahead in $\gF$, the dashed curve still covers most of the disk because \risnd assumes that reverse is engaged at once. The light region ends near the setpoint because $\gR$ is reached only through $\gN$ and the next lock, and the dark region shrinks to the rear because the forward thrust persists until the lock ends. In the lower left panel, the two regions coincide because $\gR$ already brakes the forward motion.
 
 \begin{figure}[!t]
 \centering
