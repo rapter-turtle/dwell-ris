@@ -523,11 +523,10 @@ Time in $\gR$ or $\gF$ (\%) & 54.3 & 70.6 & 65.3 & 70.4 \\
 Switches per minute & 15.4 & 11.6 & 12.7 & 10.2 \\
 Exits within a lock (\%) & 80 & 13 & 32 & n/a \\
 \bottomrule
-\multicolumn{5}{p{0.95\columnwidth}}{\footnotesize 50 runs of 300 s. Distances are medians over the runs and the other metrics are means.} \\
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under every wind profile. \risnd left the disk in most runs, mostly within a lock, and some of its runs drifted far from the setpoint. \pid and \ciampc left the disk in part of the runs, each in a single short excursion in $\gR$ after reverse was engaged too late. The exits of \pid occurred only in the first half of the run, while those of \risnd and \ciampc accumulated to the end (Fig.~\ref{fig_sim_compare}(a)). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) stays short of $R$ in every run, unlike \pid and \ciampc.
+As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under every wind profile. \risnd left the disk in most runs, and some of its runs drifted far from the setpoint. Its policy does not account for the dwell, so the shifts it requests during a lock are discarded by the dwell filter and the ASV keeps the previous gear. \pid and \ciampc left the disk in part of the runs, each in a single short excursion in $\gR$ after reverse was engaged too late. The exits of \pid occurred only in the first half of the run, while those of \risnd and \ciampc accumulated to the end (Fig.~\ref{fig_sim_compare}(a)). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) stays short of $R$ in every run, unlike \pid and \ciampc.
 
 \subsection{Experimental Results}\label{sec_exp}
 
