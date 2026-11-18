@@ -484,18 +484,7 @@ The cause of these differences is clearest in the lower right panel, where the A
 \caption{Field comparison of the three controllers over the first 250~s of one designated run each, with (a) to (c) trajectories, (d) distance to the setpoint, (e) safety value of \dcris, and (f) gear. The cross, open circle, and square mark the setpoint, start, and end, and the fan is the approximate wind and current direction.}
 \label{fig_field_compare}
 \end{figure*}
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig_drone_composite.pdf}
-\caption{Drone composite of a designated \dcris run with the hull at five selected instants spanning the heading range and the GPS track. Red marks the free drift after disengagement, labeled by time since engagement. The fan is the approximate wind and current direction. The hull overhangs the circle while the GPS position, where the constraint applies, stays inside.}
-\label{fig_drone}
-\end{figure}
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig_field_runs.pdf}
-\caption{Distance to the setpoint in each designated run. Bars with ticks, lines, and diamonds mark the quartiles with the median, the 5 to 95 percentiles, and the maximum, with $R$ dashed.}
-\label{fig_field_runs}
-\end{figure}
+
 
 \subsection{Simulation Results}\label{sec_sim}
 
@@ -530,10 +519,25 @@ As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept th
 
 \subsection{Experimental Results}\label{sec_exp}
 
-To validate \dcris under real sea conditions against \pid and \ciampc, the experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The trials were run on several days in the same sea area under similar conditions, with a wind speed of 5 to 6 knots on every trial day and a tidal current of 0.1 to 0.3~m/s. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. As summarized in Table~\ref{tab_field}, each controller is evaluated over three designated runs, which last 5~min each. \dcris ran the safety policy of Section~\ref{sec_method} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers. A video of the trials is available at \pending{link}.
+To validate \dcris under real sea conditions against \pid and \ciampc, the experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The trials were run on several days in the same sea area under similar conditions, with a wind speed of 5 to 6 knots on every trial day and a tidal current of 0.1 to 0.3~m/s. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. As summarized in Table~\ref{tab_field}, each controller is evaluated over three designated runs, which last 5~min each. \dcris ran the safety policy of Section~\ref{sec_method} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers.
 
 
 One of the representative run of each controller is compared in Fig.~\ref{fig_field_compare}, with the position error in an inertial frame aligned with the motion just before engagement. All three controllers held the position in $\gR$ with short pulses of $\gF$ because the ASV lay with the stern into the wind and current and was pushed ahead. In each cycle the ASV drifted ahead in $\gN$, $\gR$ was engaged, the distance peaked a few seconds later while $\gR$ was held, and a pulse of $\gF$ stopped the sternway (Fig.~\ref{fig_field_compare}(d), (f)). \ciampc engaged $\gR$ late and far from the setpoint, so its distance exceeded $R$ in every cycle, mostly within the lock after the shift, consistent with its nominal model without disturbance tightening. \pid oscillated along the heading while creeping across it and left the disk on the side for one long interval.
+
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_drone_composite.pdf}
+\caption{Drone composite of a designated \dcris run with the hull at five selected instants spanning the heading range and the GPS track. Red marks the free drift after disengagement, labeled by time since engagement. The fan is the approximate wind and current direction. The hull overhangs the circle while the GPS position, where the constraint applies, stays inside.}
+\label{fig_drone}
+\end{figure}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_field_runs.pdf}
+\caption{Distance to the setpoint in each designated run. Bars with ticks, lines, and diamonds mark the quartiles with the median, the 5 to 95 percentiles, and the maximum, with $R$ dashed.}
+\label{fig_field_runs}
+\end{figure}
+
 
 
 \begin{table}[!t]
