@@ -449,16 +449,17 @@ False safety rate (\%) & 0.0$^{*}$ & 0.2 \\
 \end{tabular}
 \end{table}
 
-\risnd certifies 44.8 percent of the state space against 15.6 percent for \dcris, because it treats a shift as immediate and thus certifies states that need an immediate reversal. In Fig.~\ref{fig_sim_set}, its dashed curve encloses most of the disk in every panel, while the \dcris sets are smaller and narrower across the heading. These sets also depend on the dwell. The dark dwell locked set, taken just after a shift while the dwell holds the gear, lies inside the light set with the dwell released. A locked gear pushes the ASV in one direction only, so in the upper row the dark set lies ahead of the setpoint in $\gR$, which pushes the ASV backward, and behind it in $\gF$, which pushes it forward.
-
-The cause of these differences is clearest in the lower right panel, where the ASV moves ahead in $\gF$ and the RIS set still covers most of the disk. The light region ends short of the RIS set because $\gR$ is reached only through $\gN$ and the next lock, and the dark region shrinks to the rear because the forward thrust persists until the lock ends. In the lower left panel, the two regions are the same because $\gR$ already slows the forward motion, so the lock costs nothing.
-
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_set.pdf}
 \caption{Slices of the certified sets of \dcris and \risnd over the position error $(\tilde{x}, \tilde{y})$ with the heading along $\tilde{x}$, zero steering angle, and zero yaw rate. The locked set is taken just after a shift.}
 \label{fig_sim_set}
 \end{figure}
+
+\risnd certifies 44.8 percent of the state space against 15.6 percent for \dcris, because it treats a shift as immediate and thus certifies states that need an immediate reversal. In Fig.~\ref{fig_sim_set}, its dashed curve encloses most of the disk in every panel, while the \dcris sets are smaller and narrower across the heading. These sets also depend on the dwell. The dark dwell locked set, taken just after a shift while the dwell holds the gear, lies inside the light set with the dwell released. A locked gear pushes the ASV in one direction only, so in the upper row the dark set lies ahead of the setpoint in $\gR$, which pushes the ASV backward, and behind it in $\gF$, which pushes it forward.
+
+The cause of these differences is clearest in the lower right panel, where the ASV moves ahead in $\gF$ and the RIS set still covers most of the disk. The light region ends short of the RIS set because $\gR$ is reached only through $\gN$ and the next lock, and the dark region shrinks to the rear because the forward thrust persists until the lock ends. In the lower left panel, the two regions are the same because $\gR$ already slows the forward motion, so the lock costs nothing.
+
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_traj.pdf}
