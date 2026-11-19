@@ -468,12 +468,6 @@ The cause of these differences is clearest in the lower right panel, where the A
 \end{figure}
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_sim_compare.pdf}
-\caption{Simulation comparison of the four controllers with (a) the share of runs still inside the disk over time and (b) the maximum distance of each run, with $R$ dashed and the share of runs inside given on top.}
-\label{fig_sim_compare}
-\end{figure}
-\begin{figure}[!t]
-\centering
 \includegraphics[width=\linewidth]{figures/fig_site_drone.pdf}
 \caption{Experimental site off Jeongok Port with an inset drone view of the ASV under \dcris and the keep in circle to scale.}
 \label{fig_site}
@@ -515,7 +509,7 @@ Exits within a lock (\%) & 80 & 13 & 32 & n/a \\
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under every wind profile. \risnd left the disk in most runs, and some of its runs drifted far from the setpoint. Its policy does not account for the dwell, so the shifts it requests during a lock are discarded by the dwell filter and the ASV keeps the previous gear. \pid and \ciampc left the disk in part of the runs, each in a single short excursion in $\gR$ after reverse was engaged too late. The exits of \pid occurred only in the first half of the run, while those of \risnd and \ciampc accumulated to the end (Fig.~\ref{fig_sim_compare}(a)). However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts, because its policy maximizes the margin to the boundary instead of tracking the setpoint. Its maximum distance in Fig.~\ref{fig_sim_compare}(b) stays short of $R$ in every run, unlike \pid and \ciampc.
+As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under every wind profile. \risnd left the disk in most runs, and some of its runs drifted far from the setpoint. Its policy does not account for the dwell, so the shifts it requests during a lock are discarded by the dwell filter and the ASV keeps the previous gear. \pid and \ciampc left the disk in part of the runs, each in a single short excursion in $\gR$ after reverse was engaged too late. However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts, because its policy maximizes the margin to the boundary instead of tracking the setpoint.
 
 \subsection{Experimental Results}\label{sec_exp}
 
