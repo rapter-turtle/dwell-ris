@@ -481,7 +481,7 @@ The cause of these differences is clearest in the lower right panel, where the A
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_field_compare.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_compare.pdf}}{\figph{Fig. 8 placeholder. Field comparison of the three controllers.}{4cm}}
-\caption{Field comparison of the three controllers over the first 250~s of one designated run each, with (a) to (c) trajectories, (d) distance to the setpoint, (e) safety value of \dcris, and (f) gear. The cross, open circle, and square mark the setpoint, start, and end, and the fan is the approximate wind and current direction.}
+\caption{Field comparison of the three controllers over 200~s of one designated run each, with (a) to (c) trajectories, (d) distance to the setpoint, (e) safety value of \dcris, and (f) gear. The cross, open circle, and square mark the setpoint, start, and end, and the fan is the approximate wind and current direction.}
 \label{fig_field_compare}
 \end{figure*}
 
@@ -522,7 +522,7 @@ As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept th
 To validate \dcris under real sea conditions against \pid and \ciampc, the experiments were conducted off Jeongok Port, Hwaseong, Republic of Korea, in the sea area shown in Fig.~\ref{fig_site}. The trials were run on several days in the same sea area under similar conditions, with a wind speed of 5 to 6 knots on every trial day and a tidal current of 0.1 to 0.3~m/s. At engagement, each controller captured the current position and heading of the ASV as the setpoint and the heading reference, and the keep in radius was set to $R = 4$~m for all controllers. As summarized in Table~\ref{tab_field}, each controller is evaluated over three designated runs, which last 5~min each. \dcris ran the safety policy of Section~\ref{sec_method} with the networks trained in simulation without any field retraining, and the heading was left free for all controllers.
 
 
-One of the representative run of each controller is compared in Fig.~\ref{fig_field_compare}, with the position error in an inertial frame aligned with the motion just before engagement. All three controllers held the position in $\gR$ with short pulses of $\gF$. Since the side area of the AURA is larger toward the bow, the wind turned the bow downwind, so the ASV lay with the stern into the wind and current and was pushed ahead. In each cycle the ASV drifted ahead in $\gN$, $\gR$ was engaged, the distance peaked a few seconds later while $\gR$ was held, and a pulse of $\gF$ stopped the sternway (Fig.~\ref{fig_field_compare}(d), (f)). \ciampc engaged $\gR$ late and far from the setpoint, so its distance exceeded $R$ in every cycle, mostly within the lock after the shift, consistent with its nominal model without disturbance tightening. \pid oscillated along the heading while creeping across it and left the disk on the side for one long interval.
+One of the representative run of each controller is compared in Fig.~\ref{fig_field_compare}, with the position error in an inertial frame aligned with the mean heading of each run. All three controllers held the position in $\gR$ with short pulses of $\gF$. Since the side area of the AURA is larger toward the bow, the wind turned the bow downwind, so the ASV lay with the stern into the wind and current and was pushed ahead. In each cycle the ASV drifted ahead in $\gN$, $\gR$ was engaged, the distance peaked a few seconds later while $\gR$ was held, and a pulse of $\gF$ stopped the sternway (Fig.~\ref{fig_field_compare}(d), (f)). \pid oscillated along the heading while creeping across it and left the disk on the side for one long interval.
 
 
 \begin{figure}[!t]
@@ -550,14 +550,14 @@ One of the representative run of each controller is compared in Fig.~\ref{fig_fi
 \toprule
 Metric & \pid & \ciampc & \textbf{\dcris} \\
 \midrule
-RMS distance (m) & 2.89 & 3.00 & \textbf{2.00} \\
-Max distance (m) & 5.66 & 5.08 & \textbf{3.87} \\
-Time outside the circle (\%) & 12.5 & 17.0 & \textbf{0.0} \\
-Time in $\gR$ (\%) & 50.1 & 47.9 & \textbf{45.7} \\
-Time in $\gN$ (\%) & 28.9 & 37.0 & \textbf{41.7} \\
-Time in $\gF$ (\%) & 21.0 & 15.0 & \textbf{12.6} \\
-Shifts per minute & 10.5 & 10.6 & \textbf{9.6} \\
-Calculation time, mean (ms) & 0.4 & 44.8 & \textbf{33.5} \\
+RMS distance (m) & 2.89 & 2.44 & \textbf{2.00} \\
+Max distance (m) & 5.66 & 4.76 & \textbf{3.87} \\
+Time outside the circle (\%) & 12.5 & 5.4 & \textbf{0.0} \\
+Time in $\gR$ (\%) & 50.1 & 36.2 & \textbf{45.7} \\
+Time in $\gN$ (\%) & 28.9 & 53.4 & \textbf{41.7} \\
+Time in $\gF$ (\%) & 21.0 & 10.3 & \textbf{12.6} \\
+Shifts per minute & 10.5 & 11.1 & \textbf{9.6} \\
+Calculation time, mean (ms) & 0.4 & 58.6 & \textbf{33.5} \\
 Calculation time, max (ms) & 0.8 & 152.0 & \textbf{59.6} \\
 \bottomrule
 \end{tabular}
@@ -569,7 +569,7 @@ All statistics are time weighted over the designated runs, about 15~min for \dcr
 
 
 
-In contrast, \dcris achieved the smallest RMS and maximum distance in Table~\ref{tab_field} and never left the circle. Over the designated runs, \pid and \ciampc carried an offset across the heading, which a single sterndrive cannot remove directly, while the oscillation along it was similar for all three. Therefore, unlike in simulation, \dcris also achieved a smaller RMS distance than \pid. In Fig.~\ref{fig_drone}, the GPS track formed a narrow band along the heading inside the circle, and the drift ahead after disengagement confirms the push direction. Moreover, every \dcris run stayed inside with a similar distance distribution in Fig.~\ref{fig_field_runs}, whereas those of \pid and \ciampc differed strongly, some with a large share of the time outside. At a similar shift rate, \dcris spent the most time in neutral and the least in forward, with a calculation time below that of \ciampc and well within the control period.
+In contrast, \dcris achieved the smallest RMS and maximum distance in Table~\ref{tab_field} and never left the circle. Over the designated runs, \pid and \ciampc carried an offset across the heading, which a single sterndrive cannot remove directly, while the oscillation along it was similar for all three. Therefore, unlike in simulation, \dcris also achieved a smaller RMS distance than \pid. In Fig.~\ref{fig_drone}, the GPS track formed a narrow band along the heading inside the circle, and the drift ahead after disengagement confirms the push direction. Moreover, every \dcris run stayed inside with a similar distance distribution in Fig.~\ref{fig_field_runs}, whereas those of \pid and \ciampc differed strongly, some with a large share of the time outside. At a similar shift rate, \dcris ran with a calculation time below that of \ciampc and well within the control period.
 
 The largest single growth of the distance within a lock occurred under \dcris, indicating that a lock opened at an unfavorable moment can still consume much of the margin. As shown in Fig.~\ref{fig_field_compare}(e), $\hat V_h$ reached its minimum in each cycle just after $\gR$ was engaged, ahead of the distance peak, and recovered as the ASV returned. \pending{discussion of the realized disturbance relative to the bound, after the system identification} These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept it inside the circle.
 
