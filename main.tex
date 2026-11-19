@@ -484,7 +484,7 @@ The cause of these differences is clearest in the lower right panel, where the A
 
 \dcris is simulated in closed loop to verify that it keeps the ASV inside the keep in circle as certified. It is compared with \risnd and the baselines \pid and \ciampc. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose gear shift requests pass through the dwell filter and whose gains were tuned on an earlier identified model. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina,sager2011}, which predicts with the identified model under the dwell and imposes the keep in circle as a state constraint. Both baselines are also run in the field, while \risnd is only simulated.
 
-Each run lasts 300 s under wind and current loads modeled after \cite[Ch.~8]{fossen2011}, with a mean wind speed of 3.0~m/s and the wind load of \cite[Sec.~8.1]{fossen2011}. Five wind profiles are used, a steady wind, Ornstein Uhlenbeck gusts, stronger and faster gusts, and a gradual and an abrupt turn of direction. The current is constant and irrotational in the inertial frame and enters through the velocity relative to the water in the hydrodynamic terms \cite[Sec.~8.3]{fossen2011}. It flows with the wind at 0.35 m/s, and the sum of the wind and current loads is clipped to $\calW$. Each controller is run 50 times, ten times with each profile, with the wind directions spread over the circle. Every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer, and all controllers share the same starts and disturbances.
+Each run lasts 300 s under wind and current loads modeled after \cite[Ch.~8]{fossen2011}, with a mean wind speed of 3.0~m/s and the wind load of \cite[Sec.~8.1]{fossen2011}. Five wind profiles are used, a steady wind, Ornstein Uhlenbeck gusts, stronger and faster gusts, and a gradual and an abrupt turn of direction. The current is constant and irrotational in the inertial frame and enters through the velocity relative to the water in the hydrodynamic terms \cite[Sec.~8.3]{fossen2011}. It flows with the wind at 0.35 m/s, and the sum of the wind and current loads is clipped to $\calW$. Each controller is run 60 times, twelve times with each profile, with the wind directions spread over the circle. Every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer, and all controllers share the same starts and disturbances.
 
 
 
@@ -500,16 +500,17 @@ Each run lasts 300 s under wind and current loads modeled after \cite[Ch.~8]{fos
 Metric & \risnd & \pid & \ciampc & \textbf{\dcris} \\
 \midrule
 Runs inside for 300 s (\%) & 10 & 72 & 82 & \textbf{100} \\
-RMS distance (m) & 2.69 & 1.82 & 1.93 & 1.91 \\
-Max distance (m) & 5.26 & 3.39 & 3.69 & 3.49 \\
-Time in $\gR$ or $\gF$ (\%) & 54.2 & 69.3 & 69.7 & 70.4 \\
-Switches per minute & 15.3 & 11.9 & 12.1 & 10.2 \\
-Exits within a lock (\%) & 80 & 71 & 27 & n/a \\
+RMS distance (m) & 2.69 & 2.10 & 1.93 & 1.91 \\
+Max distance, mean (m) & 12.49 & 3.89 & 3.74 & 3.47 \\
+Max distance, largest (m) & 308.88 & 6.69 & 4.94 & 3.76 \\
+Time in $\gR$ or $\gF$ (\%) & 54.2 & 71.1 & 69.7 & 70.4 \\
+Switches per minute & 15.3 & 11.4 & 12.1 & 10.2 \\
+Exits within a lock (\%) & 80 & 35 & 27 & n/a \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under every wind profile. \risnd left the disk in most runs, and some of its runs drifted far from the setpoint. Its policy does not account for the dwell, so the shifts it requests during a lock are discarded by the dwell filter and the ASV keeps the previous gear. \pid and \ciampc left the disk in part of the runs, each in a single short excursion in $\gR$ after reverse was engaged too late. However, \dcris kept a slightly larger RMS distance than \pid and a similar one to \ciampc with the fewest shifts, because its policy maximizes the margin to the boundary instead of tracking the setpoint.
+As summarized in Table~\ref{tab_sim} and Fig.~\ref{fig_sim_traj}, \dcris kept the ASV inside the disk in every run under every wind profile. \risnd left the disk in most runs, and some of its runs drifted far from the setpoint. Its policy does not account for the dwell, so the shifts it requests during a lock are discarded by the dwell filter and the ASV keeps the previous gear. \pid and \ciampc left the disk in part of the runs, each in a single excursion, mostly in $\gR$ after reverse was engaged too late. Moreover, \dcris kept the smallest maximum distance and the fewest shifts, with an RMS distance similar to that of \ciampc and smaller than that of \pid.
 
 \subsection{Experimental Results}\label{sec_exp}
 
@@ -563,7 +564,7 @@ All statistics are time weighted over the designated runs, about 15~min for \dcr
 
 
 
-In contrast, \dcris achieved the smallest RMS and maximum distance in Table~\ref{tab_field} and never left the circle. Over the designated runs, \pid and \ciampc carried an offset across the heading, which a single sterndrive cannot remove directly, while the oscillation along it was similar for all three. Therefore, unlike in simulation, \dcris also achieved a smaller RMS distance than \pid. In Fig.~\ref{fig_drone}, the GPS track formed a narrow band along the heading inside the circle, and the drift ahead after disengagement confirms the push direction. Moreover, every \dcris run stayed inside with a similar distance distribution in Fig.~\ref{fig_field_runs}, whereas those of \pid and \ciampc differed strongly, some with a large share of the time outside. At a similar shift rate, \dcris ran with a calculation time below that of \ciampc and well within the control period.
+In contrast, \dcris achieved the smallest RMS and maximum distance in Table~\ref{tab_field} and never left the circle. Over the designated runs, \pid and \ciampc carried an offset across the heading, which a single sterndrive cannot remove directly, while the oscillation along it was similar for all three. In Fig.~\ref{fig_drone}, the GPS track formed a narrow band along the heading inside the circle, and the drift ahead after disengagement confirms the push direction. Moreover, every \dcris run stayed inside with a similar distance distribution in Fig.~\ref{fig_field_runs}, whereas those of \pid and \ciampc differed strongly, some with a large share of the time outside. At a similar shift rate, \dcris ran with a calculation time below that of \ciampc and well within the control period.
 
 The largest single growth of the distance within a lock occurred under \dcris, indicating that a lock opened at an unfavorable moment can still consume much of the margin. As shown in Fig.~\ref{fig_field_compare}(e), $\hat V_h$ reached its minimum in each cycle just after $\gR$ was engaged, ahead of the distance peak, and recovered as the ASV returned. \pending{discussion of the realized disturbance relative to the bound, after the system identification} These results confirm that the safety policy trained in simulation transferred to the ASV without retraining and kept it inside the circle.
 
