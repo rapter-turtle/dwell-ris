@@ -528,7 +528,7 @@ In calculation time, \pid, the simplest control law, was the fastest and \ciampc
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_field_compare.pdf}{\includegraphics[width=\textwidth]{figures/fig_field_compare.pdf}}{\figph{Fig. 8 placeholder. Field comparison of the three controllers.}{4cm}}
-\caption{Field comparison of the three controllers over 200~s of one designated run each, with (a) to (c) trajectories, (d) distance to the setpoint, (e) safety value of \dcris, and (f) gear. The cross, open circle, and square mark the setpoint, start, and end, and the fan is the approximate wind and current direction.}
+\caption{Field comparison of the three controllers over 200~s of one designated run each, with (a) to (c) trajectories, (d) distance to the setpoint, (e) safety value of \dcris, and (f) gear.}
 \label{fig_field_compare}
 \end{figure*}
 
@@ -537,7 +537,7 @@ In calculation time, \pid, the simplest control law, was the fastest and \ciampc
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_drone_composite.pdf}
-\caption{Drone composite of a designated \dcris run with the hull at five selected instants spanning the heading range and the GPS track. Red marks the free drift after disengagement, labeled by time since engagement. The fan is the approximate wind and current direction. The hull overhangs the circle while the GPS position, where the constraint applies, stays inside.}
+\caption{Drone composite of a designated \dcris run with the hull at five instants and the GPS track, with the free drift after disengagement in red. The GPS position, where the constraint applies, stays inside the circle although the hull overhangs it.}
 \label{fig_drone}
 \end{figure}
 
@@ -553,17 +553,17 @@ In calculation time, \pid, the simplest control law, was the fastest and \ciampc
 \toprule
 Metric & \pid & \ciampc & \textbf{\dcris} \\
 \midrule
-RMS distance (m) & 2.89 & 2.44 & \textbf{2.00} \\
-Max distance, mean (m) & 4.92 & 4.38 & \textbf{3.70} \\
+RMS distance (m) & 2.89 & 2.18 & \textbf{2.00} \\
+Max distance, mean (m) & 4.92 & 4.50 & \textbf{3.70} \\
 Max distance, largest (m) & 5.66 & 4.76 & \textbf{3.87} \\
-Time outside the circle (\%) & 12.5 & 5.4 & \textbf{0.0} \\
-Calculation time, mean (ms) & 0.4 & 58.6 & \textbf{33.5} \\
-Calculation time, max (ms) & 0.8 & 152.0 & \textbf{59.6} \\
+Time outside the circle (\%) & 12.5 & 5.1 & \textbf{0.0} \\
+Calculation time, mean (ms) & 0.4 & 55.3 & \textbf{33.5} \\
+Calculation time, max (ms) & 0.8 & 160.9 & \textbf{59.6} \\
 \bottomrule
 \end{tabular}
 \par\vspace{3pt}
 \begin{minipage}{\columnwidth}\scriptsize\raggedright
-All statistics are time weighted over the designated runs, about 15~min for \dcris and 13~min for \pid and \ciampc, with $R = 4$~m. The maximum distance of each run is counted after the state first entered the certified set, with $\hat V_h \ge 0$ for \dcris, while \pid and \ciampc have no certified value and are counted from the start.
+All statistics are time weighted over the designated runs, about 15~min for \dcris and \ciampc and 13~min for \pid, with $R = 4$~m. The maximum distance of each run is counted after the state first entered the certified set, with $\hat V_h \ge 0$ for \dcris, while \pid and \ciampc have no certified value and are counted from the start.
 \end{minipage}
 \end{table}
 
