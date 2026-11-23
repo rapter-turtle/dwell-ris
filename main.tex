@@ -241,7 +241,7 @@ in which the legal gear is chosen at every step. The discounted safety value $V_
 V_h = \calT_h V_h = \calT_h^{n} V_h = \lim_{k \to \infty} \calT_h^{k}\, U,
 \label{eq_fixed}
 \end{equation}
-where the convergence follows from Lemma~\ref{lem_aug}. {\color{red}The maximum over the steering rate command in \eqref{eq_onestep}, also with $\gamma_h = 1$, is assumed to be attained, which is standard for compact action sets and continuous dynamics \cite{bertsekas1972reach,akametalu2024minimum}.}
+where the convergence follows from Lemma~\ref{lem_aug}. The maximum over the steering rate command in \eqref{eq_onestep}, also with $\gamma_h = 1$, is assumed to be attained, which is standard for compact action sets and continuous dynamics \cite{bertsekas1972reach,akametalu2024minimum}.
 
 \begin{lemma}\label{lem_aug}
 Let $h$ be bounded. Then $\calT_h$ is a monotone $\gamma_h$ contraction and $\calT_h^{n}$ is a monotone $\gamma_h^{n}$ contraction in the supremum norm, and both admit the same unique bounded fixed point $V_h$ with $V_h \le h$. Moreover, $\calS^{*} = \{\xi \mid V_h^{*}(\xi) \ge 0\}$ is a robust invariant set of the augmented system under dwell constrained admissible policies.
@@ -563,7 +563,7 @@ Calculation time, max (ms) & 0.8 & 152.0 & \textbf{59.6} \\
 \end{tabular}
 \par\vspace{3pt}
 \begin{minipage}{\columnwidth}\scriptsize\raggedright
-All statistics are time weighted over the designated runs, about 15~min for \dcris and 13~min for \pid and \ciampc, with $R = 4$~m. The maximum distance of each run is counted after the state first entered the certified set, with $\hat V_h \ge 0$ for \dcris, while \pid and \ciampc have no certified value and are counted from the start.
+All statistics are time weighted over the designated runs, with $R = 4$~m. The maximum distance of each run is counted after the state first entered the certified set, with $\hat V_h \ge 0$ for \dcris, while \pid and \ciampc have no certified value and are counted from the start.
 \end{minipage}
 \end{table}
 
