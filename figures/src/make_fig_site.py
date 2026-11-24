@@ -28,7 +28,7 @@ from matplotlib.patches import Rectangle, Circle
 HERE = os.path.dirname(os.path.abspath(__file__))
 PH = os.path.join(HERE, "photos")
 W, H = 252.0, 139.667                         # pt, single column (same as the old fig_site.pdf)
-YEL = "#FFD34D"
+YEL = "#EDB100"  # keep in circle: Fig. 1 gold, dashed 4:3, width per figure (user, 2026-11-24)
 
 # georeferencing result, in pixels of the crop
 SCALE = 46.62                                 # px per m
@@ -71,7 +71,7 @@ for s in axi.spines.values():
 
 rk = R_KEEP * SCALE
 axi.add_patch(Circle((SP_U, SP_V), rk, fc=YEL, alpha=0.12, ec="none"))
-axi.add_patch(Circle((SP_U, SP_V), rk, fill=False, ec=YEL, lw=1.0))
+axi.add_patch(Circle((SP_U, SP_V), rk, fill=False, ec=YEL, lw=1.0, ls=(0, (4, 3))))
 a = np.radians(38.0)                          # radius drawn toward the open water, down right
 ue, ve = SP_U + rk * np.cos(a), SP_V + rk * np.sin(a)
 axi.plot([SP_U, ue], [SP_V, ve], color=YEL, lw=0.8)
