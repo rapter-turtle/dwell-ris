@@ -203,7 +203,7 @@ The task is encoded by the keep in function $h(\xi) = R - \sqrt{\tilde{x}^2 + \t
 V_h^{*}(\xi) = \max_{\pi \in \Pi_{\calC}} \min_{\mu} \min_{k \ge 0} h(\xi_k),
 \label{eq_value}
 \end{equation}
-where $\xi_k$ is the state at step $k$ of the trajectory that starts from $\xi_0 = \xi$ and evolves by $\xi_{k+1} = \Phi(\xi_k, \pi(\xi_k), w_k)$, and $\mu$ ranges over nonanticipative disturbance strategies that select $w_k \in \calW$ \cite{bansal2017}. Therefore, $V_h^{*}(\xi)$ is the largest worst case minimum of $h$ that a dwell constrained admissible policy can guarantee from $\xi$, and its zero superlevel set $\{\xi \mid V_h^{*}(\xi) \ge 0\}$ is the largest set from which the ASV can be kept inside the disk for all time{\color{red}, i.e., the largest dwell constrained RIS}.
+where $\xi_k$ is the state at step $k$ of the trajectory that starts from $\xi_0 = \xi$ and evolves by $\xi_{k+1} = \Phi(\xi_k, \pi(\xi_k), w_k)$, and $\mu$ ranges over nonanticipative disturbance strategies that select $w_k \in \calW$ \cite{bansal2017}. Therefore, $V_h^{*}(\xi)$ is the largest worst case minimum of $h$ that a dwell constrained admissible policy can guarantee from $\xi$, and its zero superlevel set $\{\xi \mid V_h^{*}(\xi) \ge 0\}$ is the largest {\color{red}RIS under the dwell,} from which the ASV can be kept inside the disk for all time.
 
 By the dynamic programming principle \cite{li2023cdc}, $V_h^{*}$ satisfies the Bellman equation
 \begin{equation}
