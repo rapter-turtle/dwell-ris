@@ -120,7 +120,7 @@ This section describes the gear shift dwell and the thrust deadzone of the stern
 
 The dwell filter in the actuation chain enforces a minimum interval between consecutive shift commands. This interval is the dwell, and it cannot be shortened by the controller. With the control period $\Delta t$, the dwell corresponds to $D_g$ control steps. A shift request issued during the dwell is discarded by the filter, and the current gear is held. Therefore, the controller must account for the time at which a shift becomes available, as illustrated in Fig.~\ref{fig_gear}.
 
-Once a gear is engaged, the engine runs at least at idle and the propeller delivers a minimum thrust. Therefore, thrust magnitudes between zero in neutral and this minimum cannot be produced, which forms a deadzone around zero thrust.
+Once a gear is engaged, the engine runs at least at idle and the propeller delivers a minimum thrust. Therefore, thrust magnitudes between zero in neutral and this minimum cannot be produced, which forms a deadzone around zero thrust. {\color{red}In this study, the engine speed is held at idle, although it can be commanded. At idle, an engaged gear already moves the ASV at up to about 1~m/s, which is sufficient for weathervaning within the keep in circle, while a higher engine speed made the weathervaning unstable in preliminary trials.}
 
 \subsection{Vehicle Dynamics Modeling}\label{sec_model}
 
@@ -161,7 +161,7 @@ f_c = \begin{bmatrix} f_X \\ f_Y \\ f_N \end{bmatrix}
 = \begin{bmatrix} F_g\cos\delta \\ F_g\sin\delta \\ -l_d F_g\sin\delta \end{bmatrix},
 \label{eq_force}
 \end{equation}
-where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at the throttle setting used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Owing to the deadzone of Section~\ref{sec_dwell}, the thrust takes only these three values. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
+where $F_g$ is the propeller thrust at gear level $g \in \{\gR, \gN, \gF\}$ at {\color{red}the idle engine speed} used in this study, with $F_{\gN} = 0$ and $F_{\gR} < 0 < F_{\gF}$. Owing to the deadzone of Section~\ref{sec_dwell}, the thrust takes only these three values. Here, $\delta$ denotes the steering angle of the drive, and $l_d$ is the distance from the origin of the body fixed frame to the drive.
 
 The steering angle and the steering rate are constrained by
 \begin{equation}
@@ -488,7 +488,29 @@ Exits within a lock (\%) & 80 & 35 & 27 & n/a \\
 
 \subsection{Simulation Results}\label{sec_sim}
 
-\dcris is simulated in closed loop to verify that it keeps the ASV inside the keep in circle as certified. It is compared with \risnd without dwell constraints and the baselines \pid and \ciampc. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose gear shift requests pass through the dwell filter. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina}, which predicts with the identified model under the dwell and imposes the keep in circle as a state constraint. Both baselines are also run in the field, while \risnd is only simulated.
+\dcris is simulated in closed loop to verify that it keeps the ASV inside the keep in circle as certified. It is compared with \risnd without dwell constraints and the baselines \pid and \ciampc. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose gear shift requests pass through the dwell filter. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina}, which predicts with the identified model under the dwell and imposes the keep in circle as a state constraint. {\color{red}In \pid, the speed command is proportional to the position error along the heading, and the gear is selected by a relay with hysteresis on the speed error, with every reversal passing through $\gN$. The sway force and yaw moment of its PD loops are converted to $\delta$ by weighted least squares with the thrust of the requested gear. \ciampc solves one nonlinear program per control period with IPOPT over a control horizon followed by a hold of $D_g$ steps with the gear frozen, relaxes the gear to convex weights, and rounds them under the dwell. Its cost weights the squared position error, velocity, input, and slack of the keep in circle. The gains of both baselines are listed in Table~\ref{tab_gains}. Neither baseline models the disturbance, which is countered only through feedback.} Both baselines are also run in the field, while \risnd is only simulated.
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.15}
+\caption{Gains of the Baseline Controllers}
+\label{tab_gains}
+\centering
+\footnotesize
+\color{red}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lclc}
+\toprule
+\multicolumn{2}{c}{\pid} & \multicolumn{2}{c}{\ciampc} \\
+\cmidrule(lr){1-2} \cmidrule(lr){3-4}
+Speed gain & 0.595~s$^{-1}$ & Control horizon & 12 steps \\
+Speed limit & 0.80~m/s & Gear hold & $D_g$ steps \\
+Relay on, off & 0.09, 0.03~m/s & Position weight & 0.5 \\
+Sway PD gains & 0.053, 1.56 & Velocity weight & 0.2 \\
+Heading PD gains & 0.473, 1.43 & Input weight & 0.2 \\
+Heading limit & 45$^\circ$ & Slack weight & $5\times10^{3}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 Each run lasts 300 s under wind and current loads modeled after \cite[Ch.~8]{fossen2011}, with a mean wind speed of 3.0~m/s and the wind load of \cite[Sec.~8.1]{fossen2011}. Five wind profiles are used, a steady wind, Ornstein Uhlenbeck gusts, stronger and faster gusts, and a gradual and an abrupt turn of direction. The current is constant and irrotational in the inertial frame and enters through the velocity relative to the water in the hydrodynamic terms \cite[Sec.~8.3]{fossen2011}. It flows with the wind at 0.35 m/s, and the sum of the wind and current loads is clipped to $\calW$. Each controller is run 60 times, twelve times with each profile, with the wind directions spread over the circle. Every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer, and all controllers share the same starts and disturbances.
 
