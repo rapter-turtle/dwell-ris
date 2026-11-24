@@ -149,11 +149,11 @@ C(\nu) = \begin{bmatrix} 0 & 0 & -m_{22} v \\ 0 & 0 & m_{11} u \\ m_{22} v & -m_
 \begin{equation}
 \begin{aligned}
 D(\nu) &= -\begin{bmatrix} X_u & 0 & X_{vr} v \\ 0 & Y_v & Y_r + Y_{ur} u \\ 0 & N_v + N_{uv} u & N_r \end{bmatrix} \\
-&\quad - \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & Y_{r|r|}|r| \\ 0 & N_{v|v|}|v| & N_{r|r|}|r| \end{bmatrix},
+&\quad - \begin{bmatrix} X_{u|u|}|u| & 0 & 0 \\ 0 & Y_{v|v|}|v| & {\color{red}0} \\ 0 & {\color{red}0} & N_{r|r|}|r| \end{bmatrix},
 \end{aligned}
 \label{eq_damping}
 \end{equation}
-where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, $Y_{r|r|}$, $N_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively. Since the lift on the hull grows with the forward speed, the cross derivatives include the speed dependent terms $X_{vr} v$, $Y_{ur} u$, and $N_{uv} u$, which partly offset the inertial coupling of $C(\nu)$ \cite[Sec.~7.1.2]{fossen2011}, \cite{yasukawa2015mmg}. These terms multiply the same products of velocities as $C(\nu)$, so only their sums with the inertial coupling are identified, and $X_{vr}$, $Y_{ur}$, and $N_{uv}$ follow from these sums and the identified masses.
+where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively. {\color{red}The quadratic cross terms in $|r| r$ for sway and $|v| v$ for yaw are omitted, since the identification data did not determine them.} Since the lift on the hull grows with the forward speed, the cross derivatives include the speed dependent terms $X_{vr} v$, $Y_{ur} u$, and $N_{uv} u$, which partly offset the inertial coupling of $C(\nu)$ \cite[Sec.~7.1.2]{fossen2011}, \cite{yasukawa2015mmg}. These terms multiply the same products of velocities as $C(\nu)$, so only their sums with the inertial coupling are identified, and $X_{vr}$, $Y_{ur}$, and $N_{uv}$ follow from these sums and the identified masses.
 
 By vectoring the propeller thrust through the steering angle of the drive, the control force and moment are expressed as
 \begin{equation}
@@ -380,17 +380,17 @@ The disturbance was then obtained in reverse as the force and moment $w$ that \e
 \toprule
 Item & Estimated value & Item & Estimated value \\
 \midrule
-$m_{11}$ & $1800$~kg & $X_u$ & $-108.4$~kg/s \\
-$m_{22}$ & $1987.3$~kg & $Y_v$ & $-48.7$~kg/s \\
-$m_{33}$ & $13620.4$~kg\,m$^2$ & $Y_r$ & $204.5$~kg\,m/s \\
-$X_{vr}$ & $-1.1$~kg & $N_v$ & $477.9$~kg\,m/s \\
-$Y_{ur}$ & $1113.9$~kg & $N_r$ & $-303.4$~kg\,m$^2$/s \\
-$N_{uv}$ & $140.5$~kg & $X_{u|u|}$ & $-13.0$~kg/m \\
-$F_{\gF}$ & $276.1$~N & $Y_{v|v|}$ & $-545.1$~kg/m \\
-$F_{\gR}$ & $-178.4$~N & $Y_{r|r|}$ & $-545.1$~kg\,m \\
-$l_d$ & $3.0$~m & $N_{v|v|}$ & $0$~kg \\
- & & $N_{r|r|}$ & $-8333.0$~kg\,m$^2$ \\
+$m_{11}$ & {\color{red}$1946^{\dagger}$}~kg & $X_u$ & {\color{red}$-117.1$}~kg/s \\
+$m_{22}$ & {\color{red}$2138.1$}~kg & $Y_v$ & {\color{red}$-53.8$}~kg/s \\
+$m_{33}$ & {\color{red}$14686.3$}~kg\,m$^2$ & $Y_r$ & {\color{red}$192.8$}~kg\,m/s \\
+$X_{vr}$ & {\color{red}$-0.9$}~kg & $N_v$ & {\color{red}$511.7$}~kg\,m/s \\
+$Y_{ur}$ & {\color{red}$1200.8$}~kg & $N_r$ & {\color{red}$-321.6$}~kg\,m$^2$/s \\
+$N_{uv}$ & {\color{red}$144.1$}~kg & $X_{u|u|}$ & {\color{red}$-14.1$}~kg/m \\
+$F_{\gF}$ & {\color{red}$298.5$}~N & $Y_{v|v|}$ & {\color{red}$-570.7$}~kg/m \\
+$F_{\gR}$ & {\color{red}$-193.0$}~N & $N_{r|r|}$ & {\color{red}$-9084.7$}~kg\,m$^2$ \\
+$l_d$ & {\color{red}$3.0^{\dagger}$}~m &  &  \\
 \bottomrule
+\multicolumn{4}{p{0.9\columnwidth}}{\footnotesize {\color{red}$^{\dagger}$ Fixed. $m_{11}$ is the hull mass of 1800~kg plus a surge added mass of 146~kg.}} \\
 \end{tabular}
 \end{table}
 
@@ -411,7 +411,7 @@ Parameter & Value \\
 \midrule
 Control period $\Delta t$, integration & 0.5 s, RK4 with 10 substeps \\
 Keep in radius $R$, value floor $h_{\mathrm{floor}}$ & 4 m, 2 m \\
-Disturbance bounds $(\underline{w}, \bar{w})$ & $w_X \in [-17.7, 81.3]$~N,\newline $|w_Y| \le 35.5$~N, $|w_N| \le 121.2$~N\,m \\
+Disturbance bounds $(\underline{w}, \bar{w})$ & {\color{red}$w_X \in [-19.1, 87.9]$~N,\newline $|w_Y| \le 38.2$~N, $|w_N| \le 131.1$~N\,m} \\
 Steering limits $(\delta_{\max}, \dot{\delta}_{\max})$ & $25^\circ$, $10^\circ$/s \\
 Gear dwell $D_g$, unroll horizon $n$ & 6 steps, 16 steps \\
 Parallel simulators $N$, buffer & 1024, $150N$ states \\
