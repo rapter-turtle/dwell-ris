@@ -111,25 +111,33 @@ The remainder of this article is organized as follows. Section~\ref{sec_system} 
 This section describes the gear shift dwell and the thrust deadzone of the sterndrive, together with the vehicle dynamics model and the disturbance set.
 \subsection{Gear Shift Dwell and Thrust Deadzone}\label{sec_dwell}
 
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{figures/fig_gear.pdf}
-\caption{Gear shift restrictions of the sterndrive with the thrust deadzone (left) and the lock of $D_g$ steps after each shift (right).}
-\label{fig_gear}
-\end{figure}
+
 
 The dwell filter in the actuation chain enforces a minimum interval between consecutive shift commands. This interval is the dwell, and it cannot be shortened by the controller. With the control period $\Delta t$, the dwell corresponds to $D_g$ control steps. A shift request issued during the dwell is discarded by the filter, and the current gear is held. Therefore, the controller must account for the time at which a shift becomes available, as illustrated in Fig.~\ref{fig_gear}.
 
 Once a gear is engaged, the engine runs at least at idle and the propeller delivers a minimum thrust. Therefore, thrust magnitudes between zero in neutral and this minimum cannot be produced, which forms a deadzone around zero thrust. {\color{red}In this study, the engine speed is held at idle, although it can be commanded. At idle, an engaged gear already moves the ASV at up to about 1~m/s, which is sufficient for weathervaning within the keep in circle, while a higher engine speed made the weathervaning unstable in preliminary trials.}
 
-\subsection{Vehicle Dynamics Modeling}\label{sec_model}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_gear.pdf}
+\vspace{-8mm}
+\caption{Gear shift restrictions of the sterndrive with the thrust deadzone (left) and the lock of $D_g$ steps after each shift (right).}
+\label{fig_gear}
+\end{figure}
+
 
 \begin{figure}[!t]
 \centering
 \IfFileExists{figures/fig_frames.pdf}{\includegraphics[width=0.6\linewidth]{figures/fig_frames.pdf}}{\figph{Coordinate frames and sterndrive geometry.}{4cm}}
+\vspace{-4mm}
 \caption{Coordinate frames and sterndrive geometry of the ASV with the keep in disk of radius $R$.}
 \label{fig_frames}
 \end{figure}
+
+\subsection{Vehicle Dynamics Modeling}\label{sec_model}
+
+
 
 The three degree of freedom horizontal plane model of \cite{fossen2011} describes the ASV in the body fixed and inertial frames of Fig.~\ref{fig_frames}. Following \cite{lee2024canal}, the model is formulated as
 \begin{subequations}\label{eq_model}
@@ -277,8 +285,10 @@ and the adversary minimizes $\min_i Q_{h,i}$ at the action $(\pi_h(\xi), g^\star
 \begin{figure*}[!t]
 \centering
 \IfFileExists{figures/fig_vessel.pdf}{\includegraphics[width=\textwidth]{figures/fig_vessel.pdf}}{\figph{Fig. 2 placeholder. Vessel with sensors and control hardware.}{5cm}}
+\vspace{-8mm}
 \caption{Experimental ASV and its hardware with (a) the ASV and its sensors and (b) the control hardware from the control PC to the engine and the sterndrive.}
 \label{fig_vessel}
+\vspace{-4mm}
 \end{figure*}
 
 \subsubsection{Training Schedule and Coverage}
