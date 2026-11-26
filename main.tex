@@ -466,12 +466,47 @@ False safety rate (\%) & 0.0$^{*}$ & 0.2 \\
 
 The cause of these differences is clearest in the lower right panel, where the ASV moves ahead in $\gF$ and the RIS set still covers most of the disk. The light region ends short of the RIS set because $\gR$ is reached only through $\gN$ and the next lock, and the dark region shrinks to the rear because the forward thrust persists until the lock ends. In the lower left panel, the two regions are the same because $\gR$ already slows the forward motion, so the lock costs nothing.
 
+
+
+
+
+
+\subsection{Simulation Results}\label{sec_sim}
+
+\dcris is simulated in closed loop to verify that it keeps the ASV inside the keep in circle as certified. It is compared with \risnd without dwell constraints and the baselines \pid and \ciampc. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose gear shift requests pass through the dwell filter. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina}, which predicts with the identified model under the dwell and imposes the keep in circle as a state constraint. {\color{red}In \pid, the speed command is proportional to the position error along the heading, and the gear is selected by a relay with hysteresis on the speed error, with every reversal passing through $\gN$. The sway force and yaw moment of its PD loops are converted to $\delta$ by weighted least squares with the thrust of the requested gear. \ciampc solves one nonlinear program per control period with IPOPT over a control horizon followed by a hold of $D_g$ steps with the gear frozen, relaxes the gear to convex weights, and rounds them under the dwell. Its cost weights the squared position error, velocity, input, and slack of the keep in circle. The gains of both baselines are listed in Table~\ref{tab_gains}. Neither baseline models the disturbance, which is countered only through feedback.} Both baselines are also run in the field, while \risnd is only simulated.
+
+
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/fig_sim_traj.pdf}
 \caption{Simulated trajectories with the keep in circle dashed. Each panel shows ten of the 60 runs, with the exits in the same share as over all runs, farthest first, and the safe runs closest to the boundary. Dots and crosses mark starts and first exits.}
 \label{fig_sim_traj}
 \end{figure}
+
+\begin{table}[!t]
+\renewcommand{\arraystretch}{1.15}
+\caption{Gains of the Baseline Controllers}
+\label{tab_gains}
+\centering
+\footnotesize
+\color{red}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lclc}
+\toprule
+\multicolumn{2}{c}{\pid} & \multicolumn{2}{c}{\ciampc} \\
+\cmidrule(lr){1-2} \cmidrule(lr){3-4}
+Speed gain & 0.595~s$^{-1}$ & Control horizon & 12 steps \\
+Speed limit & 0.80~m/s & Gear hold & $D_g$ steps \\
+Relay on, off & 0.09, 0.03~m/s & Position weight & 0.5 \\
+Sway PD gains & 0.053, 1.56 & Velocity weight & 0.2 \\
+Heading PD gains & 0.473, 1.43 & Input weight & 0.2 \\
+Heading limit & 45$^\circ$ & Slack weight & $5\times10^{3}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.15}
@@ -496,34 +531,9 @@ Exits within a lock (\%) & 80 & 35 & 27 & n/a \\
 
 
 
-\subsection{Simulation Results}\label{sec_sim}
 
-\dcris is simulated in closed loop to verify that it keeps the ASV inside the keep in circle as certified. It is compared with \risnd without dwell constraints and the baselines \pid and \ciampc. \pid is the dynamic positioning PID controller of \cite{fossen2011}, whose gear shift requests pass through the dwell filter. \ciampc is the CIA based MPC of \cite{chenlazar2022} with the rounding of \cite{buerger2020pycombina}, which predicts with the identified model under the dwell and imposes the keep in circle as a state constraint. {\color{red}In \pid, the speed command is proportional to the position error along the heading, and the gear is selected by a relay with hysteresis on the speed error, with every reversal passing through $\gN$. The sway force and yaw moment of its PD loops are converted to $\delta$ by weighted least squares with the thrust of the requested gear. \ciampc solves one nonlinear program per control period with IPOPT over a control horizon followed by a hold of $D_g$ steps with the gear frozen, relaxes the gear to convex weights, and rounds them under the dwell. Its cost weights the squared position error, velocity, input, and slack of the keep in circle. The gains of both baselines are listed in Table~\ref{tab_gains}. Neither baseline models the disturbance, which is countered only through feedback.} Both baselines are also run in the field, while \risnd is only simulated.
-
-\begin{table}[!t]
-\renewcommand{\arraystretch}{1.15}
-\caption{Gains of the Baseline Controllers}
-\label{tab_gains}
-\centering
-\footnotesize
-\color{red}
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lclc}
-\toprule
-\multicolumn{2}{c}{\pid} & \multicolumn{2}{c}{\ciampc} \\
-\cmidrule(lr){1-2} \cmidrule(lr){3-4}
-Speed gain & 0.595~s$^{-1}$ & Control horizon & 12 steps \\
-Speed limit & 0.80~m/s & Gear hold & $D_g$ steps \\
-Relay on, off & 0.09, 0.03~m/s & Position weight & 0.5 \\
-Sway PD gains & 0.053, 1.56 & Velocity weight & 0.2 \\
-Heading PD gains & 0.473, 1.43 & Input weight & 0.2 \\
-Heading limit & 45$^\circ$ & Slack weight & $5\times10^{3}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 Each run lasts 300 s under wind and current loads modeled after \cite[Ch.~8]{fossen2011}, with a mean wind speed of 3.0~m/s and the wind load of \cite[Sec.~8.1]{fossen2011}. Five wind profiles are used, a steady wind, Ornstein Uhlenbeck gusts, stronger and faster gusts, and a gradual and an abrupt turn of direction. The current is constant and irrotational in the inertial frame and enters through the velocity relative to the water in the hydrodynamic terms \cite[Sec.~8.3]{fossen2011}. It flows with the wind at 0.35 m/s, and the sum of the wind and current loads is clipped to $\calW$. Each controller is run 60 times, twelve times with each profile, with the wind directions spread over the circle. Every run starts at rest within the disk of radius 3 m with random heading, neutral gear, and released timer, and all controllers share the same starts and disturbances.
-
 
 
 
