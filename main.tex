@@ -115,7 +115,7 @@ This section describes the gear shift dwell and the thrust deadzone of the stern
 
 The dwell filter in the actuation chain enforces a minimum interval between consecutive shift commands. This interval is the dwell, and it cannot be shortened by the controller. With the control period $\Delta t$, the dwell corresponds to $D_g$ control steps. A shift request issued during the dwell is discarded by the filter, and the current gear is held. Therefore, the controller must account for the time at which a shift becomes available, as illustrated in Fig.~\ref{fig_gear}.
 
-Once a gear is engaged, the engine runs at least at idle and the propeller delivers a minimum thrust. Therefore, thrust magnitudes between zero in neutral and this minimum cannot be produced, which forms a deadzone around zero thrust. {\color{red}In this study, the engine speed is held at idle, although it can be commanded. At idle, an engaged gear already moves the ASV at up to about 1~m/s, which is sufficient for weathervaning within the keep in circle, while a higher engine speed made the weathervaning unstable in preliminary trials.}
+Once a gear is engaged, the engine runs at least at idle and the propeller delivers a minimum thrust. Therefore, thrust magnitudes between zero in neutral and this minimum cannot be produced, which forms a deadzone around zero thrust. {\color{red}In this study, the engine speed is held at idle, although it could be raised. At idle, an engaged gear already moves the ASV at up to about 1~m/s, which is sufficient for weathervaning within the keep in circle, while a higher engine speed made the weathervaning unstable in preliminary trials.}
 
 
 \begin{figure}[!t]
