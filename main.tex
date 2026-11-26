@@ -147,7 +147,7 @@ M\dot{\nu} + C(\nu)\nu + D(\nu)\nu &= f_c + w, \\
 J(\psi) &= \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix},
 \end{align}
 \end{subequations}
-where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $f_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $J(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. In this article, $f_c$ denotes the control vector because $\tau$ is reserved for the audit margin and $\tau_g$ for the remaining lock time.
+where $\nu = [u, v, r]^\top$ and $\eta = [x, y, \psi]^\top$ are the velocity and position vectors, respectively, and $M$, $C(\nu)$, and $D(\nu)$ denote the inertia matrix, the Coriolis and centripetal matrix, and the damping matrix. Here, $f_c = [f_X, f_Y, f_N]^\top$ represents the control forces and moment in each direction, $w = [w_X, w_Y, w_N]^\top$ denotes the environmental disturbance forces and moment bounded in \eqref{eq_wbox}, and $J(\psi)$ is the rotation matrix from the body fixed frame to the inertial frame. 
 
 {\color{red}With the inertia matrix approximated as} $M = \operatorname{diag}(m_{11}, m_{22}, m_{33})$, $C(\nu)$ and $D(\nu)$ can be expressed as
 \begin{equation}
@@ -161,7 +161,7 @@ D(\nu) &= -\begin{bmatrix} X_u & 0 & X_{vr} v \\ 0 & Y_v & Y_r + Y_{ur} u \\ 0 &
 \end{aligned}
 \label{eq_damping}
 \end{equation}
-where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively. {\color{red}The quadratic cross terms in $|r| r$ for sway and $|v| v$ for yaw are omitted, since the identification data did not determine them.} Since the lift on the hull grows with the forward speed, the cross derivatives include the speed dependent terms $X_{vr} v$, $Y_{ur} u$, and $N_{uv} u$, which partly offset the inertial coupling of $C(\nu)$ \cite[Sec.~7.1.2]{fossen2011}, \cite{yasukawa2015mmg}. These terms multiply the same products of velocities as $C(\nu)$, so only their sums with the inertial coupling are identified, and $X_{vr}$, $Y_{ur}$, and $N_{uv}$ follow from these sums and the identified masses.
+where $m_{11}$, $m_{22}$, and $m_{33}$ are the mass and moment of inertia including the added mass and added moment of inertia. The coefficients $X_u$, $Y_v$, $Y_r$, $N_v$, and $N_r$ are the linear drag coefficients, and $X_{u|u|}$, $Y_{v|v|}$, and $N_{r|r|}$ are the nonlinear drag coefficients, respectively. Since the lift on the hull grows with the forward speed, the cross derivatives include the speed dependent terms $X_{vr} v$, $Y_{ur} u$, and $N_{uv} u$, which partly offset the inertial coupling of $C(\nu)$ \cite[Sec.~7.1.2]{fossen2011}, \cite{yasukawa2015mmg}. These terms multiply the same products of velocities as $C(\nu)$, so only their sums with the inertial coupling are identified, and $X_{vr}$, $Y_{ur}$, and $N_{uv}$ follow from these sums and the identified masses.
 
 By vectoring the propeller thrust through the steering angle of the drive, the control force and moment are expressed as
 \begin{equation}
